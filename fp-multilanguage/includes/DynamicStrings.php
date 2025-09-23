@@ -79,8 +79,10 @@ class DynamicStrings
         );
     }
 
-    public function translate_dynamic_string($text)
+    public function translate_dynamic_string($text, $instance = null, $id = '')
     {
+        unset($instance, $id);
+
         return $this->translate_string($text);
     }
 
