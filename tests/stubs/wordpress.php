@@ -21,6 +21,11 @@ if (! isset($wp_remote_post_calls)) {
     $wp_remote_post_calls = [];
 }
 
+global $wp_test_filters;
+if (! isset($wp_test_filters)) {
+    $wp_test_filters = [];
+}
+
 if (! function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -240,9 +245,55 @@ if (! function_exists('set_transient')) {
     }
 }
 
+if (! function_exists('add_filter')) {
+    function add_filter($tag, $callback, $priority = 10, $accepted_args = 1)
+    {
+        global $wp_test_filters;
+
+        if (! isset($wp_test_filters[$tag])) {
+            $wp_test_filters[$tag] = [];
+        }
+
+        if (! isset($wp_test_filters[$tag][$priority])) {
+            $wp_test_filters[$tag][$priority] = [];
+        }
+
+        $wp_test_filters[$tag][$priority][] = [
+            'callback' => $callback,
+            'accepted_args' => (int) $accepted_args,
+        ];
+
+        return true;
+    }
+}
+
 if (! function_exists('apply_filters')) {
     function apply_filters($tag, $value)
     {
+        global $wp_test_filters;
+
+        $args = func_get_args();
+        $value = $args[1] ?? null;
+
+        if (! isset($wp_test_filters[$tag])) {
+            return $value;
+        }
+
+        ksort($wp_test_filters[$tag]);
+
+        foreach ($wp_test_filters[$tag] as $callbacks) {
+            foreach ($callbacks as $callback) {
+                $args[1] = $value;
+                $acceptedArgs = $callback['accepted_args'] > 0
+                    ? $callback['accepted_args']
+                    : 0;
+                $callbackArgs = $acceptedArgs === 0
+                    ? []
+                    : array_slice($args, 1, $acceptedArgs);
+                $value = call_user_func_array($callback['callback'], $callbackArgs);
+            }
+        }
+
         return $value;
     }
 }
