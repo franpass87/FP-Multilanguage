@@ -252,5 +252,46 @@ class PostTranslationManagerTest extends TestCase
 
         $this->assertSame('Titolo tradotto', $translatedTitle);
     }
+
+    public function test_rest_prepare_page_includes_translation_block(): void
+    {
+        $postId = 321;
+        $storedTranslations = [
+            'it' => [
+                'title' => 'Titolo pagina',
+                'content' => 'Contenuto pagina tradotto',
+                'excerpt' => 'Estratto pagina tradotto',
+            ],
+        ];
+
+        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $storedTranslations);
+
+        $page = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Page title',
+            'post_content' => 'Page content',
+            'post_excerpt' => 'Page excerpt',
+            'post_type' => 'page',
+        ]);
+
+        $translationService = $this->createMock(TranslationService::class);
+        $manager = new PostTranslationManager($translationService, new Settings());
+        $manager->register();
+
+        $response = (object) ['data' => ['id' => $postId]];
+        $request = new \stdClass();
+
+        $filteredResponse = \apply_filters('rest_prepare_page', $response, $page, $request);
+
+        $this->assertArrayHasKey('fp_multilanguage', $filteredResponse->data);
+        $this->assertSame(
+            $storedTranslations,
+            $filteredResponse->data['fp_multilanguage']['translations']
+        );
+        $this->assertSame(
+            Settings::get_source_language(),
+            $filteredResponse->data['fp_multilanguage']['language']
+        );
+    }
 }
 }
