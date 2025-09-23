@@ -133,4 +133,33 @@ class TranslationServiceTest extends TestCase
         $this->assertSame(1, $quota['requests'] ?? 0, 'Il numero di richieste deve aumentare.');
         $this->assertSame(strlen($text), $quota['characters'] ?? 0, 'La lunghezza deve usare strlen come fallback.');
     }
+
+    public function test_preserves_html_tags_when_format_is_html(): void
+    {
+        $service = new TranslationService();
+        $html = '<p>Un <strong>test</strong> semplice</p>';
+
+        $googleTranslation = $service->translate($html, 'en', 'it', ['format' => 'html']);
+
+        $this->assertSame('google:' . $html, $googleTranslation, 'Google deve mantenere i tag HTML quando richiesto.');
+
+        update_option(Settings::OPTION_NAME, [
+            'providers' => ['deepl'],
+            'google_api_key' => '',
+            'deepl_api_key' => 'test-deepl-key',
+            'target_languages' => ['it'],
+            'source_language' => 'en',
+            'fallback_language' => 'en',
+            'auto_translate' => true,
+        ]);
+
+        TranslationService::flush_cache();
+
+        $service = new TranslationService();
+        $deeplHtml = '<div>Altro <em>contenuto</em> di prova</div>';
+
+        $deeplTranslation = $service->translate($deeplHtml, 'en', 'it', ['format' => 'html']);
+
+        $this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
+    }
 }

@@ -224,23 +224,37 @@ if (! function_exists('wp_remote_post')) {
             }
         }
 
+        $textString = is_array($text) ? implode(' ', $text) : (string) $text;
+        $format = 'text';
+        $tagHandling = '';
+        if (is_array($decoded)) {
+            $format = strtolower((string) ($decoded['format'] ?? 'text'));
+            $tagHandling = strtolower((string) ($decoded['tag_handling'] ?? ''));
+        }
+
         $responseBody = [];
         if (str_contains($url, 'googleapis')) {
+            $translatedText = $format === 'html'
+                ? $textString
+                : strip_tags($textString);
             $responseBody = [
                 'data' => [
                     'translations' => [
-                        ['translatedText' => 'google:' . $text],
+                        ['translatedText' => 'google:' . $translatedText],
                     ],
                 ],
             ];
         } elseif (str_contains($url, 'deepl')) {
+            $translatedText = $tagHandling === 'html'
+                ? $textString
+                : strip_tags($textString);
             $responseBody = [
                 'translations' => [
-                    ['text' => 'deepl:' . $text],
+                    ['text' => 'deepl:' . $translatedText],
                 ],
             ];
         } else {
-            $responseBody = ['translations' => [['text' => $text]]];
+            $responseBody = ['translations' => [['text' => $textString]]];
         }
 
         return [

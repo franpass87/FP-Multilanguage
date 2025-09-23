@@ -11,6 +11,8 @@ class PostTranslationManager
 
     public const RELATION_META_KEY = '_fp_multilanguage_relations';
 
+    private const HTML_TRANSLATION_ARGS = ['format' => 'html'];
+
     private TranslationService $translationService;
 
     private Settings $settings;
@@ -71,9 +73,19 @@ class PostTranslationManager
                     continue;
                 }
 
-                $translatedContent = $this->translationService->translate($post->post_content, $sourceLanguage, $language);
+                $translatedContent = $this->translationService->translate(
+                    $post->post_content,
+                    $sourceLanguage,
+                    $language,
+                    self::HTML_TRANSLATION_ARGS
+                );
                 $translatedTitle = $this->translationService->translate($post->post_title, $sourceLanguage, $language);
-                $translatedExcerpt = $post->post_excerpt ? $this->translationService->translate($post->post_excerpt, $sourceLanguage, $language) : '';
+                $translatedExcerpt = $post->post_excerpt ? $this->translationService->translate(
+                    $post->post_excerpt,
+                    $sourceLanguage,
+                    $language,
+                    self::HTML_TRANSLATION_ARGS
+                ) : '';
 
                 if (! isset($existingTranslations[$language]) || $existingTranslations[$language]['content'] !== $translatedContent) {
                     $existingTranslations[$language] = [
@@ -117,7 +129,12 @@ class PostTranslationManager
             return $translations[$currentLanguage]['content'];
         }
 
-        $translated = $this->translationService->translate($content, $sourceLanguage, $currentLanguage);
+        $translated = $this->translationService->translate(
+            $content,
+            $sourceLanguage,
+            $currentLanguage,
+            self::HTML_TRANSLATION_ARGS
+        );
         if ($translated !== '') {
             return $translated;
         }
