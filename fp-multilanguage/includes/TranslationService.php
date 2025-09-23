@@ -44,7 +44,7 @@ class TranslationService
 
             $translated = $this->dispatch_translation($provider, $text, $source, $target, $args);
             if ($translated !== null && $translated !== '') {
-                $this->increment_quota($provider, mb_strlen($text));
+                $this->increment_quota($provider, $this->get_text_length($text));
                 $result = $translated;
                 $cacheable = true;
                 break;
@@ -297,6 +297,20 @@ class TranslationService
         }
 
         return false;
+    }
+
+    protected function get_text_length(string $text): int
+    {
+        if ($this->is_mb_string_available()) {
+            return mb_strlen($text);
+        }
+
+        return strlen($text);
+    }
+
+    protected function is_mb_string_available(): bool
+    {
+        return function_exists('mb_strlen');
     }
 
     private function increment_quota(string $provider, int $chars): void

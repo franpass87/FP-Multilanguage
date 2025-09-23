@@ -109,4 +109,26 @@ class TranslationServiceTest extends TestCase
         $this->assertSame('google:Temporary issue', $second, 'Il secondo tentativo deve raggiungere nuovamente il provider.');
         $this->assertSame(2, $wp_remote_post_calls['translation.googleapis.com'] ?? 0, 'Il provider deve essere chiamato due volte dopo un errore temporaneo.');
     }
+
+    public function test_uses_strlen_when_mb_string_extension_missing(): void
+    {
+        $service = new class () extends TranslationService {
+            protected function is_mb_string_available(): bool
+            {
+                return false;
+            }
+        };
+
+        $text = '😄';
+        $result = $service->translate($text, 'en', 'it');
+
+        $this->assertSame('google:' . $text, $result);
+
+        $quotaKey = 'fp_multilanguage_quota_google';
+        $quota = get_transient($quotaKey);
+
+        $this->assertIsArray($quota, 'La quota deve essere salvata come array.');
+        $this->assertSame(1, $quota['requests'] ?? 0, 'Il numero di richieste deve aumentare.');
+        $this->assertSame(strlen($text), $quota['characters'] ?? 0, 'La lunghezza deve usare strlen come fallback.');
+    }
 }
