@@ -10,12 +10,13 @@ class TranslationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
         $wp_remote_post_calls = [];
         $wp_test_filters = [];
+        $wp_remote_post_failures = [];
 
         update_option(Settings::OPTION_NAME, [
             'providers' => ['google', 'deepl'],
@@ -81,5 +82,31 @@ class TranslationServiceTest extends TestCase
         $result = $service->translate($text, 'en', 'it');
 
         $this->assertSame('Manuale personalizzato', $result);
+    }
+
+    public function test_retries_provider_after_transient_failure(): void
+    {
+        global $wp_remote_post_failures, $wp_remote_post_calls;
+
+        $wp_remote_post_failures['translation.googleapis.com'] = 1;
+
+        update_option(Settings::OPTION_NAME, [
+            'providers' => ['google'],
+            'google_api_key' => 'test-google-key',
+            'deepl_api_key' => '',
+            'target_languages' => ['it'],
+            'source_language' => 'en',
+            'fallback_language' => 'en',
+            'auto_translate' => true,
+        ]);
+
+        $service = new TranslationService();
+
+        $first = $service->translate('Temporary issue', 'en', 'it');
+        $second = $service->translate('Temporary issue', 'en', 'it');
+
+        $this->assertSame('Temporary issue', $first, 'La prima traduzione deve usare il fallback originale dopo un errore.');
+        $this->assertSame('google:Temporary issue', $second, 'Il secondo tentativo deve raggiungere nuovamente il provider.');
+        $this->assertSame(2, $wp_remote_post_calls['translation.googleapis.com'] ?? 0, 'Il provider deve essere chiamato due volte dopo un errore temporaneo.');
     }
 }
