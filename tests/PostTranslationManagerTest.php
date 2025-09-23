@@ -35,6 +35,33 @@ namespace FPMultilanguage\Content {
         }
     }
 
+    if (! function_exists(__NAMESPACE__ . '\\get_post')) {
+        function get_post($post = null)
+        {
+            global $fp_test_posts;
+
+            if ($post instanceof \WP_Post) {
+                return $post;
+            }
+
+            if ($post === null && isset($GLOBALS['post']) && $GLOBALS['post'] instanceof \WP_Post) {
+                return $GLOBALS['post'];
+            }
+
+            $postId = is_object($post) && isset($post->ID) ? $post->ID : $post;
+
+            if (is_numeric($postId)) {
+                $postId = (int) $postId;
+
+                if (isset($fp_test_posts[$postId])) {
+                    return $fp_test_posts[$postId];
+                }
+            }
+
+            return null;
+        }
+    }
+
     if (! function_exists(__NAMESPACE__ . '\\update_post_meta')) {
         function update_post_meta($postId, $key, $value)
         {
@@ -68,7 +95,7 @@ class PostTranslationManagerTest extends TestCase
     {
         parent::setUp();
 
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_test_actions, $wp_test_textdomains, $fp_test_post_meta;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_test_actions, $wp_test_textdomains, $fp_test_post_meta, $fp_test_posts;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
@@ -77,6 +104,7 @@ class PostTranslationManagerTest extends TestCase
         $wp_test_actions = [];
         $wp_test_textdomains = [];
         $fp_test_post_meta = [];
+        $fp_test_posts = [];
 
         Settings::bootstrap_defaults();
     }
@@ -187,6 +215,42 @@ class PostTranslationManagerTest extends TestCase
         $this->assertSame('Estratto tradotto', $storedTranslations['it']['excerpt']);
         $this->assertSame(['manual' => true], $storedTranslations['it']['flags']);
         $this->assertGreaterThan($existingTranslations['it']['updated_at'], $storedTranslations['it']['updated_at']);
+    }
+
+    public function test_filter_title_uses_stored_translation(): void
+    {
+        $postId = 123;
+        $storedTranslations = [
+            'it' => [
+                'title' => 'Titolo tradotto',
+                'content' => 'Contenuto tradotto',
+            ],
+        ];
+
+        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $storedTranslations);
+
+        $post = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Original title',
+        ]);
+
+        global $fp_test_posts;
+        $fp_test_posts[$postId] = $post;
+
+        $_GET['fp_lang'] = 'it';
+
+        $translationService = $this->createMock(TranslationService::class);
+        $translationService->expects($this->never())->method('translate');
+
+        $manager = new PostTranslationManager($translationService, new Settings());
+
+        try {
+            $translatedTitle = $manager->filter_title('Original title', $postId);
+        } finally {
+            unset($_GET['fp_lang']);
+        }
+
+        $this->assertSame('Titolo tradotto', $translatedTitle);
     }
 }
 }
