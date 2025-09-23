@@ -87,13 +87,21 @@ class PostTranslationManager
                     self::HTML_TRANSLATION_ARGS
                 ) : '';
 
-                if (! isset($existingTranslations[$language]) || $existingTranslations[$language]['content'] !== $translatedContent) {
-                    $existingTranslations[$language] = [
-                        'title' => $translatedTitle,
-                        'content' => $translatedContent,
-                        'excerpt' => $translatedExcerpt,
-                        'updated_at' => time(),
-                    ];
+                $existingTranslation = $existingTranslations[$language] ?? [];
+                $currentTranslation = [
+                    'title' => $translatedTitle,
+                    'content' => $translatedContent,
+                    'excerpt' => $translatedExcerpt,
+                ];
+
+                $previousTranslation = [
+                    'title' => $existingTranslation['title'] ?? '',
+                    'content' => $existingTranslation['content'] ?? '',
+                    'excerpt' => $existingTranslation['excerpt'] ?? '',
+                ];
+
+                if ($currentTranslation !== $previousTranslation) {
+                    $existingTranslations[$language] = $currentTranslation + ['updated_at' => time()];
                     $hasChanges = true;
                 }
             }
