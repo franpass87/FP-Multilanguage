@@ -88,21 +88,37 @@ class PostTranslationManager
                 ) : '';
 
                 $existingTranslation = $existingTranslations[$language] ?? [];
-                $currentTranslation = [
+                $hadExistingTranslation = \array_key_exists($language, $existingTranslations);
+                $updatedTranslation = $existingTranslation;
+                $languageHasChanges = false;
+
+                $fieldsToUpdate = [
                     'title' => $translatedTitle,
                     'content' => $translatedContent,
                     'excerpt' => $translatedExcerpt,
                 ];
 
-                $previousTranslation = [
-                    'title' => $existingTranslation['title'] ?? '',
-                    'content' => $existingTranslation['content'] ?? '',
-                    'excerpt' => $existingTranslation['excerpt'] ?? '',
-                ];
+                foreach ($fieldsToUpdate as $field => $value) {
+                    $hasPreviousValue = \array_key_exists($field, $existingTranslation);
+                    $previousValue = $hasPreviousValue ? $existingTranslation[$field] : '';
 
-                if ($currentTranslation !== $previousTranslation) {
-                    $existingTranslations[$language] = $currentTranslation + ['updated_at' => time()];
+                    if (! $hasPreviousValue || $previousValue !== $value) {
+                        $languageHasChanges = true;
+                    }
+
+                    $updatedTranslation[$field] = $value;
+                }
+
+                if ($languageHasChanges) {
+                    $updatedTranslation['updated_at'] = time();
                     $hasChanges = true;
+                } elseif (! isset($updatedTranslation['updated_at']) && $hadExistingTranslation) {
+                    $updatedTranslation['updated_at'] = time();
+                    $hasChanges = true;
+                }
+
+                if ($languageHasChanges || $hadExistingTranslation) {
+                    $existingTranslations[$language] = $updatedTranslation;
                 }
             }
         }
