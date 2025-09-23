@@ -133,5 +133,60 @@ class PostTranslationManagerTest extends TestCase
         $this->assertSame('Estratto aggiornato', $storedTranslations['it']['excerpt']);
         $this->assertGreaterThan($existingTranslations['it']['updated_at'], $storedTranslations['it']['updated_at']);
     }
+
+    public function test_updates_metadata_when_only_title_changes(): void
+    {
+        $postId = 99;
+
+        $existingTranslations = [
+            'it' => [
+                'title' => 'Titolo precedente',
+                'content' => 'Contenuto tradotto',
+                'excerpt' => 'Estratto tradotto',
+                'updated_at' => 1000,
+                'flags' => ['manual' => true],
+            ],
+        ];
+
+        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $existingTranslations);
+
+        $post = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Post title',
+            'post_content' => 'Post content',
+            'post_excerpt' => 'Post excerpt',
+            'post_type' => 'post',
+        ]);
+
+        $translationService = $this->createMock(TranslationService::class);
+        $translationService->method('translate')->willReturnCallback(
+            static function ($text, $source, $target, $args = []) {
+                unset($source, $target, $args);
+
+                switch ($text) {
+                    case 'Post content':
+                        return 'Contenuto tradotto';
+                    case 'Post title':
+                        return 'Titolo aggiornato';
+                    case 'Post excerpt':
+                        return 'Estratto tradotto';
+                    default:
+                        return '';
+                }
+            }
+        );
+
+        $manager = new PostTranslationManager($translationService, new Settings());
+        $manager->handle_post_save($postId, $post, true);
+
+        $storedTranslations = $manager->get_post_translations($postId);
+
+        $this->assertArrayHasKey('it', $storedTranslations);
+        $this->assertSame('Titolo aggiornato', $storedTranslations['it']['title']);
+        $this->assertSame('Contenuto tradotto', $storedTranslations['it']['content']);
+        $this->assertSame('Estratto tradotto', $storedTranslations['it']['excerpt']);
+        $this->assertSame(['manual' => true], $storedTranslations['it']['flags']);
+        $this->assertGreaterThan($existingTranslations['it']['updated_at'], $storedTranslations['it']['updated_at']);
+    }
 }
 }
