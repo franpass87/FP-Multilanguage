@@ -2,6 +2,7 @@
 namespace FPMultilanguage\Content;
 
 use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\TranslationService;
 use WP_Post;
 
@@ -213,26 +214,7 @@ class PostTranslationManager
 
     private function determine_language(): string
     {
-        $language = '';
-
-        if (function_exists('get_query_var')) {
-            $language = (string) get_query_var('fp_lang');
-        }
-
-        if ($language === '' && isset($_GET['fp_lang'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-            $language = (string) sanitize_text_field(wp_unslash($_GET['fp_lang'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        }
-
-        if ($language === '' && function_exists('determine_locale')) {
-            $language = substr(determine_locale(), 0, 2);
-        }
-
-        /**
-         * Allow plugins/themes to define the current language.
-         *
-         * @param string $language
-         */
-        return apply_filters('fp_multilanguage_current_language', strtolower($language));
+        return CurrentLanguage::resolve();
     }
 
     private function persist_translations(int $postId, array $translations, string $sourceLanguage): void

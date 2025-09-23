@@ -2,6 +2,7 @@
 namespace FPMultilanguage\Dynamic;
 
 use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\TranslationService;
 
 class DynamicStrings
@@ -207,10 +208,9 @@ class DynamicStrings
 
     private function get_current_language(): string
     {
-        /** @var string $language */
-        $language = apply_filters('fp_multilanguage_current_language', '');
+        $language = CurrentLanguage::resolve();
         if ($language !== '') {
-            return strtolower($language);
+            return $language;
         }
 
         return strtolower(Settings::get_source_language());
