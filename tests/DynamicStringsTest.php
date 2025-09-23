@@ -12,12 +12,14 @@ class DynamicStringsTest extends TestCase
     {
         parent::setUp();
 
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_test_actions, $wp_test_textdomains;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
         $wp_remote_post_calls = [];
         $wp_test_filters = [];
+        $wp_test_actions = [];
+        $wp_test_textdomains = [];
 
         Settings::bootstrap_defaults();
     }
