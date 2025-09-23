@@ -35,6 +35,7 @@ class TranslationService
 
         $providers = Settings::get_enabled_providers();
         $result = null;
+        $cacheable = false;
 
         foreach ($providers as $provider) {
             if ($this->is_quota_exceeded($provider)) {
@@ -45,15 +46,18 @@ class TranslationService
             if ($translated !== null && $translated !== '') {
                 $this->increment_quota($provider, mb_strlen($text));
                 $result = $translated;
+                $cacheable = true;
                 break;
             }
         }
 
         if ($result === null) {
-            $result = $this->manual_fallback($text, $target, $args);
+            [$result, $cacheable] = $this->manual_fallback($text, $target, $args);
         }
 
-        $this->set_cache($cacheKey, $result);
+        if ($cacheable) {
+            $this->set_cache($cacheKey, $result);
+        }
 
         return $result;
     }
@@ -177,18 +181,21 @@ class TranslationService
         return null;
     }
 
-    private function manual_fallback(string $text, string $target, array $args): string
+    /**
+     * @return array{translation:string, cacheable:bool}
+     */
+    private function manual_fallback(string $text, string $target, array $args): array
     {
         $fallbackLanguage = Settings::get_fallback_language();
 
         if ($target === $fallbackLanguage) {
-            return $text;
+            return [$text, false];
         }
 
         $manualStrings = Settings::get_manual_strings();
         $key = $this->get_manual_key($text);
         if (isset($manualStrings[$key][$fallbackLanguage])) {
-            return $manualStrings[$key][$fallbackLanguage];
+            return [$manualStrings[$key][$fallbackLanguage], true];
         }
 
         /**
@@ -198,7 +205,12 @@ class TranslationService
          * @param string $target
          * @param array  $args
          */
-        return apply_filters('fp_multilanguage_translation_fallback', $text, $target, $args);
+        $fallback = apply_filters('fp_multilanguage_translation_fallback', $text, $target, $args);
+        if (! is_string($fallback)) {
+            $fallback = (string) $fallback;
+        }
+
+        return [$fallback, $fallback !== $text];
     }
 
     private function get_cache_key(string $text, string $source, string $target, array $args): string
