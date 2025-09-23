@@ -95,9 +95,30 @@ class DynamicStrings
 
     public function translate_gettext($translation, $text, $domain)
     {
-        unset($text, $domain);
+        unset($domain);
 
-        return $this->translate_string($translation);
+        if (! is_string($text) || trim($text) === '') {
+            return $translation;
+        }
+
+        $language = $this->get_current_language();
+        $source = Settings::get_source_language();
+
+        if ($language === '' || $language === $source) {
+            return $translation;
+        }
+
+        $manualStrings = Settings::get_manual_strings();
+        $key = $this->get_manual_key($text);
+        if (isset($manualStrings[$key][$language])) {
+            return $manualStrings[$key][$language];
+        }
+
+        if (is_string($translation) && $translation !== '' && $translation !== $text) {
+            return $translation;
+        }
+
+        return $this->translate_string($text);
     }
 
     public function handle_ajax_save(): void

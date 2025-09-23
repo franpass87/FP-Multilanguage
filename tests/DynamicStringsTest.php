@@ -39,4 +39,61 @@ class DynamicStringsTest extends TestCase
 
         $this->assertSame('Titolo widget', $result);
     }
+
+    public function test_translate_gettext_preserves_existing_wordpress_translation(): void
+    {
+        $translationService = new class extends TranslationService {
+            public array $calls = [];
+
+            public function translate(string $text, string $source, string $target, array $args = []): string
+            {
+                $this->calls[] = [$text, $source, $target, $args];
+
+                return 'service:' . $text;
+            }
+        };
+
+        add_filter('fp_multilanguage_current_language', static function ($language) {
+            unset($language);
+
+            return 'it';
+        });
+
+        $dynamicStrings = new DynamicStrings($translationService, new Settings());
+
+        $result = $dynamicStrings->translate_gettext('Ciao', 'Hello', 'default');
+
+        $this->assertSame('Ciao', $result);
+        $this->assertSame([], $translationService->calls);
+    }
+
+    public function test_translate_gettext_allows_manual_override_on_translated_string(): void
+    {
+        $hash = hash('sha1', 'Hello');
+        Settings::update_manual_string($hash, 'it', 'Override manuale');
+
+        $translationService = new class extends TranslationService {
+            public array $calls = [];
+
+            public function translate(string $text, string $source, string $target, array $args = []): string
+            {
+                $this->calls[] = [$text, $source, $target, $args];
+
+                return 'service:' . $text;
+            }
+        };
+
+        add_filter('fp_multilanguage_current_language', static function ($language) {
+            unset($language);
+
+            return 'it';
+        });
+
+        $dynamicStrings = new DynamicStrings($translationService, new Settings());
+
+        $result = $dynamicStrings->translate_gettext('Traduzione WP', 'Hello', 'default');
+
+        $this->assertSame('Override manuale', $result);
+        $this->assertSame([], $translationService->calls);
+    }
 }
