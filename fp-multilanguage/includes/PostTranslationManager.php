@@ -33,6 +33,7 @@ class PostTranslationManager
 
         if (function_exists('add_filter')) {
             add_filter('the_content', [$this, 'filter_content']);
+            add_filter('the_title', [$this, 'filter_title'], 10, 2);
             add_filter('rest_prepare_post', [$this, 'expose_translations'], 10, 3);
         }
     }
@@ -142,34 +143,21 @@ class PostTranslationManager
             return $content;
         }
 
-        $currentLanguage = $this->determine_language();
-        $sourceLanguage = Settings::get_source_language();
+        return $this->get_translated_value($post, 'content', $content, self::HTML_TRANSLATION_ARGS);
+    }
 
-        if ($currentLanguage === '' || $currentLanguage === $sourceLanguage) {
-            return $content;
+    public function filter_title(string $title, $post = null): string
+    {
+        if (is_admin()) {
+            return $title;
         }
 
-        $translations = $this->get_post_translations($post->ID);
-        if (isset($translations[$currentLanguage]['content'])) {
-            return $translations[$currentLanguage]['content'];
+        $postObject = get_post($post);
+        if (! $postObject instanceof WP_Post) {
+            return $title;
         }
 
-        $translated = $this->translationService->translate(
-            $content,
-            $sourceLanguage,
-            $currentLanguage,
-            self::HTML_TRANSLATION_ARGS
-        );
-        if ($translated !== '') {
-            return $translated;
-        }
-
-        $fallbackLanguage = Settings::get_fallback_language();
-        if ($fallbackLanguage !== $currentLanguage && isset($translations[$fallbackLanguage]['content'])) {
-            return $translations[$fallbackLanguage]['content'];
-        }
-
-        return $content;
+        return $this->get_translated_value($postObject, 'title', $title);
     }
 
     public function expose_translations($response, $post, $request)
@@ -215,6 +203,38 @@ class PostTranslationManager
     private function determine_language(): string
     {
         return CurrentLanguage::resolve();
+    }
+
+    private function get_translated_value(WP_Post $post, string $field, string $value, array $translationArgs = []): string
+    {
+        $currentLanguage = $this->determine_language();
+        $sourceLanguage = Settings::get_source_language();
+
+        if ($currentLanguage === '' || $currentLanguage === $sourceLanguage) {
+            return $value;
+        }
+
+        $translations = $this->get_post_translations($post->ID);
+        if (isset($translations[$currentLanguage][$field])) {
+            return $translations[$currentLanguage][$field];
+        }
+
+        $translated = $this->translationService->translate(
+            $value,
+            $sourceLanguage,
+            $currentLanguage,
+            $translationArgs
+        );
+        if ($translated !== '') {
+            return $translated;
+        }
+
+        $fallbackLanguage = Settings::get_fallback_language();
+        if ($fallbackLanguage !== $currentLanguage && isset($translations[$fallbackLanguage][$field])) {
+            return $translations[$fallbackLanguage][$field];
+        }
+
+        return $value;
     }
 
     private function persist_translations(int $postId, array $translations, string $sourceLanguage): void
