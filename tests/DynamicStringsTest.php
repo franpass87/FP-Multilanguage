@@ -20,6 +20,7 @@ class DynamicStringsTest extends TestCase
         $wp_test_filters = [];
         $wp_test_actions = [];
         $wp_test_textdomains = [];
+        $_GET = [];
 
         Settings::bootstrap_defaults();
     }
@@ -135,8 +136,33 @@ class DynamicStringsTest extends TestCase
         $result = $dynamicStrings->translate_gettext('Traduzione WP', 'Hello', 'default');
 
         $this->assertSame('service:Hello', $result);
-        $this->assertSame([
+        $this->assertSame([ 
             ['Hello', 'en', 'it', ['origin' => 'filter']],
+        ], $translationService->calls);
+    }
+
+    public function test_translates_requested_language_from_query_var(): void
+    {
+        $_GET['fp_lang'] = 'it';
+
+        $translationService = new class extends TranslationService {
+            public array $calls = [];
+
+            public function translate(string $text, string $source, string $target, array $args = []): string
+            {
+                $this->calls[] = [$text, $source, $target, $args];
+
+                return 'service:' . $text;
+            }
+        };
+
+        $dynamicStrings = new DynamicStrings($translationService, new Settings());
+
+        $result = $dynamicStrings->translate_dynamic_string('Hello world');
+
+        $this->assertSame('service:Hello world', $result);
+        $this->assertSame([
+            ['Hello world', 'en', 'it', []],
         ], $translationService->calls);
     }
 }
