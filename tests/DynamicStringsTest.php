@@ -96,4 +96,45 @@ class DynamicStringsTest extends TestCase
         $this->assertSame('Override manuale', $result);
         $this->assertSame([], $translationService->calls);
     }
+
+    public function test_translate_gettext_can_be_forced_via_filter(): void
+    {
+        $translationService = new class extends TranslationService {
+            public array $calls = [];
+
+            public function translate(string $text, string $source, string $target, array $args = []): string
+            {
+                $this->calls[] = [$text, $source, $target, $args];
+
+                return 'service:' . $text;
+            }
+        };
+
+        add_filter('fp_multilanguage_current_language', static function ($language) {
+            unset($language);
+
+            return 'it';
+        });
+
+        add_filter(
+            'fp_multilanguage_force_gettext_translation',
+            static function ($payload) {
+                $payload['force'] = true;
+                $payload['service_args'] = ['origin' => 'filter'];
+
+                return $payload;
+            },
+            10,
+            1
+        );
+
+        $dynamicStrings = new DynamicStrings($translationService, new Settings());
+
+        $result = $dynamicStrings->translate_gettext('Traduzione WP', 'Hello', 'default');
+
+        $this->assertSame('service:Hello', $result);
+        $this->assertSame([
+            ['Hello', 'en', 'it', ['origin' => 'filter']],
+        ], $translationService->calls);
+    }
 }

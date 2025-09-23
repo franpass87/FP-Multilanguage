@@ -93,9 +93,11 @@ class DynamicStrings
         return $this->translate_string($title);
     }
 
-    public function translate_gettext($translation, $text, $domain)
+    public function translate_gettext($translation, $text, $domain, $args = [])
     {
-        unset($domain);
+        if (! is_array($args)) {
+            $args = [];
+        }
 
         if (! is_string($text) || trim($text) === '') {
             return $translation;
@@ -114,11 +116,43 @@ class DynamicStrings
             return $manualStrings[$key][$language];
         }
 
-        if (is_string($translation) && $translation !== '' && $translation !== $text) {
+        $forceTranslation = ! empty($args['force']) || ! empty($args['force_translation']);
+        $serviceArgs = isset($args['service_args']) && is_array($args['service_args'])
+            ? $args['service_args']
+            : [];
+
+        if (function_exists('apply_filters')) {
+            $filterResult = apply_filters(
+                'fp_multilanguage_force_gettext_translation',
+                [
+                    'force' => $forceTranslation,
+                    'service_args' => $serviceArgs,
+                ],
+                $translation,
+                $text,
+                $domain,
+                $language,
+                $source,
+                $args
+            );
+
+            if (is_array($filterResult)) {
+                if (array_key_exists('force', $filterResult)) {
+                    $forceTranslation = (bool) $filterResult['force'];
+                }
+                if (isset($filterResult['service_args']) && is_array($filterResult['service_args'])) {
+                    $serviceArgs = $filterResult['service_args'];
+                }
+            } else {
+                $forceTranslation = (bool) $filterResult;
+            }
+        }
+
+        if (! $forceTranslation && is_string($translation) && $translation !== '' && $translation !== $text) {
             return $translation;
         }
 
-        return $this->translate_string($text);
+        return $this->translate_string($text, $serviceArgs);
     }
 
     public function handle_ajax_save(): void
@@ -147,7 +181,7 @@ class DynamicStrings
         wp_send_json_success(['key' => $key, 'language' => $language, 'value' => $value]);
     }
 
-    private function translate_string($text)
+    private function translate_string($text, array $args = [])
     {
         if (! is_string($text) || trim($text) === '') {
             return $text;
@@ -166,7 +200,7 @@ class DynamicStrings
             return $manualStrings[$key][$language];
         }
 
-        $translated = $this->translationService->translate($text, $source, $language);
+        $translated = $this->translationService->translate($text, $source, $language, $args);
 
         return $translated !== '' ? $translated : $text;
     }
