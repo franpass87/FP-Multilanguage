@@ -35,6 +35,7 @@ class PostTranslationManager
             add_filter('the_content', [$this, 'filter_content']);
             add_filter('the_title', [$this, 'filter_title'], 10, 2);
             add_filter('rest_prepare_post', [$this, 'expose_translations'], 10, 3);
+            add_filter('rest_prepare_page', [$this, 'expose_translations'], 10, 3);
         }
     }
 
@@ -162,6 +163,10 @@ class PostTranslationManager
 
     public function expose_translations($response, $post, $request)
     {
+        if (! $post instanceof WP_Post) {
+            return $response;
+        }
+
         if (isset($response->data) && is_array($response->data)) {
             $response->data['fp_multilanguage'] = [
                 'language' => $this->determine_language() ?: Settings::get_source_language(),
