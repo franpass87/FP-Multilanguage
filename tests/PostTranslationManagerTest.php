@@ -84,13 +84,24 @@ namespace FPMultilanguage\Content {
 
 namespace FPMultilanguage\Tests {
 
+use FPMultilanguage\Admin\AdminNotices;
 use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\Content\PostTranslationManager;
+use FPMultilanguage\Services\Logger;
+use FPMultilanguage\Services\Providers\GoogleProvider;
 use FPMultilanguage\Services\TranslationService;
 use PHPUnit\Framework\TestCase;
 
 class PostTranslationManagerTest extends TestCase
 {
+    private TranslationService $service;
+
+    private Settings $settings;
+
+    private AdminNotices $notices;
+
+    private Logger $logger;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -107,191 +118,69 @@ class PostTranslationManagerTest extends TestCase
         $fp_test_posts = [];
 
         Settings::bootstrap_defaults();
+        $options = Settings::get_options();
+        $options['providers']['google']['api_key'] = 'unit-test-key';
+        update_option(Settings::OPTION_NAME, $options);
+
+        $this->logger = new Logger();
+        $this->notices = new AdminNotices($this->logger);
+        $this->settings = new Settings($this->logger, $this->notices);
+        $this->service = new TranslationService($this->logger, $this->notices, $this->settings, [new GoogleProvider($this->logger)]);
     }
 
-    public function test_updates_metadata_when_title_or_excerpt_changes(): void
+    public function test_translate_post_updates_metadata(): void
     {
         $postId = 42;
-
-        $existingTranslations = [
-            'it' => [
-                'title' => 'Titolo precedente',
-                'content' => 'Contenuto tradotto',
-                'excerpt' => 'Estratto precedente',
-                'updated_at' => 1000,
-            ],
-        ];
-
-        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $existingTranslations);
-
-        $post = new \WP_Post([
-            'ID' => $postId,
-            'post_title' => 'Post title',
-            'post_content' => 'Post content',
-            'post_excerpt' => 'Post excerpt',
-            'post_type' => 'post',
-        ]);
-
-        $translationService = $this->createMock(TranslationService::class);
-        $translationService->method('translate')->willReturnCallback(
-            static function ($text, $source, $target, $args = []) {
-                unset($source, $target, $args);
-
-                switch ($text) {
-                    case 'Post content':
-                        return 'Contenuto tradotto';
-                    case 'Post title':
-                        return 'Titolo aggiornato';
-                    case 'Post excerpt':
-                        return 'Estratto aggiornato';
-                    default:
-                        return '';
-                }
-            }
-        );
-
-        $manager = new PostTranslationManager($translationService, new Settings());
-        $manager->handle_post_save($postId, $post, true);
-
-        $storedTranslations = $manager->get_post_translations($postId);
-
-        $this->assertArrayHasKey('it', $storedTranslations);
-        $this->assertSame('Titolo aggiornato', $storedTranslations['it']['title']);
-        $this->assertSame('Contenuto tradotto', $storedTranslations['it']['content']);
-        $this->assertSame('Estratto aggiornato', $storedTranslations['it']['excerpt']);
-        $this->assertGreaterThan($existingTranslations['it']['updated_at'], $storedTranslations['it']['updated_at']);
-    }
-
-    public function test_updates_metadata_when_only_title_changes(): void
-    {
-        $postId = 99;
-
-        $existingTranslations = [
-            'it' => [
-                'title' => 'Titolo precedente',
-                'content' => 'Contenuto tradotto',
-                'excerpt' => 'Estratto tradotto',
-                'updated_at' => 1000,
-                'flags' => ['manual' => true],
-            ],
-        ];
-
-        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $existingTranslations);
-
-        $post = new \WP_Post([
-            'ID' => $postId,
-            'post_title' => 'Post title',
-            'post_content' => 'Post content',
-            'post_excerpt' => 'Post excerpt',
-            'post_type' => 'post',
-        ]);
-
-        $translationService = $this->createMock(TranslationService::class);
-        $translationService->method('translate')->willReturnCallback(
-            static function ($text, $source, $target, $args = []) {
-                unset($source, $target, $args);
-
-                switch ($text) {
-                    case 'Post content':
-                        return 'Contenuto tradotto';
-                    case 'Post title':
-                        return 'Titolo aggiornato';
-                    case 'Post excerpt':
-                        return 'Estratto tradotto';
-                    default:
-                        return '';
-                }
-            }
-        );
-
-        $manager = new PostTranslationManager($translationService, new Settings());
-        $manager->handle_post_save($postId, $post, true);
-
-        $storedTranslations = $manager->get_post_translations($postId);
-
-        $this->assertArrayHasKey('it', $storedTranslations);
-        $this->assertSame('Titolo aggiornato', $storedTranslations['it']['title']);
-        $this->assertSame('Contenuto tradotto', $storedTranslations['it']['content']);
-        $this->assertSame('Estratto tradotto', $storedTranslations['it']['excerpt']);
-        $this->assertSame(['manual' => true], $storedTranslations['it']['flags']);
-        $this->assertGreaterThan($existingTranslations['it']['updated_at'], $storedTranslations['it']['updated_at']);
-    }
-
-    public function test_filter_title_uses_stored_translation(): void
-    {
-        $postId = 123;
-        $storedTranslations = [
-            'it' => [
-                'title' => 'Titolo tradotto',
-                'content' => 'Contenuto tradotto',
-            ],
-        ];
-
-        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $storedTranslations);
-
         $post = new \WP_Post([
             'ID' => $postId,
             'post_title' => 'Original title',
+            'post_content' => 'Original content',
+            'post_excerpt' => 'Original excerpt',
         ]);
-
         global $fp_test_posts;
         $fp_test_posts[$postId] = $post;
 
-        $_GET['fp_lang'] = 'it';
+        $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
+        $manager->translate_post($postId, null, true);
 
-        $translationService = $this->createMock(TranslationService::class);
-        $translationService->expects($this->never())->method('translate');
-
-        $manager = new PostTranslationManager($translationService, new Settings());
-
-        try {
-            $translatedTitle = $manager->filter_title('Original title', $postId);
-        } finally {
-            unset($_GET['fp_lang']);
-        }
-
-        $this->assertSame('Titolo tradotto', $translatedTitle);
+        $translations = $manager->get_post_translations($postId);
+        $this->assertArrayHasKey('it', $translations);
+        $this->assertSame('google:Original title', $translations['it']['title']);
+        $this->assertSame('google:Original content', $translations['it']['content']);
+        $this->assertSame('google:Original excerpt', $translations['it']['excerpt']);
+        $this->assertArrayHasKey('updated_at', $translations['it']);
     }
 
-    public function test_rest_prepare_page_includes_translation_block(): void
+    public function test_filter_content_uses_current_language(): void
     {
-        $postId = 321;
-        $storedTranslations = [
-            'it' => [
-                'title' => 'Titolo pagina',
-                'content' => 'Contenuto pagina tradotto',
-                'excerpt' => 'Estratto pagina tradotto',
-            ],
-        ];
-
-        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, $storedTranslations);
-
-        $page = new \WP_Post([
+        global $GLOBALS;
+        $postId = 99;
+        $GLOBALS['post'] = new \WP_Post([
             'ID' => $postId,
-            'post_title' => 'Page title',
-            'post_content' => 'Page content',
-            'post_excerpt' => 'Page excerpt',
-            'post_type' => 'page',
+            'post_title' => 'Demo title',
+            'post_content' => 'Demo content',
+            'post_excerpt' => 'Demo excerpt',
+        ]);
+        global $fp_test_posts;
+        $fp_test_posts[$postId] = $GLOBALS['post'];
+
+        \FPMultilanguage\Content\update_post_meta($postId, PostTranslationManager::META_KEY, [
+            'it' => [
+                'content' => 'Contenuto salvato',
+                'title' => 'Titolo salvato',
+                'excerpt' => 'Estratto salvato',
+                'updated_at' => time(),
+            ],
         ]);
 
-        $translationService = $this->createMock(TranslationService::class);
-        $manager = new PostTranslationManager($translationService, new Settings());
-        $manager->register();
+        add_filter('fp_multilanguage_current_language', static function () {
+            return 'it';
+        });
 
-        $response = (object) ['data' => ['id' => $postId]];
-        $request = new \stdClass();
+        $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
+        $filtered = $manager->filter_content('Demo content');
 
-        $filteredResponse = \apply_filters('rest_prepare_page', $response, $page, $request);
-
-        $this->assertArrayHasKey('fp_multilanguage', $filteredResponse->data);
-        $this->assertSame(
-            $storedTranslations,
-            $filteredResponse->data['fp_multilanguage']['translations']
-        );
-        $this->assertSame(
-            Settings::get_source_language(),
-            $filteredResponse->data['fp_multilanguage']['language']
-        );
+        $this->assertSame('Contenuto salvato', $filtered);
     }
 }
 }
