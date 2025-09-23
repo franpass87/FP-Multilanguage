@@ -79,11 +79,11 @@ class DynamicStrings
         );
     }
 
-    public function translate_dynamic_string($text, $instance = null, $id = '')
+    public function translate_dynamic_string($title, $instance = null, $id_base = '')
     {
-        unset($instance, $id);
+        unset($instance, $id_base);
 
-        return $this->translate_string($text);
+        return $this->translate_string($title);
     }
 
     public function translate_menu_item($title, $item, $args, $depth)
