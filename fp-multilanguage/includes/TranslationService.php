@@ -102,11 +102,12 @@ class TranslationService
         }
 
         $url = add_query_arg(['key' => $apiKey], 'https://translation.googleapis.com/language/translate/v2');
+        $format = strtolower((string) ($args['format'] ?? 'text'));
         $body = [
             'q' => $text,
             'source' => $source,
             'target' => $target,
-            'format' => $args['format'] ?? 'text',
+            'format' => $format === 'html' ? 'html' : 'text',
         ];
 
         $response = wp_remote_post($url, [
@@ -147,6 +148,29 @@ class TranslationService
             'source_lang' => strtoupper($source),
             'target_lang' => strtoupper($target),
         ];
+
+        $format = strtolower((string) ($args['format'] ?? 'text'));
+        if ($format === 'html') {
+            $body['tag_handling'] = 'html';
+
+            $deeplArgs = [];
+            if (isset($args['deepl']) && is_array($args['deepl'])) {
+                $deeplArgs = $args['deepl'];
+            }
+
+            $htmlOptions = ['ignore_tags', 'non_splitting_tags', 'split_sentences', 'outline_detection', 'preserve_formatting'];
+            foreach ($htmlOptions as $option) {
+                if (isset($args[$option]) && is_scalar($args[$option])) {
+                    $body[$option] = $args[$option];
+
+                    continue;
+                }
+
+                if (isset($deeplArgs[$option]) && is_scalar($deeplArgs[$option])) {
+                    $body[$option] = $deeplArgs[$option];
+                }
+            }
+        }
 
         $response = wp_remote_post($endpoint, [
             'timeout' => 20,
