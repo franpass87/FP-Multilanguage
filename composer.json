@@ -1,0 +1,27 @@
+{
+    "name": "fp/multilanguage",
+    "description": "Plugin WordPress per la gestione multilingua avanzata.",
+    "type": "wordpress-plugin",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "FPMultilanguage\\": "fp-multilanguage/includes/",
+            "FPMultilanguage\\Admin\\": "fp-multilanguage/includes/",
+            "FPMultilanguage\\Content\\": "fp-multilanguage/includes/",
+            "FPMultilanguage\\Dynamic\\": "fp-multilanguage/includes/",
+            "FPMultilanguage\\SEO\\": "fp-multilanguage/includes/",
+            "FPMultilanguage\\Services\\": "fp-multilanguage/includes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "FPMultilanguage\\Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
