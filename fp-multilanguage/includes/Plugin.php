@@ -58,8 +58,10 @@ class Plugin
     private function register_hooks(): void
     {
         if (function_exists('add_action')) {
+            add_action('init', [$this, 'load_textdomain']);
             add_action('plugins_loaded', [$this, 'bootstrap']);
         } else {
+            $this->load_textdomain();
             $this->bootstrap();
         }
     }
@@ -70,5 +72,28 @@ class Plugin
         $this->postTranslationManager->register();
         $this->dynamicStrings->register();
         $this->seo->register();
+    }
+
+    public function load_textdomain(): void
+    {
+        if (! function_exists('load_plugin_textdomain')) {
+            return;
+        }
+
+        $pluginPath = defined('FP_MULTILANGUAGE_PATH')
+            ? FP_MULTILANGUAGE_PATH
+            : dirname(__DIR__) . '/';
+
+        $pluginFile = $pluginPath . 'fp-multilanguage.php';
+
+        $relativePath = function_exists('plugin_basename')
+            ? dirname(plugin_basename($pluginFile))
+            : basename(rtrim($pluginPath, '/'));
+
+        if ($relativePath === '' || $relativePath === '.') {
+            $relativePath = basename(rtrim($pluginPath, '/'));
+        }
+
+        load_plugin_textdomain('fp-multilanguage', false, $relativePath . '/languages');
     }
 }

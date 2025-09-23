@@ -10,13 +10,15 @@ class TranslationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures, $wp_test_actions, $wp_test_textdomains;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
         $wp_remote_post_calls = [];
         $wp_test_filters = [];
         $wp_remote_post_failures = [];
+        $wp_test_actions = [];
+        $wp_test_textdomains = [];
 
         update_option(Settings::OPTION_NAME, [
             'providers' => ['google', 'deepl'],

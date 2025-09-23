@@ -34,6 +34,10 @@ Dopo l'attivazione, aprire **Impostazioni → FP Multilanguage** per configurare
 
 Le impostazioni sono salvate tramite `register_setting` e vengono sanificate automaticamente. L'aggiornamento delle opzioni invalida la cache delle traduzioni per garantire che le modifiche abbiano effetto immediato.
 
+## Localizzazione
+
+I file di traduzione (`.po`/`.mo`) del plugin devono essere posizionati nella cartella `fp-multilanguage/languages/`. Durante l'hook `init` di WordPress il plugin carica automaticamente il dominio `fp-multilanguage`, rendendo disponibili le stringhe localizzate per il backend e il frontend.
+
 ## Uso
 
 ### Post e pagine
@@ -89,6 +93,7 @@ fp-multilanguage/
 │   ├── PostTranslationManager.php# gestione traduzione post/pagine
 │   ├── DynamicStrings.php        # traduzione stringhe dinamiche + fallback JS
 │   └── SEO.php                   # integrazione SEO multilingua
+├── languages/                    # file di localizzazione del plugin (mo/po)
 ├── assets/
 │   └── js/dynamic-translations.js
 └── tests/

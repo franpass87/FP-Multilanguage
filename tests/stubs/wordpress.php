@@ -31,6 +31,63 @@ if (! isset($wp_test_filters)) {
     $wp_test_filters = [];
 }
 
+global $wp_test_actions;
+if (! isset($wp_test_actions)) {
+    $wp_test_actions = [];
+}
+
+global $wp_test_textdomains;
+if (! isset($wp_test_textdomains)) {
+    $wp_test_textdomains = [];
+}
+
+if (! function_exists('add_action')) {
+    function add_action($tag, $callback, $priority = 10, $accepted_args = 1)
+    {
+        global $wp_test_actions;
+
+        if (! isset($wp_test_actions[$tag])) {
+            $wp_test_actions[$tag] = [];
+        }
+
+        if (! isset($wp_test_actions[$tag][$priority])) {
+            $wp_test_actions[$tag][$priority] = [];
+        }
+
+        $wp_test_actions[$tag][$priority][] = [
+            'callback' => $callback,
+            'accepted_args' => (int) $accepted_args,
+        ];
+
+        return true;
+    }
+}
+
+if (! function_exists('do_action')) {
+    function do_action($tag, ...$args)
+    {
+        global $wp_test_actions;
+
+        if (! isset($wp_test_actions[$tag])) {
+            return;
+        }
+
+        ksort($wp_test_actions[$tag]);
+
+        foreach ($wp_test_actions[$tag] as $callbacks) {
+            foreach ($callbacks as $callback) {
+                $acceptedArgs = $callback['accepted_args'] > 0
+                    ? $callback['accepted_args']
+                    : 0;
+                $callbackArgs = $acceptedArgs === 0
+                    ? []
+                    : array_slice($args, 0, $acceptedArgs);
+                call_user_func_array($callback['callback'], $callbackArgs);
+            }
+        }
+    }
+}
+
 if (! function_exists('get_option')) {
     function get_option($name, $default = false)
     {
@@ -278,6 +335,22 @@ if (! function_exists('add_filter')) {
         $wp_test_filters[$tag][$priority][] = [
             'callback' => $callback,
             'accepted_args' => (int) $accepted_args,
+        ];
+
+        return true;
+    }
+}
+
+if (! function_exists('load_plugin_textdomain')) {
+    function load_plugin_textdomain($domain, $deprecated = false, $plugin_rel_path = false, $locale = null)
+    {
+        global $wp_test_textdomains;
+
+        $wp_test_textdomains[] = [
+            'domain' => $domain,
+            'deprecated' => $deprecated,
+            'plugin_rel_path' => $plugin_rel_path,
+            'locale' => $locale,
         ];
 
         return true;
