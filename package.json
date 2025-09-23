@@ -1,0 +1,15 @@
+{
+  "name": "fp-multilanguage",
+  "version": "1.0.0",
+  "description": "Asset pipeline per FP Multilanguage",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "make-pot": "wp i18n make-pot ./fp-multilanguage ./languages/fp-multilanguage.pot --slug=fp-multilanguage"
+  },
+  "devDependencies": {
+    "sass": "^1.80.0",
+    "vite": "^5.4.0"
+  }
+}

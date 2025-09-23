@@ -1,13 +1,21 @@
 <?php
 namespace FPMultilanguage\Tests;
 
+use FPMultilanguage\Admin\AdminNotices;
 use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\Dynamic\DynamicStrings;
+use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
 use PHPUnit\Framework\TestCase;
 
 class DynamicStringsTest extends TestCase
 {
+    private Logger $logger;
+
+    private AdminNotices $notices;
+
+    private Settings $settings;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -23,20 +31,27 @@ class DynamicStringsTest extends TestCase
         $_GET = [];
 
         Settings::bootstrap_defaults();
+        $this->logger = new Logger();
+        $this->notices = new AdminNotices($this->logger);
+        $this->settings = new Settings($this->logger, $this->notices);
+    }
+
+    private function createDynamicStrings(TranslationService $service): DynamicStrings
+    {
+        return new DynamicStrings($service, $this->settings, $this->notices, $this->logger);
     }
 
     public function test_translate_dynamic_string_accepts_three_arguments(): void
     {
-        $hash = hash('sha1', 'Widget title');
+        $hash = hash('sha1', 'generic|Widget title');
         Settings::update_manual_string($hash, 'it', 'Titolo widget');
 
-        add_filter('fp_multilanguage_current_language', static function ($language) {
-            unset($language);
-
+        add_filter('fp_multilanguage_current_language', static function () {
             return 'it';
         });
 
-        $dynamicStrings = new DynamicStrings(new TranslationService(), new Settings());
+        $service = $this->createMock(TranslationService::class);
+        $dynamicStrings = $this->createDynamicStrings($service);
 
         $result = $dynamicStrings->translate_dynamic_string('Widget title', ['instance'], 'widget-id');
 
@@ -45,77 +60,47 @@ class DynamicStringsTest extends TestCase
 
     public function test_translate_gettext_preserves_existing_wordpress_translation(): void
     {
-        $translationService = new class extends TranslationService {
-            public array $calls = [];
+        $service = $this->createMock(TranslationService::class);
+        $service->expects($this->never())->method('translate_text');
+        $dynamicStrings = $this->createDynamicStrings($service);
 
-            public function translate(string $text, string $source, string $target, array $args = []): string
-            {
-                $this->calls[] = [$text, $source, $target, $args];
-
-                return 'service:' . $text;
-            }
-        };
-
-        add_filter('fp_multilanguage_current_language', static function ($language) {
-            unset($language);
-
+        add_filter('fp_multilanguage_current_language', static function () {
             return 'it';
         });
 
-        $dynamicStrings = new DynamicStrings($translationService, new Settings());
-
-        $result = $dynamicStrings->translate_gettext('Ciao', 'Hello', 'default');
+        $result = $dynamicStrings->filter_gettext('Ciao', 'Hello', 'default');
 
         $this->assertSame('Ciao', $result);
-        $this->assertSame([], $translationService->calls);
     }
 
     public function test_translate_gettext_allows_manual_override_on_translated_string(): void
     {
-        $hash = hash('sha1', 'Hello');
+        $hash = hash('sha1', 'default|Hello');
         Settings::update_manual_string($hash, 'it', 'Override manuale');
 
-        $translationService = new class extends TranslationService {
-            public array $calls = [];
+        $service = $this->createMock(TranslationService::class);
+        $service->expects($this->never())->method('translate_text');
+        $dynamicStrings = $this->createDynamicStrings($service);
 
-            public function translate(string $text, string $source, string $target, array $args = []): string
-            {
-                $this->calls[] = [$text, $source, $target, $args];
-
-                return 'service:' . $text;
-            }
-        };
-
-        add_filter('fp_multilanguage_current_language', static function ($language) {
-            unset($language);
-
+        add_filter('fp_multilanguage_current_language', static function () {
             return 'it';
         });
 
-        $dynamicStrings = new DynamicStrings($translationService, new Settings());
-
-        $result = $dynamicStrings->translate_gettext('Traduzione WP', 'Hello', 'default');
+        $result = $dynamicStrings->filter_gettext('Traduzione WP', 'Hello', 'default');
 
         $this->assertSame('Override manuale', $result);
-        $this->assertSame([], $translationService->calls);
     }
 
     public function test_translate_gettext_can_be_forced_via_filter(): void
     {
-        $translationService = new class extends TranslationService {
-            public array $calls = [];
+        $service = $this->getMockBuilder(TranslationService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['translate_text'])
+            ->getMock();
 
-            public function translate(string $text, string $source, string $target, array $args = []): string
-            {
-                $this->calls[] = [$text, $source, $target, $args];
+        $service->expects($this->once())->method('translate_text')->with('Hello', 'en', 'it', ['origin' => 'filter'])->willReturn('service:Hello');
 
-                return 'service:' . $text;
-            }
-        };
-
-        add_filter('fp_multilanguage_current_language', static function ($language) {
-            unset($language);
-
+        add_filter('fp_multilanguage_current_language', static function () {
             return 'it';
         });
 
@@ -131,38 +116,26 @@ class DynamicStringsTest extends TestCase
             1
         );
 
-        $dynamicStrings = new DynamicStrings($translationService, new Settings());
-
-        $result = $dynamicStrings->translate_gettext('Traduzione WP', 'Hello', 'default');
+        $dynamicStrings = $this->createDynamicStrings($service);
+        $result = $dynamicStrings->filter_gettext('Traduzione WP', 'Hello', 'default');
 
         $this->assertSame('service:Hello', $result);
-        $this->assertSame([ 
-            ['Hello', 'en', 'it', ['origin' => 'filter']],
-        ], $translationService->calls);
     }
 
     public function test_translates_requested_language_from_query_var(): void
     {
         $_GET['fp_lang'] = 'it';
 
-        $translationService = new class extends TranslationService {
-            public array $calls = [];
+        $service = $this->getMockBuilder(TranslationService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['translate_text'])
+            ->getMock();
 
-            public function translate(string $text, string $source, string $target, array $args = []): string
-            {
-                $this->calls[] = [$text, $source, $target, $args];
+        $service->expects($this->once())->method('translate_text')->with('Hello world', 'en', 'it', [])->willReturn('service:Hello world');
 
-                return 'service:' . $text;
-            }
-        };
-
-        $dynamicStrings = new DynamicStrings($translationService, new Settings());
-
+        $dynamicStrings = $this->createDynamicStrings($service);
         $result = $dynamicStrings->translate_dynamic_string('Hello world');
 
         $this->assertSame('service:Hello world', $result);
-        $this->assertSame([
-            ['Hello world', 'en', 'it', []],
-        ], $translationService->calls);
     }
 }

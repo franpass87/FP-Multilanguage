@@ -1,0 +1,1301 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Call to function is_array\\(\\) with array will always evaluate to true\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Admin\\\\Settings\\:\\:rest_get_settings\\(\\) has parameter \\$request with generic class WP_REST_Request but does not specify its types\\: T$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Admin\\\\Settings\\:\\:rest_update_settings\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Admin\\\\Settings\\:\\:rest_update_settings\\(\\) has parameter \\$request with generic class WP_REST_Request but does not specify its types\\: T$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Admin\\\\Settings\\:\\:sanitize\\(\\) has parameter \\$input with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Parameter \\#3 \\$previous of class WP_Error constructor expects Throwable\\|null, array\\<string, int\\> given\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Admin/Settings.php
+
+		-
+			message: "#^Call to static method error\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/CLI/Commands.php
+
+		-
+			message: "#^Call to static method success\\(\\) on an unknown class WP_CLI\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/CLI/Commands.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\CLI\\\\Commands\\:\\:\\$service is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/CLI/Commands.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:expose_translations\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:expose_translations\\(\\) has parameter \\$post with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:expose_translations\\(\\) has parameter \\$request with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:expose_translations\\(\\) has parameter \\$response with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:filter_attachment_attributes\\(\\) has parameter \\$attachment with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:filter_excerpt\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:filter_excerpt\\(\\) has parameter \\$excerpt with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:filter_excerpt\\(\\) has parameter \\$post with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:filter_title\\(\\) has parameter \\$post with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:rest_translate_post\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:rest_translate_post\\(\\) has parameter \\$request with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:\\$logger is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:\\$notices is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Content\\\\PostTranslationManager\\:\\:\\$settings is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Content/PostTranslationManager.php
+
+		-
+			message: "#^Call to an undefined method hasProperty\\(prefix\\)\\:\\:replace\\(\\)\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Callback expects 1 parameter, \\$accepted_args is set to 4\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Callback expects 4 parameters, \\$accepted_args is set to 5\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:filter_generic_string\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:filter_generic_string\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:rest_update_strings\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:rest_update_strings\\(\\) has parameter \\$request with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:translate_dynamic_string\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:translate_dynamic_string\\(\\) has parameter \\$id with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:translate_dynamic_string\\(\\) has parameter \\$instance with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:translate_dynamic_string\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Parameter \\#3 \\$previous of class WP_Error constructor expects Throwable\\|null, array\\<string, int\\> given\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:\\$logger is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:\\$notices is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:\\$settings is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
+
+		-
+			message: "#^Path in require_once\\(\\) \"\\./wp\\-admin/includes/upgrade\\.php\" is not a file or it does not exist\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Install/Migrator.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Install\\\\Migrator\\:\\:\\$logger is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Install/Migrator.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\SEO\\\\SEO\\:\\:\\$logger is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/SEO/SEO.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\SEO\\\\SEO\\:\\:\\$settings is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/SEO/SEO.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Services\\\\Logger\\:\\:\\$woocommerceLogger has unknown class WC_Logger as its type\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Services/Logger.php
+
+		-
+			message: "#^Offset 'characters' on array\\{requests\\: int, characters\\: int, updated_at\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Services/TranslationService.php
+
+		-
+			message: "#^Offset 'requests' on array\\{requests\\: int, characters\\: int, updated_at\\: int\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Services/TranslationService.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Services\\\\TranslationService\\:\\:\\$settings is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Services/TranslationService.php
+
+		-
+			message: "#^Method FPMultilanguage\\\\Support\\\\Container\\:\\:set\\(\\) has parameter \\$concrete with no type specified\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Support/Container.php
+
+		-
+			message: "#^Template type T of method FPMultilanguage\\\\Support\\\\Container\\:\\:get\\(\\) is not referenced in a parameter\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Support/Container.php
+
+		-
+			message: "#^Class FPMultilanguage\\\\Widgets\\\\LanguageSwitcher extends generic class WP_Widget but does not specify its types\\: T$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Function fp_multilanguage not found\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Offset 'after_title' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Offset 'after_widget' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Offset 'before_title' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Offset 'before_widget' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Property FPMultilanguage\\\\Widgets\\\\LanguageSwitcher\\:\\:\\$settings is never read, only written\\.$#"
+			count: 1
+			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post\\(\\) has parameter \\$post with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post_meta\\(\\) has parameter \\$postId with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\get_post_meta\\(\\) has parameter \\$single with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\update_post_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\update_post_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\update_post_meta\\(\\) has parameter \\$postId with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function FPMultilanguage\\\\Content\\\\update_post_meta\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Property WP_Post\\:\\:\\$ID has no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Property WP_Post\\:\\:\\$post_content has no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Property WP_Post\\:\\:\\$post_excerpt has no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Property WP_Post\\:\\:\\$post_title has no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Property WP_Post\\:\\:\\$post_type has no type specified\\.$#"
+			count: 1
+			path: tests/PostTranslationManagerTest.php
+
+		-
+			message: "#^Function __\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function __\\(\\) has parameter \\$domain with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function __\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_action\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_action\\(\\) has parameter \\$accepted_args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_action\\(\\) has parameter \\$callback with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_action\\(\\) has parameter \\$priority with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_action\\(\\) has parameter \\$tag with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_filter\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_filter\\(\\) has parameter \\$accepted_args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_filter\\(\\) has parameter \\$callback with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_filter\\(\\) has parameter \\$priority with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_filter\\(\\) has parameter \\$tag with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_query_arg\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_query_arg\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_shortcode\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_shortcode\\(\\) has parameter \\$callback with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function add_shortcode\\(\\) has parameter \\$tag with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function admin_url\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function admin_url\\(\\) has parameter \\$path with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function apply_filters\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function apply_filters\\(\\) has parameter \\$tag with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function apply_filters\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function check_ajax_referer\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function check_ajax_referer\\(\\) has parameter \\$action with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function check_ajax_referer\\(\\) has parameter \\$die with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function check_ajax_referer\\(\\) has parameter \\$query_arg with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function checked\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function checked\\(\\) has parameter \\$checked with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function checked\\(\\) has parameter \\$current with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_time\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_time\\(\\) has parameter \\$gmt with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_time\\(\\) has parameter \\$type with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_user_can\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_user_can\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function current_user_can\\(\\) has parameter \\$capability with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function determine_locale\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function do_action\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function do_action\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function do_action\\(\\) has parameter \\$tag with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_attr\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_attr\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html__\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html__\\(\\) has parameter \\$domain with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html__\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html_e\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html_e\\(\\) has parameter \\$domain with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_html_e\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_textarea\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function esc_textarea\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_option\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_option\\(\\) has parameter \\$default with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_option\\(\\) has parameter \\$name with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_permalink\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_permalink\\(\\) has parameter \\$post with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_post_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_post_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_post_meta\\(\\) has parameter \\$post_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_post_meta\\(\\) has parameter \\$single with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_queried_object\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_query_var\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_query_var\\(\\) has parameter \\$default with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_query_var\\(\\) has parameter \\$var with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_transient\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_transient\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_user_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_user_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_user_meta\\(\\) has parameter \\$single with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function get_user_meta\\(\\) has parameter \\$user_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function home_url\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function home_url\\(\\) has parameter \\$path with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function is_admin\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function is_singular\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function is_ssl\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function is_wp_error\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function is_wp_error\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function load_plugin_textdomain\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function load_plugin_textdomain\\(\\) has parameter \\$deprecated with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function load_plugin_textdomain\\(\\) has parameter \\$domain with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function load_plugin_textdomain\\(\\) has parameter \\$locale with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function load_plugin_textdomain\\(\\) has parameter \\$plugin_rel_path with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function plugin_basename\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function plugin_basename\\(\\) has parameter \\$file with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_rest_route\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_rest_route\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_rest_route\\(\\) has parameter \\$namespace with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_rest_route\\(\\) has parameter \\$override with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_rest_route\\(\\) has parameter \\$route with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_widget\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function register_widget\\(\\) has parameter \\$widget with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function rest_ensure_response\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function rest_ensure_response\\(\\) has parameter \\$response with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function rest_url\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function rest_url\\(\\) has parameter \\$path with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_html_class\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_html_class\\(\\) has parameter \\$class with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_key\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_key\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_text_field\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_text_field\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_textarea_field\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function sanitize_textarea_field\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function set_transient\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function set_transient\\(\\) has parameter \\$expiration with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function set_transient\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function set_transient\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function shortcode_atts\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function shortcode_atts\\(\\) has parameter \\$atts with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function shortcode_atts\\(\\) has parameter \\$pairs with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function shortcode_atts\\(\\) has parameter \\$shortcode with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function trailingslashit\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function trailingslashit\\(\\) has parameter \\$string with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_option\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_option\\(\\) has parameter \\$name with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_option\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_post_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_post_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_post_meta\\(\\) has parameter \\$post_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_post_meta\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_user_meta\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_user_meta\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_user_meta\\(\\) has parameter \\$user_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function update_user_meta\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_get\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_get\\(\\) has parameter \\$group with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_get\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_set\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_set\\(\\) has parameter \\$expire with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_set\\(\\) has parameter \\$group with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_set\\(\\) has parameter \\$key with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_cache_set\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_create_nonce\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_create_nonce\\(\\) has parameter \\$action with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has parameter \\$deps with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has parameter \\$handle with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has parameter \\$in_footer with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has parameter \\$src with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_enqueue_script\\(\\) has parameter \\$ver with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_get_current_user\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_is_post_autosave\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_is_post_autosave\\(\\) has parameter \\$post_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_is_post_revision\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_is_post_revision\\(\\) has parameter \\$post_id with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_json_encode\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_json_encode\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_kses_post\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_kses_post\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_localize_script\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_localize_script\\(\\) has parameter \\$handle with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_localize_script\\(\\) has parameter \\$l10n with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_localize_script\\(\\) has parameter \\$object_name with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_parse_args\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_parse_args\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_parse_args\\(\\) has parameter \\$defaults with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has parameter \\$deps with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has parameter \\$handle with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has parameter \\$in_footer with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has parameter \\$src with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_register_script\\(\\) has parameter \\$ver with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_post\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_post\\(\\) has parameter \\$args with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_post\\(\\) has parameter \\$url with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_retrieve_body\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_retrieve_body\\(\\) has parameter \\$response with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_retrieve_response_code\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_remote_retrieve_response_code\\(\\) has parameter \\$response with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_script_is\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_script_is\\(\\) has parameter \\$handle with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_script_is\\(\\) has parameter \\$list with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_error\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_error\\(\\) has parameter \\$data with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_error\\(\\) has parameter \\$status_code with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_success\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_success\\(\\) has parameter \\$data with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_send_json_success\\(\\) has parameter \\$status_code with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_strip_all_tags\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_strip_all_tags\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_trim_words\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_trim_words\\(\\) has parameter \\$num_words with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_trim_words\\(\\) has parameter \\$text with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_unslash\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_unslash\\(\\) has parameter \\$value with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_verify_nonce\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_verify_nonce\\(\\) has parameter \\$action with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Function wp_verify_nonce\\(\\) has parameter \\$nonce with no type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php
+
+		-
+			message: "#^Method WP_Error\\:\\:get_error_message\\(\\) has no return type specified\\.$#"
+			count: 1
+			path: tests/stubs/wordpress.php

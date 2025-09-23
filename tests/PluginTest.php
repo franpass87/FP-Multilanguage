@@ -30,7 +30,7 @@ class PluginTest extends TestCase
             define('FP_MULTILANGUAGE_PATH', dirname(__DIR__) . '/fp-multilanguage/');
         }
 
-        Plugin::instance();
+        Plugin::instance()->init();
 
         do_action('init');
 
