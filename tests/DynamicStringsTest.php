@@ -20,7 +20,7 @@ class DynamicStringsTest extends TestCase
     {
         parent::setUp();
 
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_test_actions, $wp_test_textdomains;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_test_actions, $wp_test_textdomains, $wp_localized_scripts;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
@@ -28,6 +28,7 @@ class DynamicStringsTest extends TestCase
         $wp_test_filters = [];
         $wp_test_actions = [];
         $wp_test_textdomains = [];
+        $wp_localized_scripts = [];
         $_GET = [];
 
         Settings::bootstrap_defaults();
@@ -215,5 +216,35 @@ class DynamicStringsTest extends TestCase
         $result = $dynamicStrings->translate_dynamic_string('Hello world');
 
         $this->assertSame('service:Hello world', $result);
+    }
+
+    public function test_enqueue_assets_localizes_capabilities_and_prompts(): void
+    {
+        global $wp_localized_scripts;
+
+        if (! defined('FP_MULTILANGUAGE_URL')) {
+            define('FP_MULTILANGUAGE_URL', 'https://example.com/wp-content/plugins/fp-multilanguage/');
+        }
+
+        if (! defined('FP_MULTILANGUAGE_VERSION')) {
+            define('FP_MULTILANGUAGE_VERSION', '1.0.0');
+        }
+
+        $service = $this->createMock(TranslationService::class);
+        $dynamicStrings = $this->createDynamicStrings($service);
+
+        $dynamicStrings->enqueue_assets();
+
+        $this->assertArrayHasKey('fp-multilanguage-dynamic', $wp_localized_scripts);
+        $this->assertArrayHasKey('fpMultilanguageDynamic', $wp_localized_scripts['fp-multilanguage-dynamic']);
+
+        $data = $wp_localized_scripts['fp-multilanguage-dynamic']['fpMultilanguageDynamic'];
+
+        $this->assertArrayHasKey('canEdit', $data);
+        $this->assertTrue($data['canEdit']);
+
+        $this->assertArrayHasKey('prompts', $data);
+        $this->assertArrayHasKey('edit', $data['prompts']);
+        $this->assertSame(__('Inserisci la traduzione manuale', 'fp-multilanguage'), $data['prompts']['edit']);
     }
 }
