@@ -212,10 +212,12 @@ class DynamicStrings {
 	}
 
 	public function filter_gettext_with_context( string $translation, string $text, string $context, string $domain ): string {
+		$fullContext = $context . '|' . $domain;
+
 		if ( $translation !== $text ) {
 			$language      = CurrentLanguage::resolve();
 			$manualStrings = Settings::get_manual_strings();
-			$key           = $this->get_manual_key( $text, $context . '|' . $domain );
+			$key           = $this->get_manual_key( $text, $fullContext );
 			if ( $language !== '' && isset( $manualStrings[ $key ][ $language ] ) ) {
 				return $manualStrings[ $key ][ $language ];
 			}
@@ -223,11 +225,12 @@ class DynamicStrings {
 			return $translation;
 		}
 
-		$key = $this->get_manual_key( $text, $context . '|' . $domain );
-		$this->store_string( $key, $text, $context );
+		$key = $this->get_manual_key( $text, $fullContext );
+		$this->store_string( $key, $text, $fullContext );
 
-		return $this->translate_string( $text, $context );
+		return $this->translate_string( $text, $fullContext );
 	}
+
 
         public function filter_ngettext( string $translation, string $single, string $plural, int $number, string $domain ): string {
                 $text = $number === 1 ? $single : $plural;

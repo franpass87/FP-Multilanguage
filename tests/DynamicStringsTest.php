@@ -142,6 +142,27 @@ class DynamicStringsTest extends TestCase
         $this->assertSame('service:Hello', $result);
     }
 
+    public function test_filter_gettext_with_context_returns_manual_translation_without_service_call(): void
+    {
+        $text = 'Click me';
+        $context = 'button';
+        $domain = 'default';
+        $hash = hash('sha1', $context . '|' . $domain . '|' . $text);
+        Settings::update_manual_string($hash, 'it', 'Cliccami');
+
+        add_filter('fp_multilanguage_current_language', static function () {
+            return 'it';
+        });
+
+        $service = $this->createMock(TranslationService::class);
+        $service->expects($this->never())->method('translate_text');
+        $dynamicStrings = $this->createDynamicStrings($service);
+
+        $result = $dynamicStrings->filter_gettext_with_context($text, $text, $context, $domain);
+
+        $this->assertSame('Cliccami', $result);
+    }
+
     public function test_filter_ngettext_preserves_existing_wordpress_translation(): void
     {
         $service = $this->createMock(TranslationService::class);
