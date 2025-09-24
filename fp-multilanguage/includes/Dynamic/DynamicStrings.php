@@ -73,17 +73,21 @@ class DynamicStrings {
 		$language      = CurrentLanguage::resolve();
 
 		wp_enqueue_script( 'fp-multilanguage-dynamic' );
-		wp_localize_script(
-			'fp-multilanguage-dynamic',
-			'fpMultilanguageDynamic',
-			array(
-				'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-				'nonce'         => wp_create_nonce( 'fp_multilanguage_manual_string' ),
-				'language'      => $language,
-				'manualStrings' => $manualStrings,
-				'restUrl'       => rest_url( 'fp-multilanguage/v1/strings' ),
-			)
-		);
+                wp_localize_script(
+                        'fp-multilanguage-dynamic',
+                        'fpMultilanguageDynamic',
+                        array(
+                                'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+                                'nonce'         => wp_create_nonce( 'fp_multilanguage_manual_string' ),
+                                'language'      => $language,
+                                'manualStrings' => $manualStrings,
+                                'restUrl'       => rest_url( 'fp-multilanguage/v1/strings' ),
+                                'canEdit'       => current_user_can( 'manage_options' ),
+                                'prompts'       => array(
+                                        'edit' => __( 'Inserisci la traduzione manuale', 'fp-multilanguage' ),
+                                ),
+                        )
+                );
 
 		if ( ! wp_script_is( 'fp-multilanguage-frontend', 'enqueued' ) ) {
 			wp_enqueue_script( 'fp-multilanguage-frontend' );

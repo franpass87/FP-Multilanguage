@@ -5,6 +5,10 @@
     var manualStrings = config.manualStrings || {};
     var language = config.language || '';
     var canEdit = !!config.canEdit;
+    var prompts = config.prompts || {};
+    var editPrompt = typeof prompts.edit === 'string' && prompts.edit.length > 0
+        ? prompts.edit
+        : 'Traduzione manuale';
 
     function getManualValue(key) {
         if (manualStrings[key] && manualStrings[key][language]) {
@@ -31,7 +35,7 @@
                 element.classList.add('fp-multilanguage-editable');
                 element.addEventListener('dblclick', function () {
                     var current = manualValue !== null ? manualValue : element.innerText;
-                    var value = window.prompt(config.prompts && config.prompts.edit ? config.prompts.edit : 'Traduzione manuale', current);
+                    var value = window.prompt(editPrompt, current);
                     if (value === null) {
                         return;
                     }
