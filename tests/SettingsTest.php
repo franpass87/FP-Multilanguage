@@ -1,0 +1,86 @@
+<?php
+namespace FPMultilanguage\Tests;
+
+use FPMultilanguage\Admin\AdminNotices;
+use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\Services\Logger;
+use PHPUnit\Framework\TestCase;
+
+class SettingsTest extends TestCase
+{
+    private Settings $settings;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        global $wp_test_options, $wp_test_cache, $wp_test_transients;
+        $wp_test_options   = array();
+        $wp_test_cache     = array();
+        $wp_test_transients = array();
+
+        Settings::clear_cache();
+
+        $logger         = new Logger();
+        $notices        = new AdminNotices( $logger );
+        $this->settings = new Settings( $logger, $notices );
+    }
+
+    public function test_sanitize_ensures_fallback_added_to_targets(): void
+    {
+        $input = array(
+            'source_language'   => 'en',
+            'fallback_language' => 'fr',
+            'target_languages'  => array( 'en', 'it', '' ),
+        );
+
+        $sanitized = $this->settings->sanitize( $input );
+
+        $this->assertSame( 'fr', $sanitized['fallback_language'] );
+        $this->assertContains( 'it', $sanitized['target_languages'] );
+        $this->assertContains( 'fr', $sanitized['target_languages'] );
+        $this->assertNotContains( 'en', $sanitized['target_languages'], 'La lingua sorgente non deve essere presente tra le destinazioni.' );
+    }
+
+    public function test_sanitize_uses_defaults_when_targets_empty(): void
+    {
+        $input = array(
+            'source_language'   => 'en',
+            'fallback_language' => 'en',
+            'target_languages'  => array(),
+        );
+
+        $sanitized = $this->settings->sanitize( $input );
+
+        $this->assertNotEmpty( $sanitized['target_languages'] );
+        $this->assertContains( 'it', $sanitized['target_languages'], 'Quando mancano le lingue di destinazione devono essere ripristinati i valori di default.' );
+    }
+
+    public function test_get_options_uses_cache_until_cleared(): void
+    {
+        $stored = array(
+            'source_language'   => 'en',
+            'fallback_language' => 'en',
+            'target_languages'  => array( 'it' ),
+            'providers'         => array(),
+            'seo'               => array(),
+            'quote_tracking'    => array(),
+        );
+
+        update_option( Settings::OPTION_NAME, $stored );
+
+        $first = Settings::get_options();
+        $this->assertSame( 'en', $first['source_language'] );
+
+        $stored['source_language'] = 'es';
+        global $wp_test_options;
+        $wp_test_options[ Settings::OPTION_NAME ] = $stored;
+
+        $cached = Settings::get_options();
+        $this->assertSame( 'en', $cached['source_language'], 'Il valore deve restare invariato finché la cache non viene svuotata.' );
+
+        Settings::clear_cache();
+        $updated = Settings::get_options();
+        $this->assertSame( 'es', $updated['source_language'] );
+    }
+}

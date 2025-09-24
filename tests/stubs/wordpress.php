@@ -106,7 +106,11 @@ if (! function_exists('update_option')) {
     function update_option($name, $value)
     {
         global $wp_test_options;
+
+        $oldValue = $wp_test_options[$name] ?? null;
         $wp_test_options[$name] = $value;
+
+        do_action('update_option_' . $name, $value, $oldValue);
 
         return true;
     }
@@ -138,6 +142,13 @@ if (! function_exists('sanitize_textarea_field')) {
     function sanitize_textarea_field($value)
     {
         return trim(filter_var((string) $value, FILTER_SANITIZE_SPECIAL_CHARS));
+    }
+}
+
+if (! function_exists('esc_url_raw')) {
+    function esc_url_raw(string $url): string
+    {
+        return filter_var($url, FILTER_SANITIZE_URL);
     }
 }
 
