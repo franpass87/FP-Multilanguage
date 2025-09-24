@@ -41,10 +41,11 @@ class Plugin {
 	public function init(): void {
 		$this->register_services();
 
-		add_action( 'plugins_loaded', array( $this, 'bootstrap' ), 5 );
-		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
-		add_action( 'widgets_init', array( $this, 'register_widgets' ) );
-		add_shortcode( 'fp_language_switcher', array( $this, 'render_language_switcher' ) );
+				add_action( 'plugins_loaded', array( $this, 'bootstrap' ), 5 );
+				add_action( 'init', array( $this, 'load_textdomain' ), 1 );
+				add_action( 'template_redirect', array( $this, 'remember_language_preference' ), 1 );
+				add_action( 'widgets_init', array( $this, 'register_widgets' ) );
+				add_shortcode( 'fp_language_switcher', array( $this, 'render_language_switcher' ) );
 	}
 
 	public function bootstrap(): void {
@@ -109,14 +110,46 @@ class Plugin {
 	public function render_language_switcher( array $atts = array() ): string {
 		$widget = $this->container->get( 'language_switcher' );
 		if ( ! $widget instanceof LanguageSwitcher ) {
-			return '';
+				return '';
 		}
 
-		return $widget->render_shortcode( $atts );
+				return $widget->render_shortcode( $atts );
+	}
+
+	public function remember_language_preference(): void {
+		if ( is_admin() ) {
+			return;
+		}
+
+		$language = CurrentLanguage::resolve();
+		if ( '' === $language ) {
+			return;
+		}
+
+		$allowed_languages = array_merge(
+			array( Settings::get_source_language() ),
+			Settings::get_target_languages()
+		);
+		$allowed_languages = array_unique( array_map( 'strtolower', $allowed_languages ) );
+
+		if ( ! in_array( $language, $allowed_languages, true ) ) {
+			return;
+		}
+
+		$remembered = '';
+		if ( isset( $_COOKIE['fp_multilanguage_lang'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___COOKIE
+			$remembered = sanitize_key( (string) $_COOKIE['fp_multilanguage_lang'] ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___COOKIE
+		}
+
+		if ( $remembered === $language ) {
+			return;
+		}
+
+		CurrentLanguage::remember( $language );
 	}
 
 	public function get_container(): Container {
-		return $this->container;
+			return $this->container;
 	}
 
 	public static function activate(): void {

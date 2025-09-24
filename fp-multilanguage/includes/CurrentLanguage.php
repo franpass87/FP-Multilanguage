@@ -77,13 +77,15 @@ class CurrentLanguage {
 		$expire       = time() + ( defined( 'YEAR_IN_SECONDS' ) ? YEAR_IN_SECONDS : 31536000 );
 
 		if ( function_exists( 'setcookie' ) ) {
-			setcookie( 'fp_multilanguage_lang', $language, $expire, $cookiePath, $cookieDomain, $secure, $httpOnly );
+				setcookie( 'fp_multilanguage_lang', $language, $expire, $cookiePath, $cookieDomain, $secure, $httpOnly );
 		}
 
+				$_COOKIE['fp_multilanguage_lang'] = $language; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___COOKIE
+
 		if ( function_exists( 'wp_get_current_user' ) ) {
-			$user = wp_get_current_user();
+				$user = wp_get_current_user();
 			if ( $user && isset( $user->ID ) && $user->ID > 0 ) {
-				update_user_meta( $user->ID, 'fp_multilanguage_language', $language );
+						update_user_meta( $user->ID, 'fp_multilanguage_language', $language );
 			}
 		}
 
