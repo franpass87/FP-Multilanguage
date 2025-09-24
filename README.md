@@ -8,6 +8,7 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 - **Gestione impostazioni** con pagina admin, salvataggio async via REST, schede (Generale/Provider/SEO/Quote) e script `admin.js`.
 - **Servizio di traduzione** con caching multi-layer, rate limiting, quote aggregate (`fp_multilanguage_quota`), retry con backoff e fallback manuali.
 - **Provider dedicati** (`GoogleProvider`, `DeepLProvider`) basati su `TranslationProviderInterface` e estensibilità tramite filtro `fp_multilanguage_provider_sequence`.
+- **Glossari personalizzati** configurabili da backend per Google Cloud e DeepL (ID risorsa, ignore-case, livello di formalità).
 - **Risoluzione lingua corrente** tramite query var, cookie, preferenze utente, URL rewriting e filtri.
 - **Gestione contenuti** con traduzione automatica su `save_post`, esposizione REST/CLI, filtri front-end (`the_content`, `the_title`, `get_the_excerpt`, `wp_get_attachment_image_attributes`) e metadati persistiti.
 - **Stringhe dinamiche** con storage in tabella custom (`wp_fp_multilanguage_strings`), API REST, AJAX editor inline e fallback JS.

@@ -22,7 +22,7 @@ class TranslationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures, $wp_remote_post_invalid_json, $wp_test_actions, $wp_test_textdomains;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures, $wp_remote_post_invalid_json, $wp_test_actions, $wp_test_textdomains, $wp_remote_post_requests;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
@@ -32,6 +32,7 @@ class TranslationServiceTest extends TestCase
         $wp_remote_post_invalid_json = [];
         $wp_test_actions = [];
         $wp_test_textdomains = [];
+        $wp_remote_post_requests = [];
 
         update_option(Settings::OPTION_NAME, [
             'source_language' => 'en',
@@ -167,6 +168,44 @@ class TranslationServiceTest extends TestCase
         $this->assertSame(2, $wp_remote_post_calls['translation.googleapis.com'] ?? 0, 'Il provider deve essere chiamato due volte dopo un errore temporaneo.');
     }
 
+    public function test_google_payload_includes_glossary_config(): void
+    {
+        update_option(Settings::OPTION_NAME, [
+            'source_language' => 'en',
+            'fallback_language' => 'en',
+            'target_languages' => ['it'],
+            'auto_translate' => true,
+            'providers' => [
+                'google' => [
+                    'enabled' => true,
+                    'api_key' => 'with-glossary',
+                    'glossary_id' => 'projects/demo/locations/global/glossaries/catalog',
+                    'glossary_ignore_case' => true,
+                ],
+                'deepl' => [
+                    'enabled' => false,
+                    'api_key' => '',
+                    'endpoint' => 'https://api.deepl.com/v2/translate',
+                ],
+            ],
+            'seo' => [],
+            'quote_tracking' => [],
+        ]);
+
+        TranslationService::flush_cache();
+        $result = $this->service->translate_text('Glossary content', 'en', 'it');
+
+        $this->assertSame('google:Glossary content', $result);
+
+        global $wp_remote_post_requests;
+        $request = $wp_remote_post_requests['translation.googleapis.com'][0] ?? [];
+        $decoded = $request['decoded_body'] ?? [];
+
+        $this->assertArrayHasKey('glossaryConfig', $decoded, 'La richiesta deve includere la configurazione del glossario.');
+        $this->assertSame('projects/demo/locations/global/glossaries/catalog', $decoded['glossaryConfig']['glossary'] ?? '');
+        $this->assertTrue($decoded['glossaryConfig']['ignoreCase'] ?? false);
+    }
+
     public function test_uses_strlen_when_mb_string_extension_missing(): void
     {
         $service = new class ($this->logger, $this->notices, $this->settings) extends TranslationService {
@@ -192,6 +231,43 @@ class TranslationServiceTest extends TestCase
         $this->assertIsArray($quota, 'La quota deve essere salvata come array.');
         $this->assertSame(1, $quota['google']['it']['requests'] ?? 0, 'Il numero di richieste deve aumentare.');
         $this->assertSame(strlen($text), $quota['google']['it']['characters'] ?? 0, 'La lunghezza deve usare strlen come fallback.');
+    }
+
+    public function test_deepl_payload_includes_glossary_and_formality(): void
+    {
+        update_option(Settings::OPTION_NAME, [
+            'source_language' => 'en',
+            'fallback_language' => 'en',
+            'target_languages' => ['it'],
+            'auto_translate' => true,
+            'providers' => [
+                'google' => [
+                    'enabled' => false,
+                    'api_key' => '',
+                ],
+                'deepl' => [
+                    'enabled' => true,
+                    'api_key' => 'deepl-glossary',
+                    'endpoint' => 'https://api.deepl.com/v2/translate',
+                    'glossary_id' => '1234-5678',
+                    'formality' => 'more',
+                ],
+            ],
+            'seo' => [],
+            'quote_tracking' => [],
+        ]);
+
+        TranslationService::flush_cache();
+        $result = $this->service->translate_text('DeepL request', 'en', 'it');
+
+        $this->assertSame('deepl:DeepL request', $result);
+
+        global $wp_remote_post_requests;
+        $request = $wp_remote_post_requests['api.deepl.com'][0] ?? [];
+        $decoded = $request['decoded_body'] ?? [];
+
+        $this->assertSame('1234-5678', $decoded['glossary_id'] ?? '', 'La richiesta deve includere l\'ID del glossario.');
+        $this->assertSame('more', $decoded['formality'] ?? '');
     }
 
     public function test_preserves_html_tags_when_format_is_html(): void

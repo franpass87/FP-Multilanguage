@@ -30,25 +30,30 @@ class DeepLProvider implements TranslationProviderInterface {
 			'target_lang' => strtoupper( $target ),
 		);
 
-		if ( ! empty( $options['formality'] ) ) {
-			$body['formality'] = $options['formality'];
-		}
+                $glossaryId = isset( $options['glossary_id'] ) ? (string) $options['glossary_id'] : '';
+                if ( '' === $glossaryId && ! empty( $options['glossary'] ) ) {
+                        $glossaryId = (string) $options['glossary'];
+                }
 
-		if ( ! empty( $options['glossary'] ) ) {
-			$body['glossary_id'] = $options['glossary'];
-		}
+                if ( $glossaryId !== '' ) {
+                        $body['glossary_id'] = $glossaryId;
+                }
 
-		$format = strtolower( (string) ( $options['format'] ?? 'text' ) );
-		if ( $format === 'html' ) {
-			$body['tag_handling'] = 'html';
-			if ( ! empty( $options['preserve_tags'] ) ) {
+                $format = strtolower( (string) ( $options['format'] ?? 'text' ) );
+                if ( $format === 'html' ) {
+                        $body['tag_handling'] = 'html';
+                        if ( ! empty( $options['preserve_tags'] ) ) {
 				$body['non_splitting_tags'] = implode( ',', (array) $options['preserve_tags'] );
 			}
 		}
 
 		$timeout = isset( $options['timeout'] ) ? (int) $options['timeout'] : 20;
 
-		$response = wp_remote_post(
+                if ( isset( $options['formality'] ) && is_string( $options['formality'] ) && $options['formality'] !== '' && 'default' !== $options['formality'] ) {
+                        $body['formality'] = $options['formality'];
+                }
+
+                $response = wp_remote_post(
 			$endpoint,
 			array(
 				'timeout' => max( 5, $timeout ),
