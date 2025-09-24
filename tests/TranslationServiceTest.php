@@ -22,13 +22,14 @@ class TranslationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures, $wp_test_actions, $wp_test_textdomains;
+        global $wp_test_options, $wp_test_cache, $wp_test_transients, $wp_remote_post_calls, $wp_test_filters, $wp_remote_post_failures, $wp_remote_post_invalid_json, $wp_test_actions, $wp_test_textdomains;
         $wp_test_options = [];
         $wp_test_cache = [];
         $wp_test_transients = [];
         $wp_remote_post_calls = [];
         $wp_test_filters = [];
         $wp_remote_post_failures = [];
+        $wp_remote_post_invalid_json = [];
         $wp_test_actions = [];
         $wp_test_textdomains = [];
 
@@ -106,6 +107,17 @@ class TranslationServiceTest extends TestCase
         $result = $this->service->translate_text('Test string', 'en', 'it');
 
         $this->assertSame('deepl:Test string', $result);
+    }
+
+    public function test_uses_fallback_provider_when_json_response_is_invalid(): void
+    {
+        global $wp_remote_post_invalid_json;
+        $wp_remote_post_invalid_json['translation.googleapis.com'] = 3;
+
+        TranslationService::flush_cache();
+        $result = $this->service->translate_text('Trigger invalid JSON', 'en', 'it');
+
+        $this->assertSame('deepl:Trigger invalid JSON', $result, 'Il servizio deve passare al provider successivo quando la risposta JSON è non valida.');
     }
 
     public function test_manual_translation_is_returned_when_available(): void

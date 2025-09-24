@@ -59,12 +59,32 @@ class GoogleProvider implements TranslationProviderInterface {
 			return null;
 		}
 
-		$payload    = json_decode( wp_remote_retrieve_body( $response ), true );
-		$translated = $payload['data']['translations'][0]['translatedText'] ?? '';
-		if ( $translated === '' ) {
-			return null;
+				$body = wp_remote_retrieve_body( $response );
+		if ( ! is_string( $body ) || $body === '' ) {
+				$this->logger->warning( 'Google Translate empty body response' );
+
+				return null;
 		}
 
-		return new TranslationResponse( (string) $translated, true, array( 'provider' => $this->get_name() ) );
+				$payload = json_decode( $body, true );
+		if ( ! is_array( $payload ) ) {
+				$this->logger->warning( 'Google Translate invalid JSON response' );
+
+				return null;
+		}
+
+				$translations = $payload['data']['translations'] ?? array();
+		if ( ! is_array( $translations ) || ! isset( $translations[0]['translatedText'] ) ) {
+				$this->logger->warning( 'Google Translate missing translatedText field' );
+
+				return null;
+		}
+
+				$translated = (string) $translations[0]['translatedText'];
+		if ( $translated === '' ) {
+				return null;
+		}
+
+				return new TranslationResponse( $translated, true, array( 'provider' => $this->get_name() ) );
 	}
 }
