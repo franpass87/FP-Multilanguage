@@ -151,7 +151,9 @@ class Plugin {
 		if ( ! $container->has( 'logger' ) ) {
 			$container->set(
 				'logger',
-				static function (): Logger {
+				static function ( Container $container ): Logger {
+					unset( $container );
+
 					return new Logger();
 				}
 			);
