@@ -39,6 +39,7 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 ## Configurazione
 
 - Vai in **Impostazioni → FP Multilanguage** per definire lingua sorgente/fallback, lingue di destinazione, provider (Google/DeepL), SEO e monitor quote.
+- I codici lingua sono normalizzati automaticamente e supportano formati regionali (`pt-BR`, `es-ES`, `zh-Hant`).
 - Il bottone “Sincronizza via REST” usa `admin.js` per inviare le opzioni all’endpoint `fp-multilanguage/v1/settings` (nonce `fp_multilanguage_settings`).
 - Le traduzioni manuali delle stringhe sono gestite tramite AJAX (`wp_ajax_fp_multilanguage_save_string`) e REST (`fp-multilanguage/v1/strings`).
 

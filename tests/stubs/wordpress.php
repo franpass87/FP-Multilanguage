@@ -628,7 +628,7 @@ if (! function_exists('is_admin')) {
 if (! function_exists('determine_locale')) {
     function determine_locale()
     {
-        return 'en_US';
+        return $GLOBALS['wp_test_locale'] ?? 'en_US';
     }
 }
 

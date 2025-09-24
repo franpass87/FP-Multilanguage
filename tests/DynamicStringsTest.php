@@ -32,6 +32,7 @@ class DynamicStringsTest extends TestCase
         $_GET = [];
 
         Settings::bootstrap_defaults();
+        \FPMultilanguage\CurrentLanguage::clear_cache();
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
         $this->settings = new Settings($this->logger, $this->notices);

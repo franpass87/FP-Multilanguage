@@ -126,14 +126,24 @@ class Plugin {
 			return;
 		}
 
-		$allowed_languages = array_merge(
-			array( Settings::get_source_language() ),
-			Settings::get_target_languages()
-		);
-		$allowed_languages = array_unique( array_map( 'strtolower', $allowed_languages ) );
+				$allowed_languages = array_merge(
+					array( Settings::get_source_language() ),
+					Settings::get_target_languages()
+				);
+				$allowed_languages = array_unique(
+					array_map(
+						static function ( string $language ): string {
+										$language = strtolower( $language );
+										$language = str_replace( array( ' ', '_' ), '-', $language );
+
+										return trim( preg_replace( '/[^a-z0-9-]/', '', $language ) ?? '', '-' );
+						},
+						$allowed_languages
+					)
+				);
 
 		if ( ! in_array( $language, $allowed_languages, true ) ) {
-			return;
+				return;
 		}
 
 		$remembered = '';

@@ -77,6 +77,22 @@ class SettingsTest extends TestCase
         $this->assertFalse( $sanitized['providers']['deepl']['enabled'], 'Il provider DeepL deve essere disabilitato senza chiave API.' );
     }
 
+    public function test_sanitize_normalizes_language_formats(): void
+    {
+        $input = array(
+            'source_language'   => 'EN',
+            'fallback_language' => 'PT_BR',
+            'target_languages'  => 'PT_BR, ES_es',
+        );
+
+        $sanitized = $this->settings->sanitize( $input );
+
+        $this->assertSame( 'en', $sanitized['source_language'] );
+        $this->assertSame( 'pt-br', $sanitized['fallback_language'] );
+        $this->assertContains( 'pt-br', $sanitized['target_languages'] );
+        $this->assertContains( 'es-es', $sanitized['target_languages'] );
+    }
+
     public function test_get_options_uses_cache_until_cleared(): void
     {
         $stored = array(

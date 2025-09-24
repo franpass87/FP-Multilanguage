@@ -26,6 +26,7 @@ FP Multilanguage offre:
 1. Carica la cartella `fp-multilanguage` in `wp-content/plugins/`.
 2. Attiva il plugin dalla schermata "Plugin" in WordPress.
 3. Configura le lingue e le chiavi API in Impostazioni → FP Multilanguage.
+4. Inserisci i codici lingua nel formato desiderato (ad es. `pt-BR`, `zh-Hant`): il plugin li normalizza automaticamente.
 
 == Frequently Asked Questions ==
 
