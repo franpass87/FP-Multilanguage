@@ -58,6 +58,26 @@ class DynamicStringsTest extends TestCase
         $this->assertSame('Titolo widget', $result);
     }
 
+    public function test_filter_generic_string_handles_nav_menu_filter_arguments(): void
+    {
+        $menuTitle = 'Menu item';
+        $hash = hash('sha1', 'generic|' . $menuTitle);
+        Settings::update_manual_string($hash, 'it', 'Voce di menu');
+
+        add_filter('fp_multilanguage_current_language', static function () {
+            return 'it';
+        });
+
+        $service = $this->createMock(TranslationService::class);
+        $service->expects($this->never())->method('translate_text');
+        $dynamicStrings = $this->createDynamicStrings($service);
+
+        add_filter('nav_menu_item_title', [$dynamicStrings, 'filter_generic_string'], 10, 4);
+        $result = apply_filters('nav_menu_item_title', $menuTitle, (object) ['ID' => 10], (object) [], 0);
+
+        $this->assertSame('Voce di menu', $result);
+    }
+
     public function test_translate_gettext_preserves_existing_wordpress_translation(): void
     {
         $service = $this->createMock(TranslationService::class);

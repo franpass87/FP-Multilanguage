@@ -244,7 +244,9 @@ class DynamicStrings {
                 return $this->filter_gettext( $translation, $text, $domain );
         }
 
-	public function filter_generic_string( $value ) {
+	public function filter_generic_string( $value, ...$args ) {
+		unset( $args );
+
 		if ( ! is_string( $value ) || trim( $value ) === '' ) {
 			return $value;
 		}
