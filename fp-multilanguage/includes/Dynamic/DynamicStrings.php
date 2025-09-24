@@ -168,8 +168,9 @@ class DynamicStrings {
 			return $translation;
 		}
 
-		$key = $this->get_manual_key( $text, $domain );
-		$this->store_string( $key, $text, $domain );
+		$identifier = $this->build_identifier( '', $domain );
+		$key        = $this->get_manual_key( $text, '', $domain );
+		$this->store_string( $key, $text, $identifier );
 
 		$language      = CurrentLanguage::resolve();
 		$manualStrings = Settings::get_manual_strings();
@@ -208,16 +209,16 @@ class DynamicStrings {
 			return $translation;
 		}
 
-		return $this->translate_string( $text, $domain, $serviceArgs );
+		return $this->translate_string( $text, $identifier, $serviceArgs );
 	}
 
 	public function filter_gettext_with_context( string $translation, string $text, string $context, string $domain ): string {
-		$fullContext = $context . '|' . $domain;
+		$identifier = $this->build_identifier( $context, $domain );
 
 		if ( $translation !== $text ) {
 			$language      = CurrentLanguage::resolve();
 			$manualStrings = Settings::get_manual_strings();
-			$key           = $this->get_manual_key( $text, $fullContext );
+			$key           = $this->get_manual_key( $text, $context, $domain );
 			if ( $language !== '' && isset( $manualStrings[ $key ][ $language ] ) ) {
 				return $manualStrings[ $key ][ $language ];
 			}
@@ -225,10 +226,10 @@ class DynamicStrings {
 			return $translation;
 		}
 
-		$key = $this->get_manual_key( $text, $fullContext );
-		$this->store_string( $key, $text, $fullContext );
+		$key = $this->get_manual_key( $text, $context, $domain );
+		$this->store_string( $key, $text, $identifier );
 
-		return $this->translate_string( $text, $fullContext );
+		return $this->translate_string( $text, $identifier );
 	}
 
 
@@ -257,7 +258,7 @@ class DynamicStrings {
 		return $this->translate_string( $value, 'generic' );
 	}
 
-	private function translate_string( string $text, string $context = '', array $args = array() ): string {
+	private function translate_string( string $text, string $identifier = '', array $args = array() ): string {
 		$language = CurrentLanguage::resolve();
 		$source   = Settings::get_source_language();
 
@@ -266,7 +267,7 @@ class DynamicStrings {
 		}
 
 		$manualStrings = Settings::get_manual_strings();
-		$key           = $this->get_manual_key( $text, $context );
+		$key           = $this->get_manual_key( $text, $identifier );
 		if ( isset( $manualStrings[ $key ][ $language ] ) ) {
 			return $manualStrings[ $key ][ $language ];
 		}
@@ -279,9 +280,29 @@ class DynamicStrings {
 		return $text;
 	}
 
-	private function get_manual_key( string $text, string $context = '' ): string {
+	private function get_manual_key( string $text, string $context = '', string $domain = '' ): string {
+		if ( $domain !== '' ) {
+			$context = $this->build_identifier( $context, $domain );
+		}
+
 		return hash( 'sha1', $context . '|' . $text );
 	}
+
+	private function build_identifier( string $context = '', string $domain = '' ): string {
+		if ( $context !== '' && $domain !== '' ) {
+			return $context . '|' . $domain;
+		}
+
+		if ( $context !== '' ) {
+			return $context;
+		}
+
+		if ( $domain !== '' ) {
+			return $domain;
+		}
+
+		return '';
+}
 
 	private function store_string( string $key, string $original, string $context ): void {
 		global $wpdb;
