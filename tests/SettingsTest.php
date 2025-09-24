@@ -77,6 +77,39 @@ class SettingsTest extends TestCase
         $this->assertFalse( $sanitized['providers']['deepl']['enabled'], 'Il provider DeepL deve essere disabilitato senza chiave API.' );
     }
 
+    public function test_sanitize_normalizes_provider_glossary_options(): void
+    {
+        $input = array(
+            'providers' => array(
+                'google' => array(
+                    'enabled'              => true,
+                    'api_key'              => 'key',
+                    'glossary_id'          => '  projects/example/locations/eu/glossaries/demo  ',
+                    'glossary_ignore_case' => '1',
+                    'timeout'              => '2',
+                ),
+                'deepl' => array(
+                    'enabled'     => true,
+                    'api_key'     => 'secret',
+                    'endpoint'    => 'https://api.deepl.com/v2/translate',
+                    'glossary_id' => " 1234-5678 \n",
+                    'formality'   => 'MORE',
+                ),
+            ),
+        );
+
+        $sanitized = $this->settings->sanitize( $input );
+
+        $google = $sanitized['providers']['google'];
+        $this->assertSame( 'projects/example/locations/eu/glossaries/demo', $google['glossary_id'] );
+        $this->assertTrue( $google['glossary_ignore_case'], 'L\'opzione ignoreCase deve essere attivata.' );
+        $this->assertSame( 5, $google['timeout'], 'Il timeout deve rispettare il valore minimo di 5 secondi.' );
+
+        $deepl = $sanitized['providers']['deepl'];
+        $this->assertSame( '1234-5678', $deepl['glossary_id'] );
+        $this->assertSame( 'more', $deepl['formality'] );
+    }
+
     public function test_sanitize_normalizes_language_formats(): void
     {
         $input = array(

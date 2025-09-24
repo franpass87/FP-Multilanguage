@@ -31,6 +31,11 @@ if (! isset($wp_remote_post_invalid_json)) {
     $wp_remote_post_invalid_json = [];
 }
 
+global $wp_remote_post_requests;
+if (! isset($wp_remote_post_requests)) {
+    $wp_remote_post_requests = [];
+}
+
 global $wp_test_filters;
 if (! isset($wp_test_filters)) {
     $wp_test_filters = [];
@@ -205,12 +210,26 @@ if (! function_exists('wp_json_encode')) {
 if (! function_exists('wp_remote_post')) {
     function wp_remote_post($url, $args = [])
     {
-        global $wp_remote_post_calls, $wp_remote_post_failures, $wp_remote_post_invalid_json;
+        global $wp_remote_post_calls, $wp_remote_post_failures, $wp_remote_post_invalid_json, $wp_remote_post_requests;
         $host = parse_url($url, PHP_URL_HOST) ?: $url;
         if (! isset($wp_remote_post_calls[$host])) {
             $wp_remote_post_calls[$host] = 0;
         }
         $wp_remote_post_calls[$host]++;
+
+        if (isset($wp_remote_post_requests[$host])) {
+            $wp_remote_post_requests[$host][] = [
+                'url' => $url,
+                'args' => $args,
+            ];
+        } else {
+            $wp_remote_post_requests[$host] = [
+                [
+                    'url' => $url,
+                    'args' => $args,
+                ],
+            ];
+        }
 
         if (isset($wp_remote_post_failures[$host]) && $wp_remote_post_failures[$host] > 0) {
             $wp_remote_post_failures[$host]--;
@@ -242,6 +261,8 @@ if (! function_exists('wp_remote_post')) {
         } else {
             $decoded = $body;
         }
+
+        $wp_remote_post_requests[$host][count($wp_remote_post_requests[$host]) - 1]['decoded_body'] = $decoded;
 
         $text = '';
         if (is_array($decoded)) {
@@ -451,6 +472,15 @@ if (! function_exists('checked')) {
     {
         if ((bool) $checked === (bool) $current) {
             echo 'checked="checked"';
+        }
+    }
+}
+
+if (! function_exists('selected')) {
+    function selected($selected, $current = true)
+    {
+        if ((string) $selected === (string) $current) {
+            echo 'selected="selected"';
         }
     }
 }

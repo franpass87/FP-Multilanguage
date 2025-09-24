@@ -2,10 +2,13 @@
 
 ## In lavorazione
 
-- Supporto glossari personalizzati per provider (Google/DeepL) con UI dedicata.
 - Traduzione media (alt text, caption, file names) e sincronizzazione su CDN.
 - Localizzazione commenti front-end con moderazione multilingua.
 - Integrazione con cache page builders (Elementor, Gutenberg patterns complessi).
+
+## Completate
+
+- Supporto glossari personalizzati per provider (Google/DeepL) con UI dedicata.
 
 ## Idee future
 
