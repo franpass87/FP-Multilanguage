@@ -194,14 +194,15 @@ class Settings {
 				return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
 		}
 
-			$options = $this->sanitize( $params );
-			update_option( self::OPTION_NAME, $options );
-			TranslationService::flush_cache();
+		$options = $this->sanitize( $params );
+		update_option( self::OPTION_NAME, $options );
+		TranslationService::flush_cache();
 
-			$this->logger->info( 'Settings updated via REST API.' );
-			$this->notices->add_notice( __( 'Impostazioni aggiornate correttamente.', 'fp-multilanguage' ) );
+		$options = $this->get_options();
+		$this->logger->info( 'Settings updated via REST API.' );
+		$this->notices->add_notice( __( 'Impostazioni aggiornate correttamente.', 'fp-multilanguage' ) );
 
-			return rest_ensure_response( $options );
+		return rest_ensure_response( $options );
 	}
 
 	public function enqueue_assets( string $hook ): void {
@@ -419,14 +420,13 @@ class Settings {
 			}
 		}
 
-		if ( ! isset( $sanitized['quote_tracking'] ) || ! is_array( $sanitized['quote_tracking'] ) ) {
-			$sanitized['quote_tracking'] = array();
-		}
+		$sanitized['quote_tracking'] = self::get_quote_tracking();
 
 		TranslationService::flush_cache();
 
 		return $sanitized;
 	}
+
 
 	private function sanitize_language( string $value ): string {
 		$value = sanitize_text_field( strtolower( $value ) );
@@ -439,15 +439,23 @@ class Settings {
 			return self::$defaults;
 		}
 
-		$options = get_option( self::OPTION_NAME, array() );
+		$optionsRaw = get_option( self::OPTION_NAME, array() );
 
-		return wp_parse_args( is_array( $options ) ? $options : array(), self::$defaults );
+		$options = wp_parse_args( is_array( $optionsRaw ) ? $optionsRaw : array(), self::$defaults );
+
+		$options['quote_tracking'] = self::get_quote_tracking();
+
+		return $options;
 	}
 
 	public static function get_manual_strings(): array {
 		$stored = get_option( self::MANUAL_STRINGS_OPTION, array() );
 
 		return is_array( $stored ) ? $stored : array();
+	}
+
+	public static function get_quote_tracking(): array {
+		return TranslationService::get_usage_stats();
 	}
 
 	public static function update_manual_string( string $key, string $language, string $value ): void {

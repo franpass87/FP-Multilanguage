@@ -127,6 +127,8 @@ class Plugin {
 		$migrator = $instance->container->get( 'migrator' );
 		$migrator->maybe_migrate();
 
+		Settings::bootstrap_defaults();
+
 		update_option( self::VERSION_OPTION, FP_MULTILANGUAGE_VERSION );
 	}
 

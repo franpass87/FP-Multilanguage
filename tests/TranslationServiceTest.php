@@ -210,11 +210,33 @@ class TranslationServiceTest extends TestCase
             'quote_tracking' => [],
         ]);
 
-        TranslationService::flush_cache();
+		TranslationService::flush_cache();
 
-        $deeplHtml = '<div>Altro <em>contenuto</em> di prova</div>';
-        $deeplTranslation = $this->service->translate_text($deeplHtml, 'en', 'it', ['format' => 'html']);
+		$deeplHtml = '<div>Altro <em>contenuto</em> di prova</div>';
+		$deeplTranslation = $this->service->translate_text($deeplHtml, 'en', 'it', ['format' => 'html']);
 
-        $this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
-    }
+		$this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
+	}
+
+	public function test_exposes_quota_usage_stats(): void
+	{
+		$this->service->translate_text('Quota check', 'en', 'it');
+
+		$usage = TranslationService::get_usage_stats();
+
+		$this->assertArrayHasKey('google', $usage, 'Il provider Google deve essere tracciato nelle quote.');
+		$this->assertArrayHasKey('it', $usage['google'], 'La lingua di destinazione deve essere registrata.');
+		$this->assertSame(1, $usage['google']['it']['requests'], 'Il numero di richieste deve essere incrementato.');
+		$this->assertSame(strlen('Quota check'), $usage['google']['it']['characters'], 'I caratteri utilizzati devono essere conteggiati.');
+		$this->assertGreaterThan(0, $usage['google']['it']['updated_at'], 'La data di aggiornamento deve essere valorizzata.');
+	}
+
+	public function test_settings_include_quote_tracking_usage(): void
+	{
+		$this->service->translate_text('Settings quota', 'en', 'it');
+
+		$options = Settings::get_options();
+
+		$this->assertSame(1, $options['quote_tracking']['google']['it']['requests'] ?? 0, 'Le impostazioni devono esporre la quota aggregata.');
+	}
 }

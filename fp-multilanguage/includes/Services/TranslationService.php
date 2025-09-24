@@ -133,6 +133,41 @@ class TranslationService {
 	}
 
 	/**
+	 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
+	 */
+	public static function get_usage_stats(): array {
+		if ( ! function_exists( 'get_option' ) ) {
+			return array();
+		}
+
+		$stored = get_option( self::QUOTA_OPTION, array() );
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+
+		$normalized = array();
+		foreach ( $stored as $provider => $languages ) {
+			if ( ! is_array( $languages ) ) {
+				continue;
+			}
+
+			foreach ( $languages as $language => $usage ) {
+				if ( ! is_array( $usage ) ) {
+					continue;
+				}
+
+				$normalized[ $provider ][ $language ] = array(
+					'requests'   => (int) ( $usage['requests'] ?? 0 ),
+					'characters' => (int) ( $usage['characters'] ?? 0 ),
+					'updated_at' => isset( $usage['updated_at'] ) ? (int) $usage['updated_at'] : 0,
+				);
+			}
+		}
+
+		return $normalized;
+	}
+
+	/**
 	 * @param array<string, mixed> $options
 	 */
 	private function normalize_options( array $options ): array {
@@ -359,12 +394,7 @@ class TranslationService {
 	 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
 	 */
 	private function get_quota(): array {
-		$stored = get_option( self::QUOTA_OPTION, array() );
-		if ( ! is_array( $stored ) ) {
-			return array();
-		}
-
-		return $stored;
+		return self::get_usage_stats();
 	}
 
 	protected function get_text_length( string $text ): int {
