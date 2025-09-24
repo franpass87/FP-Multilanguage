@@ -141,7 +141,7 @@ class PostTranslationManagerTest extends TestCase
         $fp_test_posts[$postId] = $post;
 
         $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
-        $manager->translate_post($postId, null, true);
+        $manager->translate_post($postId);
 
         $translations = $manager->get_post_translations($postId);
         $this->assertArrayHasKey('it', $translations);
@@ -149,6 +149,33 @@ class PostTranslationManagerTest extends TestCase
         $this->assertSame('google:Original content', $translations['it']['content']);
         $this->assertSame('google:Original excerpt', $translations['it']['excerpt']);
         $this->assertArrayHasKey('updated_at', $translations['it']);
+    }
+
+    public function test_handle_post_save_skips_translation_when_auto_translate_disabled(): void
+    {
+        $options = Settings::get_options();
+        $options['auto_translate'] = false;
+        update_option(Settings::OPTION_NAME, $options);
+
+        $postId = 77;
+        $post = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Titolo',
+            'post_content' => 'Contenuto',
+            'post_excerpt' => 'Estratto',
+        ]);
+        global $fp_test_posts;
+        $fp_test_posts[$postId] = $post;
+
+        global $wp_remote_post_calls;
+        $wp_remote_post_calls = [];
+
+        $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
+        $manager->handle_post_save($postId, $post, false);
+        $manager->handle_post_save($postId, $post, true);
+
+        $this->assertSame([], $manager->get_post_translations($postId));
+        $this->assertArrayNotHasKey('translation.googleapis.com', $wp_remote_post_calls);
     }
 
     public function test_filter_content_uses_current_language(): void
