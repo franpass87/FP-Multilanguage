@@ -17,6 +17,10 @@ class CurrentLanguageTest extends TestCase
         $wp_test_options = [];
         $wp_test_actions = [];
         $wp_test_textdomains = [];
+        $GLOBALS['wp_test_locale'] = 'en_US';
+
+        global $wp_user_meta_storage;
+        $wp_user_meta_storage = [];
 
         $_GET = [];
         $_COOKIE = [];
@@ -33,6 +37,9 @@ class CurrentLanguageTest extends TestCase
         $_GET = [];
         $_COOKIE = [];
         unset($_SERVER['REQUEST_URI']);
+        $GLOBALS['wp_test_locale'] = 'en_US';
+
+        \FPMultilanguage\CurrentLanguage::clear_cache();
 
         parent::tearDown();
     }
@@ -50,6 +57,35 @@ class CurrentLanguageTest extends TestCase
         $this->assertSame('it', CurrentLanguage::resolve(), 'La lingua corrente deve corrispondere a quella memorizzata.');
     }
 
+    public function test_remember_normalizes_language_code(): void
+    {
+        CurrentLanguage::remember('PT_br');
+
+        $this->assertSame('pt-br', $_COOKIE['fp_multilanguage_lang'] ?? null);
+        $this->assertSame('pt-br', CurrentLanguage::resolve());
+        $this->assertSame('pt-br', get_user_meta(1, 'fp_multilanguage_language', true));
+    }
+
+    public function test_resolve_detects_regional_locale(): void
+    {
+        $GLOBALS['wp_test_locale'] = 'pt_BR';
+
+        update_option(Settings::OPTION_NAME, [
+            'source_language' => 'en',
+            'fallback_language' => 'en',
+            'target_languages' => ['pt-br'],
+            'providers' => [],
+            'seo' => [],
+            'quote_tracking' => [],
+            'auto_translate' => false,
+        ]);
+
+        Settings::clear_cache();
+        $this->resetCurrentLanguageCache();
+
+        $this->assertSame('pt-br', CurrentLanguage::resolve());
+    }
+
     private function resetPluginSingleton(): void
     {
         $reflection = new ReflectionClass(Plugin::class);
@@ -60,9 +96,6 @@ class CurrentLanguageTest extends TestCase
 
     private function resetCurrentLanguageCache(): void
     {
-        $reflection = new ReflectionClass(CurrentLanguage::class);
-        $property = $reflection->getProperty('cached');
-        $property->setAccessible(true);
-        $property->setValue(null, null);
+        CurrentLanguage::clear_cache();
     }
 }

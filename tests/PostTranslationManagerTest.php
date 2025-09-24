@@ -118,6 +118,7 @@ class PostTranslationManagerTest extends TestCase
         $fp_test_posts = [];
 
         Settings::bootstrap_defaults();
+        \FPMultilanguage\CurrentLanguage::clear_cache();
         $options = Settings::get_options();
         $options['providers']['google']['enabled'] = true;
         $options['providers']['google']['api_key'] = 'unit-test-key';

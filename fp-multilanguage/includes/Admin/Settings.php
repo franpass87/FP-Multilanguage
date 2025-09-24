@@ -1,6 +1,7 @@
 <?php
 namespace FPMultilanguage\Admin;
 
+use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
 use WP_Error;
@@ -485,16 +486,23 @@ class Settings {
 
 			TranslationService::flush_cache();
 
-			self::set_cached_options( $sanitized );
+						self::set_cached_options( $sanitized );
+						CurrentLanguage::clear_cache();
 
 			return $sanitized;
 	}
 
 
 	private function sanitize_language( string $value ): string {
-		$value = sanitize_text_field( strtolower( $value ) );
+			$value = sanitize_text_field( strtolower( $value ) );
+			$value = str_replace( array( ' ', '_' ), '-', $value );
 
-		return preg_replace( '/[^a-z0-9_-]/', '', $value );
+			$value = preg_replace( '/[^a-z0-9-]/', '', $value );
+		if ( null === $value ) {
+				return '';
+		}
+
+			return trim( $value, '-' );
 	}
 
 	public static function get_options(): array {
