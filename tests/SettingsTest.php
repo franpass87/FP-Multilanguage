@@ -56,6 +56,27 @@ class SettingsTest extends TestCase
         $this->assertContains( 'it', $sanitized['target_languages'], 'Quando mancano le lingue di destinazione devono essere ripristinati i valori di default.' );
     }
 
+    public function test_sanitize_disables_provider_without_api_key(): void
+    {
+        $input = array(
+            'providers' => array(
+                'google' => array(
+                    'enabled' => true,
+                    'api_key' => '',
+                ),
+                'deepl' => array(
+                    'enabled' => 1,
+                    'api_key' => '   ',
+                ),
+            ),
+        );
+
+        $sanitized = $this->settings->sanitize( $input );
+
+        $this->assertFalse( $sanitized['providers']['google']['enabled'], 'Il provider Google deve essere disabilitato senza chiave API.' );
+        $this->assertFalse( $sanitized['providers']['deepl']['enabled'], 'Il provider DeepL deve essere disabilitato senza chiave API.' );
+    }
+
     public function test_get_options_uses_cache_until_cleared(): void
     {
         $stored = array(
