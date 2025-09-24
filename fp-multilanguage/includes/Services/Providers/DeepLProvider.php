@@ -69,12 +69,32 @@ class DeepLProvider implements TranslationProviderInterface {
 			return null;
 		}
 
-		$payload    = json_decode( wp_remote_retrieve_body( $response ), true );
-		$translated = $payload['translations'][0]['text'] ?? '';
-		if ( $translated === '' ) {
-			return null;
+				$body = wp_remote_retrieve_body( $response );
+		if ( ! is_string( $body ) || $body === '' ) {
+				$this->logger->warning( 'DeepL empty body response' );
+
+				return null;
 		}
 
-		return new TranslationResponse( (string) $translated, true, array( 'provider' => $this->get_name() ) );
+				$payload = json_decode( $body, true );
+		if ( ! is_array( $payload ) ) {
+				$this->logger->warning( 'DeepL invalid JSON response' );
+
+				return null;
+		}
+
+				$translations = $payload['translations'] ?? array();
+		if ( ! is_array( $translations ) || ! isset( $translations[0]['text'] ) ) {
+				$this->logger->warning( 'DeepL missing text field' );
+
+				return null;
+		}
+
+				$translated = (string) $translations[0]['text'];
+		if ( $translated === '' ) {
+				return null;
+		}
+
+				return new TranslationResponse( $translated, true, array( 'provider' => $this->get_name() ) );
 	}
 }

@@ -26,6 +26,11 @@ if (! isset($wp_remote_post_failures)) {
     $wp_remote_post_failures = [];
 }
 
+global $wp_remote_post_invalid_json;
+if (! isset($wp_remote_post_invalid_json)) {
+    $wp_remote_post_invalid_json = [];
+}
+
 global $wp_test_filters;
 if (! isset($wp_test_filters)) {
     $wp_test_filters = [];
@@ -189,7 +194,7 @@ if (! function_exists('wp_json_encode')) {
 if (! function_exists('wp_remote_post')) {
     function wp_remote_post($url, $args = [])
     {
-        global $wp_remote_post_calls, $wp_remote_post_failures;
+        global $wp_remote_post_calls, $wp_remote_post_failures, $wp_remote_post_invalid_json;
         $host = parse_url($url, PHP_URL_HOST) ?: $url;
         if (! isset($wp_remote_post_calls[$host])) {
             $wp_remote_post_calls[$host] = 0;
@@ -205,6 +210,18 @@ if (! function_exists('wp_remote_post')) {
             return [
                 'response' => ['code' => 500],
                 'body' => json_encode(['error' => 'Simulated failure']),
+            ];
+        }
+
+        if (isset($wp_remote_post_invalid_json[$host]) && $wp_remote_post_invalid_json[$host] > 0) {
+            $wp_remote_post_invalid_json[$host]--;
+            if ($wp_remote_post_invalid_json[$host] === 0) {
+                unset($wp_remote_post_invalid_json[$host]);
+            }
+
+            return [
+                'response' => ['code' => 200],
+                'body' => '{invalid-json-response',
             ];
         }
 
