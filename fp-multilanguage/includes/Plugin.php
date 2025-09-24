@@ -174,6 +174,7 @@ class Plugin {
 		delete_option( Settings::MANUAL_STRINGS_OPTION );
 		delete_option( 'fp_multilanguage_quota' );
 		delete_option( self::VERSION_OPTION );
+		delete_option( SEO::SLUG_INDEX_OPTION );
 
 		/** @var Migrator $migrator */
 		$migrator = self::instance()->container->get( 'migrator' );

@@ -132,6 +132,69 @@ class SEOTest extends TestCase
         $this->assertSame($expectedAlternates, $resolvedLinks);
     }
 
+    public function test_resolve_translated_slug_maps_query_to_post(): void
+    {
+        $logger = new Logger();
+        $notices = new AdminNotices($logger);
+        $settings = new Settings($logger, $notices);
+        $translationService = new TranslationService($logger, $notices, $settings);
+
+        $postTranslationManager = new class extends PostTranslationManager {
+            public function __construct()
+            {
+            }
+        };
+
+        update_option(SEO::SLUG_INDEX_OPTION, [
+            'chi-siamo' => [
+                'post_id' => 321,
+                'language' => 'it',
+            ],
+        ]);
+
+        $seo = new SEO($settings, $translationService, $postTranslationManager, $logger);
+
+        $result = $seo->resolve_translated_slug(['name' => 'chi-siamo']);
+
+        $this->assertSame(321, $result['p']);
+        $this->assertSame(321, $result['page_id']);
+        $this->assertSame('it', $result['fp_lang']);
+    }
+
+    public function test_cleanup_slug_index_removes_post_entries(): void
+    {
+        $logger = new Logger();
+        $notices = new AdminNotices($logger);
+        $settings = new Settings($logger, $notices);
+        $translationService = new TranslationService($logger, $notices, $settings);
+
+        $postTranslationManager = new class extends PostTranslationManager {
+            public function __construct()
+            {
+            }
+        };
+
+        update_option(SEO::SLUG_INDEX_OPTION, [
+            'chi-siamo' => [
+                'post_id' => 654,
+                'language' => 'it',
+            ],
+            'en/about' => [
+                'post_id' => 123,
+                'language' => 'en',
+            ],
+        ]);
+
+        $seo = new SEO($settings, $translationService, $postTranslationManager, $logger);
+        $seo->cleanup_slug_index(654);
+
+        $index = get_option(SEO::SLUG_INDEX_OPTION);
+
+        $this->assertIsArray($index);
+        $this->assertArrayNotHasKey('chi-siamo', $index);
+        $this->assertArrayHasKey('en/about', $index);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $entries
      */
