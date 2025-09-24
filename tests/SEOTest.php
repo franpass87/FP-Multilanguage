@@ -1,9 +1,14 @@
 <?php
 namespace {
     if (! class_exists('WP_Post')) {
+        #[\AllowDynamicProperties]
         class WP_Post
         {
-            public $ID;
+            public int $ID = 0;
+            public string $post_title = '';
+            public string $post_content = '';
+            public string $post_excerpt = '';
+            public string $post_type = 'post';
 
             public function __construct(array $data = [])
             {

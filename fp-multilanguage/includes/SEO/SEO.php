@@ -247,29 +247,28 @@ class SEO {
 		unset( $postType );
 
 		$languageUrls = $this->get_language_urls( $post, $this->get_meta( $post->ID ) );
-                if ( ! empty( $languageUrls ) ) {
-                        $entry['alternates'] = array();
-                        foreach ( $languageUrls as $lang => $url ) {
-                                $entry['alternates'][] = array(
-                                        'rel'      => 'alternate',
-                                        'hreflang' => $lang,
-                                        'href'     => $url,
-                                );
-                        }
-                }
+		if ( ! empty( $languageUrls ) ) {
+				$entry['alternates'] = array();
+			foreach ( $languageUrls as $lang => $url ) {
+						$entry['alternates'][] = array(
+							'rel'      => 'alternate',
+							'hreflang' => $lang,
+							'href'     => $url,
+						);
+			}
+		}
 
 		return $entry;
 	}
 
 	public function filter_robots_txt( string $output, bool $is_public ): string {
 		if ( ! $is_public ) {
-			return $output;
+				return $output;
 		}
 
-			$language = CurrentLanguage::resolve();
-		if ( $language !== '' && strpos( $output, 'Sitemap:' ) === false ) {
-			$output .= "\n# FP Multilanguage";
-			$output .= "\nSitemap: " . home_url( '/sitemap-' . $language . '.xml' );
+		if ( strpos( $output, 'Sitemap:' ) === false ) {
+				$output .= "\n# FP Multilanguage";
+				$output .= "\nSitemap: " . home_url( '/wp-sitemap.xml' );
 		}
 
 			return $output;

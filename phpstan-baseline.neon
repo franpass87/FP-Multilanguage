@@ -121,21 +121,6 @@ parameters:
 			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
 
 		-
-			message: "#^Callback expects 1 parameter, \\$accepted_args is set to 4\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
-
-		-
-			message: "#^Callback expects 4 parameters, \\$accepted_args is set to 5\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
-
-		-
-			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:filter_generic_string\\(\\) has no return type specified\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
-
-		-
 			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:filter_generic_string\\(\\) has parameter \\$value with no type specified\\.$#"
 			count: 1
 			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
@@ -239,41 +224,6 @@ parameters:
 			message: "#^Template type T of method FPMultilanguage\\\\Support\\\\Container\\:\\:get\\(\\) is not referenced in a parameter\\.$#"
 			count: 1
 			path: fp-multilanguage/includes/Support/Container.php
-
-		-
-			message: "#^Class FPMultilanguage\\\\Widgets\\\\LanguageSwitcher extends generic class WP_Widget but does not specify its types\\: T$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Function fp_multilanguage not found\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Offset 'after_title' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Offset 'after_widget' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Offset 'before_title' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Offset 'before_widget' on array\\{name\\: string, id\\: string, description\\: string, class\\: string, before_widget\\: string, after_widget\\: string, before_title\\: string, after_title\\: string, \\.\\.\\.\\} on left side of \\?\\? always exists and is not nullable\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
-
-		-
-			message: "#^Property FPMultilanguage\\\\Widgets\\\\LanguageSwitcher\\:\\:\\$settings is never read, only written\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Widgets/LanguageSwitcher.php
 
 		-
 			message: "#^Function FPMultilanguage\\\\Content\\\\get_post\\(\\) has no return type specified\\.$#"
