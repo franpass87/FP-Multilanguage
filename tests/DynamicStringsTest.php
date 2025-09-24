@@ -122,6 +122,43 @@ class DynamicStringsTest extends TestCase
         $this->assertSame('service:Hello', $result);
     }
 
+    public function test_filter_ngettext_preserves_existing_wordpress_translation(): void
+    {
+        $service = $this->createMock(TranslationService::class);
+        $service->expects($this->never())->method('translate_text');
+        $dynamicStrings = $this->createDynamicStrings($service);
+
+        add_filter('fp_multilanguage_current_language', static function () {
+            return 'it';
+        });
+
+        $result = $dynamicStrings->filter_ngettext('Traduzione WP', 'Singolare', 'Plurale', 2, 'default');
+
+        $this->assertSame('Traduzione WP', $result);
+    }
+
+    public function test_filter_ngettext_triggers_automatic_translation_when_needed(): void
+    {
+        $service = $this->getMockBuilder(TranslationService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['translate_text'])
+            ->getMock();
+
+        $service->expects($this->once())
+            ->method('translate_text')
+            ->with('Singolare', 'en', 'it', [])
+            ->willReturn('service:Singolare');
+
+        add_filter('fp_multilanguage_current_language', static function () {
+            return 'it';
+        });
+
+        $dynamicStrings = $this->createDynamicStrings($service);
+        $result = $dynamicStrings->filter_ngettext('Singolare', 'Singolare', 'Plurale', 1, 'default');
+
+        $this->assertSame('service:Singolare', $result);
+    }
+
     public function test_translates_requested_language_from_query_var(): void
     {
         $_GET['fp_lang'] = 'it';

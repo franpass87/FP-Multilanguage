@@ -229,11 +229,20 @@ class DynamicStrings {
 		return $this->translate_string( $text, $context );
 	}
 
-	public function filter_ngettext( string $single, string $plural, int $number, string $domain ): string {
-		$text = $number === 1 ? $single : $plural;
+        public function filter_ngettext( string $translation, string $single, string $plural, int $number, string $domain ): string {
+                $text = $number === 1 ? $single : $plural;
 
-		return $this->filter_gettext( $text, $text, $domain );
-	}
+                if ( $translation !== $text ) {
+                        $result = $this->filter_gettext( $translation, $text, $domain );
+                        if ( $result !== $translation && $result !== $text ) {
+                                return $result;
+                        }
+
+                        return $translation;
+                }
+
+                return $this->filter_gettext( $translation, $text, $domain );
+        }
 
 	public function filter_generic_string( $value ) {
 		if ( ! is_string( $value ) || trim( $value ) === '' ) {
