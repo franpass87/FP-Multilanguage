@@ -142,7 +142,7 @@ class DynamicStringsTest extends TestCase
         $this->assertSame('service:Hello', $result);
     }
 
-    public function test_filter_gettext_with_context_returns_manual_translation_without_service_call(): void
+    public function test_manual_translation_for_x_returns_without_service_call(): void
     {
         $text = 'Click me';
         $context = 'button';
