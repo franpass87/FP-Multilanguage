@@ -119,6 +119,7 @@ class PostTranslationManagerTest extends TestCase
 
         Settings::bootstrap_defaults();
         $options = Settings::get_options();
+        $options['providers']['google']['enabled'] = true;
         $options['providers']['google']['api_key'] = 'unit-test-key';
         update_option(Settings::OPTION_NAME, $options);
 
