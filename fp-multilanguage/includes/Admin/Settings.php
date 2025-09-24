@@ -17,11 +17,13 @@ class Settings {
 
 	private const REST_NAMESPACE = 'fp-multilanguage/v1';
 
-	private Logger $logger;
+        private Logger $logger;
 
-	private AdminNotices $notices;
+        private AdminNotices $notices;
 
-	private static array $defaults = array(
+        private static ?array $cachedOptions = null;
+
+        private static array $defaults = array(
 		'source_language'   => 'en',
 		'fallback_language' => 'en',
 		'target_languages'  => array( 'it' ),
@@ -46,27 +48,39 @@ class Settings {
 		'quote_tracking'    => array(),
 	);
 
-	public function __construct( Logger $logger, AdminNotices $notices ) {
-		$this->logger  = $logger;
-		$this->notices = $notices;
-	}
+        public function __construct( Logger $logger, AdminNotices $notices ) {
+                $this->logger  = $logger;
+                $this->notices = $notices;
 
-	public static function bootstrap_defaults(): void {
-		if ( ! function_exists( 'get_option' ) ) {
-			return;
-		}
+                self::clear_cache();
 
-		$options = get_option( self::OPTION_NAME, array() );
-		if ( ! is_array( $options ) || empty( $options ) ) {
-			update_option( self::OPTION_NAME, self::$defaults );
-		} else {
-			update_option( self::OPTION_NAME, wp_parse_args( $options, self::$defaults ) );
-		}
+                if ( function_exists( 'add_action' ) ) {
+                        add_action( 'update_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
+                        add_action( 'add_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
+                        add_action( 'delete_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
+                }
+        }
 
-		if ( false === get_option( self::MANUAL_STRINGS_OPTION, false ) ) {
-			update_option( self::MANUAL_STRINGS_OPTION, array() );
-		}
-	}
+        public static function bootstrap_defaults(): void {
+                if ( ! function_exists( 'get_option' ) ) {
+                        return;
+                }
+
+                $options = get_option( self::OPTION_NAME, array() );
+                if ( ! is_array( $options ) || empty( $options ) ) {
+                        $options = self::$defaults;
+                } else {
+                        $options = wp_parse_args( $options, self::$defaults );
+                }
+
+                update_option( self::OPTION_NAME, $options );
+
+                self::set_cached_options( $options );
+
+                if ( false === get_option( self::MANUAL_STRINGS_OPTION, false ) ) {
+                        update_option( self::MANUAL_STRINGS_OPTION, array() );
+                }
+        }
 
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
@@ -386,23 +400,58 @@ class Settings {
 		<?php
 	}
 
-	public function sanitize( $input ): array {
-		$sanitized = wp_parse_args( is_array( $input ) ? $input : array(), self::$defaults );
+        public function sanitize( $input ): array {
+                $sanitized = wp_parse_args( is_array( $input ) ? $input : array(), self::$defaults );
 
-		$sanitized['source_language']   = $this->sanitize_language( $sanitized['source_language'] );
-		$sanitized['fallback_language'] = $this->sanitize_language( $sanitized['fallback_language'] );
+                $sanitized['source_language']   = $this->sanitize_language( $sanitized['source_language'] );
+                $sanitized['fallback_language'] = $this->sanitize_language( $sanitized['fallback_language'] );
 
-		$targets = $sanitized['target_languages'];
-		if ( is_string( $targets ) ) {
-			$targets = preg_split( '/[,\s]+/', $targets );
-		}
-		$targets                       = array_filter( array_map( array( $this, 'sanitize_language' ), (array) $targets ) );
-		$sanitized['target_languages'] = array_values( array_unique( $targets ) );
+                if ( '' === $sanitized['fallback_language'] ) {
+                        $sanitized['fallback_language'] = $sanitized['source_language'];
+                }
 
-		$sanitized['auto_translate'] = ! empty( $sanitized['auto_translate'] );
+                $targets = $sanitized['target_languages'];
+                if ( is_string( $targets ) ) {
+                        $targets = preg_split( '/[,\s]+/', $targets );
+                }
+                $targets = array_map( array( $this, 'sanitize_language' ), (array) $targets );
+                $targets = array_filter( $targets );
+                $targets = array_values( array_unique( $targets ) );
+                $targets = array_values(
+                        array_filter(
+                                $targets,
+                                static function ( string $language ) use ( $sanitized ): bool {
+                                        return $language !== $sanitized['source_language'];
+                                }
+                        )
+                );
 
-		foreach ( array( 'google', 'deepl' ) as $provider ) {
-			$providerOptions            = $sanitized['providers'][ $provider ] ?? array();
+                if ( $sanitized['fallback_language'] !== $sanitized['source_language'] && ! in_array( $sanitized['fallback_language'], $targets, true ) ) {
+                        $targets[] = $sanitized['fallback_language'];
+                }
+
+                if ( empty( $targets ) ) {
+                        $defaultTargets = array_map( array( $this, 'sanitize_language' ), (array) self::$defaults['target_languages'] );
+                        $defaultTargets = array_filter(
+                                $defaultTargets,
+                                static function ( string $language ) use ( $sanitized ): bool {
+                                        return $language !== $sanitized['source_language'];
+                                }
+                        );
+
+                        if ( empty( $defaultTargets ) && $sanitized['fallback_language'] !== $sanitized['source_language'] ) {
+                                $defaultTargets = array( $sanitized['fallback_language'] );
+                        }
+
+                        $targets = array_values( array_unique( $defaultTargets ) );
+                }
+
+                $sanitized['target_languages'] = array_values( array_unique( $targets ) );
+
+                $sanitized['auto_translate'] = ! empty( $sanitized['auto_translate'] );
+
+                foreach ( array( 'google', 'deepl' ) as $provider ) {
+                        $providerOptions            = $sanitized['providers'][ $provider ] ?? array();
 			$providerOptions            = wp_parse_args( $providerOptions, self::$defaults['providers'][ $provider ] );
 			$providerOptions['enabled'] = ! empty( $providerOptions['enabled'] );
 			$providerOptions['api_key'] = sanitize_text_field( $providerOptions['api_key'] );
@@ -418,14 +467,16 @@ class Settings {
 			foreach ( self::$defaults['seo'] as $key => $default ) {
 				$sanitized['seo'][ $key ] = isset( $sanitized['seo'][ $key ] ) ? (bool) $sanitized['seo'][ $key ] : (bool) $default;
 			}
-		}
+                }
 
-		$sanitized['quote_tracking'] = self::get_quote_tracking();
+                $sanitized['quote_tracking'] = self::get_quote_tracking();
 
-		TranslationService::flush_cache();
+                TranslationService::flush_cache();
 
-		return $sanitized;
-	}
+                self::set_cached_options( $sanitized );
+
+                return $sanitized;
+        }
 
 
 	private function sanitize_language( string $value ): string {
@@ -434,22 +485,24 @@ class Settings {
 		return preg_replace( '/[^a-z0-9_-]/', '', $value );
 	}
 
-	public static function get_options(): array {
-		if ( ! function_exists( 'get_option' ) ) {
-			return self::$defaults;
-		}
+        public static function get_options(): array {
+                if ( null === self::$cachedOptions ) {
+                        if ( ! function_exists( 'get_option' ) ) {
+                                self::$cachedOptions = self::$defaults;
+                        } else {
+                                $optionsRaw = get_option( self::OPTION_NAME, array() );
+                                self::$cachedOptions = wp_parse_args( is_array( $optionsRaw ) ? $optionsRaw : array(), self::$defaults );
+                        }
+                }
 
-		$optionsRaw = get_option( self::OPTION_NAME, array() );
+                $options = self::$cachedOptions;
+                $options['quote_tracking'] = self::get_quote_tracking();
 
-		$options = wp_parse_args( is_array( $optionsRaw ) ? $optionsRaw : array(), self::$defaults );
+                return $options;
+        }
 
-		$options['quote_tracking'] = self::get_quote_tracking();
-
-		return $options;
-	}
-
-	public static function get_manual_strings(): array {
-		$stored = get_option( self::MANUAL_STRINGS_OPTION, array() );
+        public static function get_manual_strings(): array {
+                $stored = get_option( self::MANUAL_STRINGS_OPTION, array() );
 
 		return is_array( $stored ) ? $stored : array();
 	}
@@ -498,7 +551,15 @@ class Settings {
 		return self::get_options()['target_languages'];
 	}
 
-	public static function is_auto_translate_enabled(): bool {
-		return (bool) self::get_options()['auto_translate'];
-	}
+        public static function is_auto_translate_enabled(): bool {
+                return (bool) self::get_options()['auto_translate'];
+        }
+
+        public static function clear_cache(): void {
+                self::$cachedOptions = null;
+        }
+
+        private static function set_cached_options( array $options ): void {
+                self::$cachedOptions = $options;
+        }
 }
