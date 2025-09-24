@@ -352,7 +352,7 @@ class Settings {
 	}
 
 	private function render_quote_tab(): void {
-		$quotes = $this->get_options()['quote_tracking'] ?? array();
+			$quotes = TranslationService::get_usage_stats();
 		?>
 		<table class="widefat striped">
 			<thead>
@@ -364,21 +364,25 @@ class Settings {
 				</tr>
 			</thead>
 			<tbody>
-				<?php if ( empty( $quotes ) ) : ?>
+			<?php if ( empty( $quotes ) ) : ?>
 					<tr>
 						<td colspan="4"><?php esc_html_e( 'Nessun dato disponibile. Le quote verranno aggiornate dopo le prime traduzioni.', 'fp-multilanguage' ); ?></td>
 					</tr>
 				<?php else : ?>
-					<?php foreach ( $quotes as $provider => $data ) : ?>
-						<?php foreach ( $data as $language => $usage ) : ?>
-							<tr>
-								<td><?php echo esc_html( $provider ); ?></td>
-								<td><?php echo esc_html( $language ); ?></td>
-								<td><?php echo esc_html( number_format_i18n( $usage['characters'] ?? 0 ) ); ?></td>
-								<td><?php echo esc_html( isset( $usage['updated_at'] ) ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $usage['updated_at'] ) : '-' ); ?></td>
-							</tr>
-						<?php endforeach; ?>
-					<?php endforeach; ?>
+										<?php foreach ( $quotes as $provider => $data ) : ?>
+												<?php foreach ( $data as $language => $usage ) : ?>
+														<?php
+														$characters = (int) $usage['characters'];
+														$updated_at = (int) $usage['updated_at'];
+														?>
+														<tr>
+																<td><?php echo esc_html( $provider ); ?></td>
+																<td><?php echo esc_html( $language ); ?></td>
+																<td><?php echo esc_html( number_format_i18n( $characters ) ); ?></td>
+																<td><?php echo esc_html( $updated_at > 0 ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $updated_at ) : '-' ); ?></td>
+														</tr>
+												<?php endforeach; ?>
+										<?php endforeach; ?>
 				<?php endif; ?>
 			</tbody>
 		</table>

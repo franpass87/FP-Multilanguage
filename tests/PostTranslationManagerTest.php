@@ -149,6 +149,62 @@ class PostTranslationManagerTest extends TestCase
         $this->assertSame('google:Original content', $translations['it']['content']);
         $this->assertSame('google:Original excerpt', $translations['it']['excerpt']);
         $this->assertArrayHasKey('updated_at', $translations['it']);
+        $this->assertArrayHasKey('source', $translations['it']);
+        $expectedSource = [
+            'title' => hash('sha1', 'Original title'),
+            'content' => hash('sha1', 'Original content'),
+            'excerpt' => hash('sha1', 'Original excerpt'),
+            'meta' => [],
+        ];
+        $this->assertSame($expectedSource, $translations['it']['source']);
+        $this->assertSame('synced', $translations['it']['status'] ?? null);
+    }
+
+    public function test_translate_post_does_not_duplicate_work_when_source_is_unchanged(): void
+    {
+        $postId = 101;
+        $post = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Stable title',
+            'post_content' => 'Stable content',
+            'post_excerpt' => 'Stable excerpt',
+        ]);
+        global $fp_test_posts;
+        $fp_test_posts[$postId] = $post;
+
+        $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
+        $firstTranslations = $manager->translate_post($postId);
+        $initialTimestamp = $firstTranslations['it']['updated_at'] ?? 0;
+
+        $secondTranslations = $manager->translate_post($postId);
+        $this->assertSame($firstTranslations, $secondTranslations, 'Le traduzioni non devono cambiare se il contenuto è invariato');
+        $this->assertSame($initialTimestamp, $secondTranslations['it']['updated_at'] ?? 0, 'Il timestamp deve rimanere identico quando non ci sono modifiche.');
+    }
+
+    public function test_translate_post_updates_only_changed_fields(): void
+    {
+        $postId = 202;
+        $post = new \WP_Post([
+            'ID' => $postId,
+            'post_title' => 'Title A',
+            'post_content' => 'Content A',
+            'post_excerpt' => 'Excerpt A',
+        ]);
+        global $fp_test_posts;
+        $fp_test_posts[$postId] = $post;
+
+        $manager = new PostTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
+        $manager->translate_post($postId);
+
+        sleep(1);
+        $fp_test_posts[$postId]->post_title = 'Title B';
+
+        $translations = $manager->translate_post($postId);
+        $this->assertSame('google:Title B', $translations['it']['title']);
+        $this->assertSame('google:Content A', $translations['it']['content']);
+        $this->assertSame(hash('sha1', 'Title B'), $translations['it']['source']['title']);
+        $this->assertSame(hash('sha1', 'Content A'), $translations['it']['source']['content']);
+        $this->assertSame(hash('sha1', 'Excerpt A'), $translations['it']['source']['excerpt']);
     }
 
     public function test_handle_post_save_skips_translation_when_auto_translate_disabled(): void

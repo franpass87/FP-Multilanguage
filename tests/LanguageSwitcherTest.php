@@ -1,9 +1,14 @@
 <?php
 namespace {
     if (! class_exists('WP_Post')) {
+        #[\AllowDynamicProperties]
         class WP_Post
         {
-            public $ID;
+            public int $ID = 0;
+            public string $post_title = '';
+            public string $post_content = '';
+            public string $post_excerpt = '';
+            public string $post_type = 'post';
 
             public function __construct(array $data = [])
             {
@@ -17,7 +22,7 @@ namespace {
     if (! class_exists('WP_Widget')) {
         class WP_Widget
         {
-            public function __construct($id_base = '', $name = '', $widget_options = [], $control_options = [])
+            public function __construct(string $id_base = '', string $name = '', array $widget_options = [], array $control_options = [])
             {
                 unset($id_base, $name, $widget_options, $control_options);
             }
@@ -35,7 +40,7 @@ namespace {
 
 namespace FPMultilanguage\Widgets {
     if (! function_exists(__NAMESPACE__ . '\\fpml_set_test_queried_object')) {
-        function fpml_set_test_queried_object($object): void
+        function fpml_set_test_queried_object(?object $object): void
         {
             $GLOBALS['fpml_test_queried_object'] = $object;
         }
@@ -50,7 +55,7 @@ namespace FPMultilanguage\Widgets {
     }
 
     if (! function_exists(__NAMESPACE__ . '\\get_queried_object')) {
-        function get_queried_object()
+        function get_queried_object(): ?object
         {
             return $GLOBALS['fpml_test_queried_object'] ?? null;
         }
@@ -68,17 +73,17 @@ namespace FPMultilanguage\Widgets {
     }
 
     if (! function_exists(__NAMESPACE__ . '\\fp_multilanguage')) {
-        function fp_multilanguage()
+        function fp_multilanguage(): object
         {
             return new class() {
-                public function get_container()
+                public function get_container(): object
                 {
                     return new class() {
-                        public function get($id)
+                        public function get(string $id): ?object
                         {
                             if ($id === 'post_translation_manager') {
                                 return new class() {
-                                    public function get_post_translations($postId)
+                                    public function get_post_translations(int $postId): array
                                     {
                                         return $GLOBALS['fpml_test_translations'][$postId] ?? [];
                                     }
@@ -116,6 +121,7 @@ class LanguageSwitcherTest extends TestCase
 
         $_GET = [];
         $_SERVER['REQUEST_URI'] = '/';
+        update_option('fp_multilanguage_slug_index', ['by_path' => [], 'by_post' => []]);
     }
 
     protected function tearDown(): void
@@ -124,6 +130,7 @@ class LanguageSwitcherTest extends TestCase
 
         $_GET = [];
         unset($_SERVER['REQUEST_URI']);
+        update_option('fp_multilanguage_slug_index', ['by_path' => [], 'by_post' => []]);
 
         parent::tearDown();
     }
@@ -161,6 +168,34 @@ class LanguageSwitcherTest extends TestCase
 
         $this->assertSame('https://example.com/category/news/?paged=2&fp_lang=en', $languages['en']);
         $this->assertSame('https://example.com/category/news/?paged=2&fp_lang=it', $languages['it']);
+    }
+
+    public function test_uses_seo_slugs_when_available(): void
+    {
+        $post = new \WP_Post(['ID' => 7]);
+        \FPMultilanguage\Widgets\fpml_set_test_queried_object($post);
+        \FPMultilanguage\Widgets\fpml_set_post_translations(7, [
+            'it' => ['content' => 'tradotto'],
+        ]);
+
+        update_option('fp_multilanguage_slug_index', [
+            'by_path' => [
+                'en/product' => ['post_id' => 7, 'language' => 'en'],
+                'it/prodotto' => ['post_id' => 7, 'language' => 'it'],
+            ],
+            'by_post' => [
+                7 => [
+                    'en' => 'en/product',
+                    'it' => 'it/prodotto',
+                ],
+            ],
+        ]);
+
+        $switcher = new LanguageSwitcher();
+        $languages = $this->invokeGetLanguages($switcher);
+
+        $this->assertSame('https://example.com/en/product/', $languages['en']);
+        $this->assertSame('https://example.com/it/prodotto/', $languages['it']);
     }
 
     private function invokeGetLanguages(LanguageSwitcher $switcher): array

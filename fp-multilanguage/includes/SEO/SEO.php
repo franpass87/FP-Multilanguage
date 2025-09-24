@@ -12,6 +12,8 @@ class SEO {
 
 	private const META_KEY = '_fp_multilanguage_seo';
 
+	private const SLUG_INDEX_OPTION = 'fp_multilanguage_slug_index';
+
 	private Settings $settings;
 
 	private TranslationService $translationService;
@@ -28,14 +30,16 @@ class SEO {
 	}
 
 	public function register(): void {
-		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
-		add_action( 'save_post', array( $this, 'save_meta' ), 20, 2 );
-		add_action( 'wp_head', array( $this, 'render_meta_tags' ), 1 );
-		add_filter( 'pre_get_document_title', array( $this, 'filter_document_title' ) );
-		add_filter( 'wp_sitemaps_posts_entry', array( $this, 'filter_sitemap_entry' ), 10, 3 );
-		add_filter( 'wpseo_locale', array( $this, 'filter_wpseo_locale' ) );
-		add_filter( 'wpseo_canonical', array( $this, 'filter_wpseo_canonical' ) );
-		add_filter( 'robots_txt', array( $this, 'filter_robots_txt' ), 10, 2 );
+			add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
+			add_action( 'save_post', array( $this, 'save_meta' ), 20, 2 );
+			add_action( 'wp_head', array( $this, 'render_meta_tags' ), 1 );
+			add_filter( 'pre_get_document_title', array( $this, 'filter_document_title' ) );
+			add_filter( 'wp_sitemaps_posts_entry', array( $this, 'filter_sitemap_entry' ), 10, 3 );
+			add_filter( 'wpseo_locale', array( $this, 'filter_wpseo_locale' ) );
+			add_filter( 'wpseo_canonical', array( $this, 'filter_wpseo_canonical' ) );
+			add_filter( 'robots_txt', array( $this, 'filter_robots_txt' ), 10, 2 );
+			add_filter( 'request', array( $this, 'resolve_slug_request' ) );
+			add_action( 'delete_post', array( $this, 'handle_post_delete' ) );
 	}
 
 	public function add_meta_box(): void {
@@ -125,7 +129,12 @@ class SEO {
 			}
 		}
 
-		update_post_meta( $postId, self::META_KEY, $sanitized );
+				update_post_meta( $postId, self::META_KEY, $sanitized );
+				$this->update_slug_index( $postId, $sanitized['slug'] );
+	}
+
+	public function handle_post_delete( int $postId ): void {
+			$this->remove_from_slug_index( $postId );
 	}
 
 	public function render_meta_tags(): void {
@@ -244,32 +253,31 @@ class SEO {
 	}
 
 	public function filter_sitemap_entry( array $entry, WP_Post $post, string $postType ): array {
-		unset( $postType );
+			unset( $postType );
 
-		$languageUrls = $this->get_language_urls( $post, $this->get_meta( $post->ID ) );
-                if ( ! empty( $languageUrls ) ) {
-                        $entry['alternates'] = array();
-                        foreach ( $languageUrls as $lang => $url ) {
-                                $entry['alternates'][] = array(
-                                        'rel'      => 'alternate',
-                                        'hreflang' => $lang,
-                                        'href'     => $url,
-                                );
-                        }
-                }
+			$languageUrls = $this->get_language_urls( $post, $this->get_meta( $post->ID ) );
+		if ( ! empty( $languageUrls ) ) {
+			$entry['alternates'] = array();
+			foreach ( $languageUrls as $lang => $url ) {
+						$entry['alternates'][] = array(
+							'rel'      => 'alternate',
+							'hreflang' => $lang,
+							'href'     => $url,
+						);
+			}
+		}
 
-		return $entry;
+			return $entry;
 	}
 
 	public function filter_robots_txt( string $output, bool $is_public ): string {
 		if ( ! $is_public ) {
-			return $output;
+				return $output;
 		}
 
-			$language = CurrentLanguage::resolve();
-		if ( $language !== '' && strpos( $output, 'Sitemap:' ) === false ) {
-			$output .= "\n# FP Multilanguage";
-			$output .= "\nSitemap: " . home_url( '/sitemap-' . $language . '.xml' );
+		if ( strpos( $output, 'Sitemap:' ) === false ) {
+				$output .= "\n# FP Multilanguage";
+				$output .= "\nSitemap: " . home_url( '/wp-sitemap.xml' );
 		}
 
 			return $output;
@@ -296,28 +304,173 @@ class SEO {
 	}
 
 	private function get_language_urls( WP_Post $post, array $meta ): array {
-		$urls         = array();
-		$source       = Settings::get_source_language();
-		$translations = $this->postTranslationManager->get_post_translations( $post->ID );
+			$urls         = array();
+			$source       = Settings::get_source_language();
+			$translations = $this->postTranslationManager->get_post_translations( $post->ID );
 
-		$urls[ $source ] = get_permalink( $post );
+			$urls[ $source ] = get_permalink( $post );
 		if ( isset( $meta['slug'][ $source ] ) && $meta['slug'][ $source ] !== '' ) {
-			$urls[ $source ] = trailingslashit( home_url( $meta['slug'][ $source ] ) );
+				$sourceSlug = $this->normalize_slug( $meta['slug'][ $source ] );
+			if ( $sourceSlug !== '' ) {
+				$urls[ $source ] = trailingslashit( home_url( $sourceSlug ) );
+			}
 		}
 
 		foreach ( $translations as $language => $data ) {
 			if ( ! isset( $data['content'] ) || $data['content'] === '' ) {
-				continue;
+					continue;
 			}
 
-			$slug = $meta['slug'][ $language ] ?? '';
+				$slug = $meta['slug'][ $language ] ?? '';
+				$slug = $this->normalize_slug( $slug );
 			if ( $slug !== '' ) {
-				$urls[ $language ] = trailingslashit( home_url( $slug ) );
+					$urls[ $language ] = trailingslashit( home_url( $slug ) );
 			} else {
-				$urls[ $language ] = add_query_arg( 'fp_lang', $language, get_permalink( $post ) );
+					$urls[ $language ] = add_query_arg( 'fp_lang', $language, get_permalink( $post ) );
 			}
 		}
 
-		return $urls;
+			return $urls;
+	}
+
+	public function resolve_slug_request( array $queryVars ): array {
+		if ( is_admin() ) {
+				return $queryVars;
+		}
+
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || isset( $queryVars['rest_route'] ) ) {
+				return $queryVars;
+		}
+
+		if ( isset( $queryVars['p'] ) || isset( $queryVars['page_id'] ) ) {
+				return $queryVars;
+		}
+
+			$path = '';
+		if ( isset( $_SERVER['REQUEST_URI'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+				$path = (string) $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		}
+
+			$parsed     = (string) parse_url( $path, PHP_URL_PATH );
+			$normalized = trim( $parsed, '/' );
+		if ( $normalized === '' || strpos( $normalized, 'wp-admin' ) === 0 || strpos( $normalized, 'wp-json' ) === 0 ) {
+				return $queryVars;
+		}
+
+			$index  = self::get_slug_index();
+			$byPath = is_array( $index['by_path'] ?? null ) ? $index['by_path'] : array();
+		if ( ! isset( $byPath[ $normalized ] ) ) {
+				return $queryVars;
+		}
+
+			$mapping  = $byPath[ $normalized ];
+			$postId   = (int) ( $mapping['post_id'] ?? 0 );
+			$language = isset( $mapping['language'] ) ? sanitize_key( (string) $mapping['language'] ) : '';
+
+		if ( $postId <= 0 ) {
+				return $queryVars;
+		}
+
+			$queryVars['p']       = $postId;
+			$queryVars['page_id'] = $postId;
+
+		if ( $language !== '' ) {
+				$queryVars['fp_lang'] = $language;
+		}
+
+			unset( $queryVars['name'], $queryVars['pagename'] );
+
+			return $queryVars;
+	}
+
+	public static function get_language_slugs( int $postId ): array {
+			$index  = self::get_slug_index();
+			$byPost = is_array( $index['by_post'] ?? null ) ? $index['by_post'] : array();
+
+		if ( isset( $byPost[ $postId ] ) && is_array( $byPost[ $postId ] ) ) {
+				return $byPost[ $postId ];
+		}
+
+			return array();
+	}
+
+	private static function get_slug_index(): array {
+			$stored = get_option( self::SLUG_INDEX_OPTION, array() );
+		if ( ! is_array( $stored ) ) {
+				return array(
+					'by_path' => array(),
+					'by_post' => array(),
+				);
+		}
+
+			$defaults = array(
+				'by_path' => array(),
+				'by_post' => array(),
+			);
+
+			return wp_parse_args( $stored, $defaults );
+	}
+
+	private function update_slug_index( int $postId, array $slugs ): void {
+			$index = self::get_slug_index();
+
+		foreach ( $index['by_path'] as $path => $data ) {
+			if ( (int) ( $data['post_id'] ?? 0 ) === $postId ) {
+				unset( $index['by_path'][ $path ] );
+			}
+		}
+
+			unset( $index['by_post'][ $postId ] );
+
+		foreach ( $slugs as $language => $slug ) {
+				$languageKey = sanitize_key( (string) $language );
+				$normalized  = $this->normalize_slug( (string) $slug );
+
+			if ( $languageKey === '' || $normalized === '' ) {
+					continue;
+			}
+
+				$index['by_path'][ $normalized ] = array(
+					'post_id'  => $postId,
+					'language' => $languageKey,
+				);
+
+				if ( ! isset( $index['by_post'][ $postId ] ) ) {
+						$index['by_post'][ $postId ] = array();
+				}
+
+				$index['by_post'][ $postId ][ $languageKey ] = $normalized;
+		}
+
+			update_option( self::SLUG_INDEX_OPTION, $index );
+	}
+
+	private function remove_from_slug_index( int $postId ): void {
+			$index   = self::get_slug_index();
+			$changed = false;
+
+		foreach ( $index['by_path'] as $path => $data ) {
+			if ( (int) ( $data['post_id'] ?? 0 ) === $postId ) {
+				unset( $index['by_path'][ $path ] );
+				$changed = true;
+			}
+		}
+
+		if ( isset( $index['by_post'][ $postId ] ) ) {
+				unset( $index['by_post'][ $postId ] );
+				$changed = true;
+		}
+
+		if ( $changed ) {
+				update_option( self::SLUG_INDEX_OPTION, $index );
+		}
+	}
+
+	private function normalize_slug( string $slug ): string {
+			$slug = trim( $slug );
+
+			$slug = trim( $slug, '/' );
+
+			return $slug;
 	}
 }

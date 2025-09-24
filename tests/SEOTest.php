@@ -1,9 +1,14 @@
 <?php
 namespace {
     if (! class_exists('WP_Post')) {
+        #[\AllowDynamicProperties]
         class WP_Post
         {
-            public $ID;
+            public int $ID = 0;
+            public string $post_title = '';
+            public string $post_content = '';
+            public string $post_excerpt = '';
+            public string $post_type = 'post';
 
             public function __construct(array $data = [])
             {
@@ -31,12 +36,22 @@ class SEOTest extends TestCase
     {
         parent::setUp();
 
-        global $wp_test_options, $wp_test_filters, $wp_test_actions;
+        global $wp_test_options, $wp_test_filters, $wp_test_actions, $wp_test_post_meta;
         $wp_test_options = [];
         $wp_test_filters = [];
         $wp_test_actions = [];
+        $wp_test_post_meta = [];
 
         Settings::bootstrap_defaults();
+        update_option('fp_multilanguage_slug_index', ['by_path' => [], 'by_post' => []]);
+    }
+
+    protected function tearDown(): void
+    {
+        unset($_POST['fp_multilanguage_seo'], $_POST['fp_multilanguage_seo_nonce']);
+        unset($_SERVER['REQUEST_URI']);
+
+        parent::tearDown();
     }
 
     public function test_filter_sitemap_entry_adds_hreflang_links(): void
@@ -125,6 +140,45 @@ class SEOTest extends TestCase
         );
 
         $this->assertSame($expectedAlternates, $resolvedLinks);
+    }
+
+    public function test_resolve_slug_request_maps_to_original_post(): void
+    {
+        $logger = new Logger();
+        $notices = new AdminNotices($logger);
+        $settings = new Settings($logger, $notices);
+        $translationService = new TranslationService($logger, $notices, $settings);
+        $manager = $this->createMock(PostTranslationManager::class);
+        $manager->method('get_post_translations')->willReturn([
+            'it' => ['content' => 'test'],
+        ]);
+
+        $seo = new SEO($settings, $translationService, $manager, $logger);
+
+        $postId = 55;
+        $post = new \WP_Post(['ID' => $postId]);
+        $_POST['fp_multilanguage_seo_nonce'] = wp_create_nonce('fp_multilanguage_seo_meta');
+        $_POST['fp_multilanguage_seo'] = [
+            'slug' => [
+                'en' => 'en/product',
+                'it' => 'it/prodotto',
+            ],
+        ];
+
+        $seo->save_meta($postId, $post);
+
+        $slugs = SEO::get_language_slugs($postId);
+        $this->assertSame([
+            'en' => 'en/product',
+            'it' => 'it/prodotto',
+        ], $slugs);
+
+        $_SERVER['REQUEST_URI'] = '/it/prodotto/';
+        $query = $seo->resolve_slug_request([]);
+
+        $this->assertSame(55, $query['p']);
+        $this->assertSame(55, $query['page_id']);
+        $this->assertSame('it', $query['fp_lang']);
     }
 
     /**

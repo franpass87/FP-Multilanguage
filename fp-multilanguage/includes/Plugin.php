@@ -120,12 +120,13 @@ class Plugin {
 	}
 
 	public static function activate(): void {
-		$instance = self::instance();
-		$instance->register_services();
+			$instance = self::instance();
+			$instance->register_services();
+			Settings::bootstrap_defaults();
 
-		/** @var Migrator $migrator */
-		$migrator = $instance->container->get( 'migrator' );
-		$migrator->maybe_migrate();
+			/** @var Migrator $migrator */
+			$migrator = $instance->container->get( 'migrator' );
+			$migrator->maybe_migrate();
 
 		update_option( self::VERSION_OPTION, FP_MULTILANGUAGE_VERSION );
 	}
@@ -135,14 +136,15 @@ class Plugin {
 	}
 
 	public static function uninstall(): void {
-		delete_option( Settings::OPTION_NAME );
-		delete_option( Settings::MANUAL_STRINGS_OPTION );
-		delete_option( 'fp_multilanguage_quota' );
-		delete_option( self::VERSION_OPTION );
+			delete_option( Settings::OPTION_NAME );
+			delete_option( Settings::MANUAL_STRINGS_OPTION );
+			delete_option( 'fp_multilanguage_quota' );
+			delete_option( self::VERSION_OPTION );
+			delete_option( 'fp_multilanguage_slug_index' );
 
-		/** @var Migrator $migrator */
-		$migrator = self::instance()->container->get( 'migrator' );
-		$migrator->drop_tables();
+			/** @var Migrator $migrator */
+			$migrator = self::instance()->container->get( 'migrator' );
+			$migrator->drop_tables();
 	}
 
 	private function register_services(): void {

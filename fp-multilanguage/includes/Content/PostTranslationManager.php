@@ -71,15 +71,15 @@ class PostTranslationManager {
 			return;
 		}
 
-               if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
-                       return;
-               }
+		if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
+				return;
+		}
 
-               if ( ! Settings::is_auto_translate_enabled() ) {
-                       return;
-               }
+		if ( ! Settings::is_auto_translate_enabled() ) {
+				return;
+		}
 
-               $this->translate_post( $postId );
+				$this->translate_post( $postId );
 	}
 
 	public function translate_post( int $postId, ?string $language = null, bool $force = false ): array {
@@ -94,48 +94,105 @@ class PostTranslationManager {
 			$targetLanguages = array_intersect( $targetLanguages, array( $language ) );
 		}
 
-		$translations = $this->get_post_translations( $postId );
-		$customFields = $this->get_custom_fields( $post );
-		$hasChanges   = false;
+				$translations  = $this->get_post_translations( $postId );
+				$customFields  = $this->get_custom_fields( $post );
+				$hasChanges    = false;
+				$titleHash     = $this->hash_value( $post->post_title );
+				$contentHash   = $this->hash_value( $post->post_content );
+				$excerptSource = $post->post_excerpt !== '' ? $post->post_excerpt : wp_trim_words( $post->post_content, 55 );
+				$excerptHash   = $this->hash_value( $excerptSource );
+				$metaHashes    = array();
+		foreach ( $customFields as $metaKey => $value ) {
+				$metaHashes[ $metaKey ] = $this->hash_value( (string) $value );
+		}
 
 		foreach ( $targetLanguages as $target ) {
 			if ( $target === $sourceLanguage ) {
-				continue;
+						continue;
 			}
 
-			$existing           = $translations[ $target ] ?? array();
-			$updated            = $existing;
-			$languageHasChanges = $force;
+				$existing           = $translations[ $target ] ?? array();
+				$updated            = $existing;
+				$languageHasChanges = $force;
 
-			$title = $this->translationService->translate_text( $post->post_title, $sourceLanguage, $target );
-			if ( ! isset( $existing['title'] ) || $existing['title'] !== $title ) {
-				$updated['title']   = $title;
-				$languageHasChanges = true;
+				$existingSource = array();
+			if ( isset( $existing['source'] ) && is_array( $existing['source'] ) ) {
+							$existingSource = $existing['source'];
 			}
 
-			$content = $this->translationService->translate_text( $post->post_content, $sourceLanguage, $target, array( 'format' => 'html' ) );
-			if ( ! isset( $existing['content'] ) || $existing['content'] !== $content ) {
-				$updated['content'] = $content;
-				$languageHasChanges = true;
+							$updatedSource = array(
+								'title'   => $existingSource['title'] ?? null,
+								'content' => $existingSource['content'] ?? null,
+								'excerpt' => $existingSource['excerpt'] ?? null,
+								'meta'    => is_array( $existingSource['meta'] ?? null ) ? $existingSource['meta'] : array(),
+							);
+
+							$languageHasChanges = $this->sync_field_translation(
+								$updated,
+								$existing,
+								$updatedSource,
+								'title',
+								$post->post_title,
+								$titleHash,
+								$sourceLanguage,
+								$target,
+								array(),
+								$force
+							) || $languageHasChanges;
+
+				$languageHasChanges = $this->sync_field_translation(
+					$updated,
+					$existing,
+					$updatedSource,
+					'content',
+					$post->post_content,
+					$contentHash,
+					$sourceLanguage,
+					$target,
+					array( 'format' => 'html' ),
+					$force
+				) || $languageHasChanges;
+
+				$languageHasChanges = $this->sync_field_translation(
+					$updated,
+					$existing,
+					$updatedSource,
+					'excerpt',
+					$excerptSource,
+					$excerptHash,
+					$sourceLanguage,
+					$target,
+					array( 'format' => 'html' ),
+					$force
+				) || $languageHasChanges;
+
+				list( $metaTranslations, $metaSource, $metaChanged ) = $this->sync_meta_translations(
+					$existing,
+					$updatedSource['meta'],
+					$customFields,
+					$metaHashes,
+					$sourceLanguage,
+					$target,
+					$force
+				);
+
+			if ( ! empty( $metaTranslations ) ) {
+				$updated['meta'] = $metaTranslations;
+			} elseif ( isset( $updated['meta'] ) ) {
+						unset( $updated['meta'] );
 			}
 
-			$excerptSource = $post->post_excerpt !== '' ? $post->post_excerpt : wp_trim_words( $post->post_content, 55 );
-			$excerpt       = $this->translationService->translate_text( $excerptSource, $sourceLanguage, $target, array( 'format' => 'html' ) );
-			if ( ! isset( $existing['excerpt'] ) || $existing['excerpt'] !== $excerpt ) {
-				$updated['excerpt'] = $excerpt;
-				$languageHasChanges = true;
-			}
-
-			$updated['meta'] = $existing['meta'] ?? array();
-			foreach ( $customFields as $metaKey => $value ) {
-				$translatedMeta = $this->translationService->translate_text( (string) $value, $sourceLanguage, $target );
-				if ( ! isset( $updated['meta'][ $metaKey ] ) || $updated['meta'][ $metaKey ] !== $translatedMeta ) {
-					$updated['meta'][ $metaKey ] = $translatedMeta;
-					$languageHasChanges          = true;
-				}
+				$updatedSource['meta'] = $metaSource;
+				$languageHasChanges    = $languageHasChanges || $metaChanged;
+				$existingMetaKeys      = array_keys( is_array( $existing['meta'] ?? null ) ? $existing['meta'] : array() );
+				$currentMetaKeys       = array_keys( $customFields );
+				$removedMetaKeys       = array_diff( $existingMetaKeys, $currentMetaKeys );
+			if ( ! empty( $removedMetaKeys ) ) {
+							$languageHasChanges = true;
 			}
 
 			if ( $languageHasChanges ) {
+				$updated['source']       = $updatedSource;
 				$updated['updated_at']   = time();
 				$updated['status']       = 'synced';
 				$translations[ $target ] = $updated;
@@ -144,7 +201,7 @@ class PostTranslationManager {
 		}
 
 		if ( $hasChanges ) {
-			update_post_meta( $postId, self::META_KEY, $translations );
+				update_post_meta( $postId, self::META_KEY, $translations );
 		}
 
 		$this->persist_relations( $postId, $translations, $sourceLanguage );
@@ -284,22 +341,111 @@ class PostTranslationManager {
 				return $default_value;
 		}
 
-			$translations = $this->get_post_translations( $post->ID );
+		$translations = $this->get_post_translations( $post->ID );
 		if ( isset( $translations[ $language ][ $field ] ) && $translations[ $language ][ $field ] !== '' ) {
 				return $translations[ $language ][ $field ];
 		}
 
-			$translated = $this->translationService->translate_text( $default_value, $source, $language, $options );
+		$translated = $this->translationService->translate_text( $default_value, $source, $language, $options );
 		if ( $translated !== '' ) {
 				return $translated;
 		}
 
-			$fallback = Settings::get_fallback_language();
+		$fallback = Settings::get_fallback_language();
 		if ( $fallback !== $language && isset( $translations[ $fallback ][ $field ] ) ) {
 				return $translations[ $fallback ][ $field ];
 		}
 
 			return $default_value;
+	}
+
+	private function hash_value( string $value ): string {
+			return hash( 'sha1', $value );
+	}
+
+	private function sync_field_translation(
+		array &$updated,
+		array $existing,
+		array &$updatedSource,
+		string $field,
+		string $value,
+		string $hash,
+		string $sourceLanguage,
+		string $targetLanguage,
+		array $options,
+		bool $force
+	): bool {
+			$hasChanges       = false;
+			$existingValue    = $existing[ $field ] ?? null;
+			$existingSource   = $updatedSource[ $field ] ?? null;
+			$needsTranslation = $force || ! is_string( $existingSource ) || $existingSource !== $hash || ! is_string( $existingValue );
+
+		if ( ! $needsTranslation ) {
+				return false;
+		}
+
+			$translated = $this->translationService->translate_text( $value, $sourceLanguage, $targetLanguage, $options );
+		if ( $translated === '' ) {
+				$translated = is_string( $existingValue ) ? $existingValue : $value;
+		}
+
+		if ( ! is_string( $existingValue ) || $existingValue !== $translated ) {
+				$updated[ $field ] = $translated;
+				$hasChanges        = true;
+		}
+
+		if ( $existingSource !== $hash ) {
+				$hasChanges = true;
+		}
+
+			$updatedSource[ $field ] = $hash;
+
+			return $hasChanges;
+	}
+
+	private function sync_meta_translations(
+		array $existing,
+		array $existingSource,
+		array $customFields,
+		array $metaHashes,
+		string $sourceLanguage,
+		string $targetLanguage,
+		bool $force
+	): array {
+			$updatedMeta       = array();
+			$updatedMetaSource = array();
+			$hasChanges        = false;
+			$existingMeta      = is_array( $existing['meta'] ?? null ) ? $existing['meta'] : array();
+
+		foreach ( $customFields as $metaKey => $value ) {
+				$hash             = $metaHashes[ $metaKey ] ?? $this->hash_value( (string) $value );
+				$existingValue    = $existingMeta[ $metaKey ] ?? null;
+				$existingMetaHash = $existingSource[ $metaKey ] ?? null;
+				$needsTranslation = $force || ! is_string( $existingMetaHash ) || $existingMetaHash !== $hash || ! is_string( $existingValue );
+
+			if ( $needsTranslation ) {
+				$translated = $this->translationService->translate_text( (string) $value, $sourceLanguage, $targetLanguage );
+				if ( $translated === '' ) {
+						$translated = is_string( $existingValue ) ? $existingValue : (string) $value;
+				}
+
+				if ( ! is_string( $existingValue ) || $existingValue !== $translated ) {
+						$hasChanges = true;
+				}
+
+				if ( $existingMetaHash !== $hash ) {
+						$hasChanges = true;
+				}
+
+				$updatedMeta[ $metaKey ] = $translated;
+			} elseif ( is_string( $existingValue ) ) {
+					$updatedMeta[ $metaKey ] = $existingValue;
+			}
+
+				$updatedMetaSource[ $metaKey ] = $hash;
+		}
+
+			return array( $updatedMeta, $updatedMetaSource, $hasChanges );
 	}
 
 	/**

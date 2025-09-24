@@ -36,6 +36,11 @@ if (! isset($wp_test_actions)) {
     $wp_test_actions = [];
 }
 
+global $wp_test_post_meta;
+if (! isset($wp_test_post_meta)) {
+    $wp_test_post_meta = [];
+}
+
 global $wp_test_textdomains;
 if (! isset($wp_test_textdomains)) {
     $wp_test_textdomains = [];
@@ -614,13 +619,37 @@ if (! function_exists('get_query_var')) {
 if (! function_exists('get_post_meta')) {
     function get_post_meta($post_id, $key = '', $single = false)
     {
-        return [];
+        global $wp_test_post_meta;
+
+        if (! isset($wp_test_post_meta[$post_id])) {
+            return $single ? '' : [];
+        }
+
+        if ($key === '') {
+            return $single ? $wp_test_post_meta[$post_id] : [$wp_test_post_meta[$post_id]];
+        }
+
+        if (! array_key_exists($key, $wp_test_post_meta[$post_id])) {
+            return $single ? '' : [];
+        }
+
+        $value = $wp_test_post_meta[$post_id][$key];
+
+        return $single ? $value : [$value];
     }
 }
 
 if (! function_exists('update_post_meta')) {
     function update_post_meta($post_id, $key, $value)
     {
+        global $wp_test_post_meta;
+
+        if (! isset($wp_test_post_meta[$post_id])) {
+            $wp_test_post_meta[$post_id] = [];
+        }
+
+        $wp_test_post_meta[$post_id][$key] = $value;
+
         return true;
     }
 }

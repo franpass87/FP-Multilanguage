@@ -125,11 +125,20 @@ class TranslationService {
 
 	public static function flush_cache(): void {
 		if ( function_exists( 'update_option' ) ) {
-			$version = (int) get_option( self::CACHE_VERSION_OPTION, 1 );
-			update_option( self::CACHE_VERSION_OPTION, $version + 1 );
+				$version = (int) get_option( self::CACHE_VERSION_OPTION, 1 );
+				update_option( self::CACHE_VERSION_OPTION, $version + 1 );
 		}
 
-		self::$runtimeCache = array();
+			self::$runtimeCache = array();
+	}
+
+		/**
+		 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
+		 */
+	public static function get_usage_stats(): array {
+			$stored = get_option( self::QUOTA_OPTION, array() );
+
+			return is_array( $stored ) ? $stored : array();
 	}
 
 	/**
@@ -355,16 +364,13 @@ class TranslationService {
 		update_option( self::QUOTA_OPTION, $quota );
 	}
 
-	/**
-	 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
-	 */
+		/**
+		 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
+		 */
 	private function get_quota(): array {
-		$stored = get_option( self::QUOTA_OPTION, array() );
-		if ( ! is_array( $stored ) ) {
-			return array();
-		}
+			$stored = self::get_usage_stats();
 
-		return $stored;
+			return $stored;
 	}
 
 	protected function get_text_length( string $text ): int {
