@@ -247,15 +247,16 @@ class SEO {
 		unset( $postType );
 
 		$languageUrls = $this->get_language_urls( $post, $this->get_meta( $post->ID ) );
-		if ( ! empty( $languageUrls ) ) {
-			$entry['alternates'] = array();
-			foreach ( $languageUrls as $lang => $url ) {
-				$entry['alternates'][] = array(
-					'language' => $lang,
-					'url'      => $url,
-				);
-			}
-		}
+                if ( ! empty( $languageUrls ) ) {
+                        $entry['alternates'] = array();
+                        foreach ( $languageUrls as $lang => $url ) {
+                                $entry['alternates'][] = array(
+                                        'rel'      => 'alternate',
+                                        'hreflang' => $lang,
+                                        'href'     => $url,
+                                );
+                        }
+                }
 
 		return $entry;
 	}
