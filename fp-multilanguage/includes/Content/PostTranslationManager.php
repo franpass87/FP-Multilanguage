@@ -71,15 +71,15 @@ class PostTranslationManager {
 			return;
 		}
 
-               if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
-                       return;
-               }
+		if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
+				return;
+		}
 
-               if ( ! Settings::is_auto_translate_enabled() ) {
-                       return;
-               }
+		if ( ! Settings::is_auto_translate_enabled() ) {
+				return;
+		}
 
-               $this->translate_post( $postId );
+				$this->translate_post( $postId );
 	}
 
 	public function translate_post( int $postId, ?string $language = null, bool $force = false ): array {

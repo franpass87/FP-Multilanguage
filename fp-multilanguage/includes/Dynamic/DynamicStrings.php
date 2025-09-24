@@ -73,21 +73,21 @@ class DynamicStrings {
 		$language      = CurrentLanguage::resolve();
 
 		wp_enqueue_script( 'fp-multilanguage-dynamic' );
-                wp_localize_script(
-                        'fp-multilanguage-dynamic',
-                        'fpMultilanguageDynamic',
-                        array(
-                                'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-                                'nonce'         => wp_create_nonce( 'fp_multilanguage_manual_string' ),
-                                'language'      => $language,
-                                'manualStrings' => $manualStrings,
-                                'restUrl'       => rest_url( 'fp-multilanguage/v1/strings' ),
-                                'canEdit'       => current_user_can( 'manage_options' ),
-                                'prompts'       => array(
-                                        'edit' => __( 'Inserisci la traduzione manuale', 'fp-multilanguage' ),
-                                ),
-                        )
-                );
+				wp_localize_script(
+					'fp-multilanguage-dynamic',
+					'fpMultilanguageDynamic',
+					array(
+						'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+						'nonce'         => wp_create_nonce( 'fp_multilanguage_manual_string' ),
+						'language'      => $language,
+						'manualStrings' => $manualStrings,
+						'restUrl'       => rest_url( 'fp-multilanguage/v1/strings' ),
+						'canEdit'       => current_user_can( 'manage_options' ),
+						'prompts'       => array(
+							'edit' => __( 'Inserisci la traduzione manuale', 'fp-multilanguage' ),
+						),
+					)
+				);
 
 		if ( ! wp_script_is( 'fp-multilanguage-frontend', 'enqueued' ) ) {
 			wp_enqueue_script( 'fp-multilanguage-frontend' );
@@ -237,29 +237,36 @@ class DynamicStrings {
 	}
 
 
-        public function filter_ngettext( string $translation, string $single, string $plural, int $number, string $domain ): string {
-                $text = $number === 1 ? $single : $plural;
+	public function filter_ngettext( string $translation, string $single, string $plural, int $number, string $domain ): string {
+			$text = $number === 1 ? $single : $plural;
 
-                if ( $translation !== $text ) {
-                        $result = $this->filter_gettext( $translation, $text, $domain );
-                        if ( $result !== $translation && $result !== $text ) {
-                                return $result;
-                        }
+		if ( $translation !== $text ) {
+				$result = $this->filter_gettext( $translation, $text, $domain );
+			if ( $result !== $translation && $result !== $text ) {
+				return $result;
+			}
 
-                        return $translation;
-                }
-
-                return $this->filter_gettext( $translation, $text, $domain );
-        }
-
-        public function filter_generic_string( $value, $item = null, $depth = null, $args = null ) {
-                unset( $item, $depth, $args );
-
-		if ( ! is_string( $value ) || trim( $value ) === '' ) {
-			return $value;
+				return $translation;
 		}
 
-		return $this->translate_string( $value, 'generic' );
+			return $this->filter_gettext( $translation, $text, $domain );
+	}
+
+		/**
+		 * @param mixed $item  Optional context object provided by the filter.
+		 * @param mixed $depth Optional depth parameter provided by the filter.
+		 * @param mixed $args  Optional arguments provided by the filter.
+		 *
+		 * @return mixed
+		 */
+	public function filter_generic_string( $value, $item = null, $depth = null, $args = null ) {
+			unset( $item, $depth, $args );
+
+		if ( ! is_string( $value ) || trim( $value ) === '' ) {
+				return $value;
+		}
+
+			return $this->translate_string( $value, 'generic' );
 	}
 
 	private function translate_string( string $text, string $identifier = '', array $args = array() ): string {
@@ -306,7 +313,7 @@ class DynamicStrings {
 		}
 
 		return '';
-}
+	}
 
 	private function store_string( string $key, string $original, string $context ): void {
 		global $wpdb;

@@ -3,8 +3,13 @@ namespace FPMultilanguage\Widgets;
 
 use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\CurrentLanguage;
+use WP_Post;
 use WP_Widget;
 
+/**
+ * @method string get_field_id( string $field_name )
+ * @method string get_field_name( string $field_name )
+ */
 class LanguageSwitcher extends WP_Widget {
 
 	public function __construct() {
@@ -15,10 +20,14 @@ class LanguageSwitcher extends WP_Widget {
 		);
 	}
 
+		/**
+		 * @param array<string, mixed> $args
+		 * @param array<string, mixed> $instance
+		 */
 	public function widget( $args, $instance ): void {
-		echo $args['before_widget'] ?? '';
+			echo $args['before_widget'] ?? '';
 
-		$title = isset( $instance['title'] ) ? apply_filters( 'widget_title', $instance['title'] ) : __( 'Lingue', 'fp-multilanguage' );
+			$title = isset( $instance['title'] ) ? apply_filters( 'widget_title', $instance['title'] ) : __( 'Lingue', 'fp-multilanguage' );
 		if ( $title !== '' ) {
 			echo $args['before_title'] ?? '';
 			echo esc_html( $title );
@@ -30,21 +39,32 @@ class LanguageSwitcher extends WP_Widget {
 		echo $args['after_widget'] ?? '';
 	}
 
+		/**
+		 * @param array<string, mixed> $instance
+		 */
 	public function form( $instance ): void {
-		$title = isset( $instance['title'] ) ? (string) $instance['title'] : '';
+			$title      = isset( $instance['title'] ) ? (string) $instance['title'] : '';
+			$field_id   = $this->get_field_id( 'title' );
+			$field_name = $this->get_field_name( 'title' );
 		?>
-		<p>
-			<label for="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>"><?php esc_html_e( 'Titolo:', 'fp-multilanguage' ); ?></label>
-			<input class="widefat" id="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'title' ) ); ?>" type="text" value="<?php echo esc_attr( $title ); ?>">
-		</p>
-		<?php
+				<p>
+						<label for="<?php echo esc_attr( $field_id ); ?>"><?php esc_html_e( 'Titolo:', 'fp-multilanguage' ); ?></label>
+						<input class="widefat" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $field_name ); ?>" type="text" value="<?php echo esc_attr( $title ); ?>">
+				</p>
+				<?php
 	}
 
-	public function update( $newInstance, $oldInstance ) {
-		$instance          = $oldInstance;
-		$instance['title'] = sanitize_text_field( $newInstance['title'] ?? '' );
+		/**
+		 * @param array<string, mixed> $newInstance
+		 * @param array<string, mixed> $oldInstance
+		 *
+		 * @return array<string, mixed>
+		 */
+	public function update( $newInstance, $oldInstance ): array {
+			$instance          = $oldInstance;
+			$instance['title'] = sanitize_text_field( $newInstance['title'] ?? '' );
 
-		return $instance;
+			return $instance;
 	}
 
 	public function render_shortcode( array $atts = array() ): string {
@@ -60,10 +80,10 @@ class LanguageSwitcher extends WP_Widget {
 	}
 
 	private function render_switcher( string $layout = 'list' ): string {
-		$languages = $this->get_languages();
-		$current   = CurrentLanguage::resolve();
+			$languages = $this->get_languages();
+			$current   = CurrentLanguage::resolve();
 
-		$items = array();
+			$items = array();
 		foreach ( $languages as $language => $url ) {
 			$class   = $language === $current ? ' class="current-language"' : '';
 			$items[] = sprintf( '<li%s><a href="%s">%s</a></li>', $class, esc_url( $url ), esc_html( strtoupper( $language ) ) );
@@ -73,80 +93,83 @@ class LanguageSwitcher extends WP_Widget {
 			return '<ul class="fp-language-switcher inline">' . implode( ' ', $items ) . '</ul>';
 		}
 
-		return '<ul class="fp-language-switcher">' . implode( '', $items ) . '</ul>';
+			return '<ul class="fp-language-switcher">' . implode( '', $items ) . '</ul>';
 	}
 
-        private function get_languages(): array {
-                $post         = get_queried_object();
-                $translations = array();
-                if ( $post instanceof \WP_Post ) {
-                        $manager      = fp_multilanguage()->get_container()->get( 'post_translation_manager' );
-                        $translations = $manager->get_post_translations( $post->ID );
-                }
+		/**
+		 * @return array<string, string>
+		 */
+	private function get_languages(): array {
+			$post         = get_queried_object();
+			$translations = array();
+		if ( $post instanceof WP_Post ) {
+				$manager      = fp_multilanguage()->get_container()->get( 'post_translation_manager' );
+				$translations = $manager->get_post_translations( $post->ID );
+		}
 
-                $baseUrl = $this->resolve_base_url( $post );
-                $baseUrl = $this->append_current_query_args( $baseUrl );
+			$baseUrl = $this->resolve_base_url( $post );
+			$baseUrl = $this->append_current_query_args( $baseUrl );
 
-                $languages            = array();
-                $source               = Settings::get_source_language();
-                $languages[ $source ] = add_query_arg( 'fp_lang', $source, $baseUrl );
+			$languages            = array();
+			$source               = Settings::get_source_language();
+			$languages[ $source ] = add_query_arg( 'fp_lang', $source, $baseUrl );
 
-                foreach ( Settings::get_target_languages() as $language ) {
-                        if ( $language === $source ) {
-                                continue;
-                        }
+		foreach ( Settings::get_target_languages() as $language ) {
+			if ( $language === $source ) {
+				continue;
+			}
 
-                        if ( ! empty( $translations ) && empty( $translations[ $language ] ) ) {
-                                continue;
-                        }
+			if ( ! empty( $translations ) && empty( $translations[ $language ] ) ) {
+				continue;
+			}
 
-                        $languages[ $language ] = add_query_arg( 'fp_lang', $language, $baseUrl );
-                }
+			$languages[ $language ] = add_query_arg( 'fp_lang', $language, $baseUrl );
+		}
 
-                return $languages;
-        }
+			return $languages;
+	}
 
-        private function resolve_base_url( $post ): string {
-                if ( $post instanceof \WP_Post ) {
-                        return get_permalink( $post );
-                }
+	private function resolve_base_url( ?WP_Post $post ): string {
+		if ( $post instanceof WP_Post ) {
+				return get_permalink( $post );
+		}
 
-                $requestUri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-                if ( $requestUri === '' ) {
-                        return home_url( '/' );
-                }
+			$requestUri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+		if ( $requestUri === '' ) {
+			return home_url( '/' );
+		}
 
-                $parts = explode( '?', $requestUri, 2 );
-                $path  = $parts[0];
+			$parts = explode( '?', $requestUri, 2 );
+			$path  = $parts[0];
 
-                if ( $path === '' ) {
-                        $path = '/';
-                } elseif ( $path[0] !== '/' ) {
-                        $path = '/' . $path;
-                }
+		if ( $path === '' ) {
+			$path = '/';
+		} elseif ( $path[0] !== '/' ) {
+			$path = '/' . $path;
+		}
 
-                return home_url( $path );
-        }
+			return home_url( $path );
+	}
 
-        private function append_current_query_args( string $baseUrl ): string {
-                if ( empty( $_GET ) || ! is_array( $_GET ) ) {
-                        return $baseUrl;
-                }
+	private function append_current_query_args( string $baseUrl ): string {
+		if ( empty( $_GET ) ) {
+				return $baseUrl;
+		}
 
-                $queryArgs = array();
+			$queryArgs = array();
 
-                foreach ( wp_unslash( $_GET ) as $key => $value ) {
-                        if ( strtolower( (string) $key ) === 'fp_lang' ) {
-                                continue;
-                        }
+		foreach ( wp_unslash( (array) $_GET ) as $key => $value ) {
+			if ( strtolower( (string) $key ) === 'fp_lang' ) {
+					continue;
+			}
 
-                        $queryArgs[ $key ] = $value;
-                }
+				$queryArgs[ $key ] = $value;
+		}
 
-                if ( empty( $queryArgs ) ) {
-                        return $baseUrl;
-                }
+		if ( empty( $queryArgs ) ) {
+			return $baseUrl;
+		}
 
-                return add_query_arg( $queryArgs, $baseUrl );
-        }
+			return add_query_arg( $queryArgs, $baseUrl );
+	}
 }
