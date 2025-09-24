@@ -7,11 +7,7 @@ use WP_Widget;
 
 class LanguageSwitcher extends WP_Widget {
 
-	private Settings $settings;
-
-	public function __construct( Settings $settings ) {
-		$this->settings = $settings;
-
+	public function __construct() {
 		parent::__construct(
 			'fp_language_switcher',
 			__( 'FP Multilanguage Switcher', 'fp-multilanguage' ),

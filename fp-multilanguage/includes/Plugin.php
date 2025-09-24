@@ -232,7 +232,7 @@ class Plugin {
 		$container->set(
 			'language_switcher',
 			static function ( Container $c ): LanguageSwitcher {
-				return new LanguageSwitcher( $c->get( 'settings' ) );
+				return new LanguageSwitcher();
 			}
 		);
 
