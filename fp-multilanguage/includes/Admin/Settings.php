@@ -532,13 +532,57 @@ class Settings {
 	}
 
 	public static function update_manual_string( string $key, string $language, string $value ): void {
-		$strings = self::get_manual_strings();
-		if ( ! isset( $strings[ $key ] ) || ! is_array( $strings[ $key ] ) ) {
-			$strings[ $key ] = array();
+			$key = self::normalize_manual_string_key( $key );
+		if ( '' === $key ) {
+				return;
 		}
 
-		$strings[ $key ][ $language ] = $value;
-		update_option( self::MANUAL_STRINGS_OPTION, $strings );
+			$language = self::normalize_manual_string_language( $language );
+		if ( '' === $language ) {
+				return;
+		}
+
+			$value = self::sanitize_manual_string_value( $value );
+
+			$strings      = self::get_manual_strings();
+			$translations = isset( $strings[ $key ] ) && is_array( $strings[ $key ] ) ? $strings[ $key ] : array();
+			$current      = $translations[ $language ] ?? null;
+
+		if ( '' === $value ) {
+			if ( ! isset( $translations[ $language ] ) ) {
+					return;
+			}
+
+				unset( $translations[ $language ] );
+			if ( empty( $translations ) ) {
+					unset( $strings[ $key ] );
+			} else {
+					$strings[ $key ] = $translations;
+			}
+		} else {
+			if ( $current === $value ) {
+					return;
+			}
+
+				$translations[ $language ] = $value;
+				$strings[ $key ]           = $translations;
+		}
+
+			update_option( self::MANUAL_STRINGS_OPTION, $strings );
+
+			self::sync_manual_string_storage( $key, $strings[ $key ] ?? array() );
+
+			TranslationService::flush_cache();
+
+		if ( function_exists( 'do_action' ) ) {
+				do_action(
+					'fp_multilanguage_manual_string_updated',
+					$key,
+					$language,
+					$value,
+					$strings[ $key ] ?? array()
+				);
+		}
 	}
 
 	public static function get_enabled_providers(): array {
@@ -580,6 +624,111 @@ class Settings {
 	}
 
 	private static function set_cached_options( array $options ): void {
-			self::$cachedOptions = $options;
+					self::$cachedOptions = $options;
+	}
+
+	private static function normalize_manual_string_key( string $key ): string {
+					$normalized = sanitize_key( $key );
+
+			return $normalized;
+	}
+
+	private static function normalize_manual_string_language( string $language ): string {
+					return sanitize_key( $language );
+	}
+
+	private static function sanitize_manual_string_value( string $value ): string {
+		if ( function_exists( 'wp_kses_post' ) ) {
+				$value = wp_kses_post( $value );
+		} elseif ( function_exists( 'sanitize_text_field' ) ) {
+				$value = sanitize_text_field( $value );
+		}
+
+			$value = preg_replace( '#<script\b[^>]*>(.*?)</script>#is', '', (string) $value );
+		if ( null === $value ) {
+				$value = '';
+		}
+
+					$value = trim( (string) $value );
+
+			return $value;
+	}
+
+	private static function sync_manual_string_storage( string $key, array $translations ): void {
+			self::sync_manual_string_table( $key, $translations );
+			self::sync_manual_string_fallback( $key, $translations );
+	}
+
+	private static function sync_manual_string_table( string $key, array $translations ): void {
+			global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
+				return;
+		}
+
+		if ( empty( $wpdb->prefix ) ) {
+				return;
+		}
+
+			$table = $wpdb->prefix . 'fp_multilanguage_strings';
+
+		if ( ! self::manual_strings_table_exists( $table ) ) {
+				return;
+		}
+
+			$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				$table,
+				array(
+					'translations' => wp_json_encode( $translations ),
+					'updated_at'   => current_time( 'mysql', true ),
+				),
+				array( 'string_key' => $key ),
+				array( '%s', '%s' ),
+				array( '%s' )
+			);
+	}
+
+	private static function manual_strings_table_exists( string $table ): bool {
+			global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
+				return false;
+		}
+
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+
+			return null !== $exists;
+	}
+
+	private static function sync_manual_string_fallback( string $key, array $translations ): void {
+			$option = get_option( 'fp_multilanguage_strings', array() );
+		if ( ! is_array( $option ) ) {
+				$option = array();
+		}
+
+			$entry = $option[ $key ] ?? array();
+		if ( ! is_array( $entry ) ) {
+				$entry = array();
+		}
+
+		if ( empty( $translations ) ) {
+				unset( $entry['translations'] );
+
+				$entryWithoutMeta = $entry;
+				unset( $entryWithoutMeta['updated_at'] );
+
+			if ( empty( $entryWithoutMeta ) ) {
+					unset( $option[ $key ] );
+			} else {
+					$entry['updated_at'] = time();
+					$option[ $key ]      = $entry;
+			}
+		} else {
+				$entry['translations'] = $translations;
+				$entry['updated_at']   = time();
+				$option[ $key ]        = $entry;
+		}
+
+			update_option( 'fp_multilanguage_strings', $option );
 	}
 }

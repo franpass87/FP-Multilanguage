@@ -120,4 +120,37 @@ class SettingsTest extends TestCase
         $updated = Settings::get_options();
         $this->assertSame( 'es', $updated['source_language'] );
     }
+
+    public function test_update_manual_string_sanitizes_and_persists(): void
+    {
+        $rawKey      = ' My-Key ';
+        $rawLanguage = ' IT ';
+        $rawValue    = " <strong>Hello</strong><script>alert('x')</script> ";
+
+        Settings::update_manual_string( $rawKey, $rawLanguage, $rawValue );
+
+        $strings = get_option( Settings::MANUAL_STRINGS_OPTION, array() );
+        $this->assertArrayHasKey( 'my-key', $strings );
+        $this->assertArrayHasKey( 'it', $strings['my-key'] );
+        $this->assertSame( '<strong>Hello</strong>', $strings['my-key']['it'] );
+
+        $fallback = get_option( 'fp_multilanguage_strings', array() );
+        $this->assertArrayHasKey( 'my-key', $fallback );
+        $this->assertArrayHasKey( 'translations', $fallback['my-key'] );
+        $this->assertSame( '<strong>Hello</strong>', $fallback['my-key']['translations']['it'] );
+    }
+
+    public function test_update_manual_string_removes_translation_when_empty(): void
+    {
+        $key = 'manual-key';
+
+        Settings::update_manual_string( $key, 'it', 'Valore iniziale' );
+        Settings::update_manual_string( $key, 'it', '' );
+
+        $strings = get_option( Settings::MANUAL_STRINGS_OPTION, array() );
+        $this->assertArrayNotHasKey( $key, $strings );
+
+        $fallback = get_option( 'fp_multilanguage_strings', array() );
+        $this->assertArrayNotHasKey( $key, $fallback );
+    }
 }
