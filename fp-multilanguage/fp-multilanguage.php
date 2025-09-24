@@ -32,9 +32,27 @@ if ( ! defined( 'FP_MULTILANGUAGE_VERSION' ) ) {
 	define( 'FP_MULTILANGUAGE_VERSION', '1.0.0' );
 }
 
-$autoload = FP_MULTILANGUAGE_PATH . '../vendor/autoload.php';
-if ( file_exists( $autoload ) ) {
-	require_once $autoload;
+$autoload_paths = array(
+        FP_MULTILANGUAGE_PATH . '../vendor/autoload.php',
+        FP_MULTILANGUAGE_PATH . 'vendor/autoload.php',
+);
+
+$is_autoloaded = false;
+
+foreach ( $autoload_paths as $autoload_path ) {
+        if ( file_exists( $autoload_path ) ) {
+                require_once $autoload_path;
+                $is_autoloaded = true;
+                break;
+        }
+}
+
+if ( ! $is_autoloaded ) {
+        $fallback_autoload = FP_MULTILANGUAGE_PATH . 'includes/autoload.php';
+
+        if ( file_exists( $fallback_autoload ) ) {
+                require_once $fallback_autoload;
+        }
 }
 
 use FPMultilanguage\Plugin;
