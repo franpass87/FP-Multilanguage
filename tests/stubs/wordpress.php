@@ -122,7 +122,7 @@ if (! function_exists('update_option')) {
 }
 
 if (! function_exists('delete_option')) {
-    function delete_option($name)
+    function delete_option(string $name): bool
     {
         global $wp_test_options;
 
@@ -815,6 +815,39 @@ if (! function_exists('rest_ensure_response')) {
 if (! class_exists('WP_Error')) {
     class WP_Error extends \Exception
     {
+        private string $error_code;
+
+        /** @var mixed */
+        private $error_data;
+
+        /**
+         * @param mixed $data
+         */
+        public function __construct(string $code = '', string $message = '', $data = null)
+        {
+            $this->error_code = $code;
+            $this->error_data = $data;
+
+            if ($message === '') {
+                $message = $code;
+            }
+
+            parent::__construct($message);
+        }
+
+        public function get_error_code(): string
+        {
+            return $this->error_code;
+        }
+
+        /**
+         * @return mixed
+         */
+        public function get_error_data()
+        {
+            return $this->error_data;
+        }
+
         public function get_error_message()
         {
             return $this->getMessage();

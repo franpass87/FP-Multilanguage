@@ -34,9 +34,22 @@ class Commands {
 		}
 
 		$postId   = (int) $args[0];
-		$language = isset( $assocArgs['language'] ) ? sanitize_key( $assocArgs['language'] ) : null;
+		$language = null;
+		if ( isset( $assocArgs['language'] ) && is_string( $assocArgs['language'] ) ) {
+			$language = sanitize_key( $assocArgs['language'] );
+		}
 
-		$translations = $this->manager->translate_post( $postId, $language, true );
+		$post = get_post( $postId );
+		if ( ! $post instanceof \WP_Post ) {
+			WP_CLI::error( 'Contenuto non trovato.' );
+		}
+
+		if ( 'attachment' === $post->post_type ) {
+			$translations = $this->manager->translate_attachment( $postId, $language, true );
+		} else {
+			$translations = $this->manager->translate_post( $postId, $language, true );
+		}
+
 		$this->logger->info(
 			'Traduzioni aggiornate',
 			array(
