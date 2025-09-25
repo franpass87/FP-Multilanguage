@@ -324,10 +324,15 @@ class TranslationServiceTest extends TestCase
 
 		$this->assertSame('google:Quota scaduta', $result, 'Le quote scadute non devono bloccare il provider principale.');
 
-		$usage = TranslationService::get_usage_stats();
+                $usage = TranslationService::get_usage_stats();
 
-		$this->assertSame(1, $usage['google']['it']['requests'] ?? 0, 'Le quote devono essere ripristinate dopo la scadenza.');
-		$this->assertGreaterThan(time() - 5, $usage['google']['it']['updated_at'] ?? 0, 'La data di aggiornamento deve riflettere la nuova richiesta.');
+                $this->assertSame(1, $usage['google']['it']['requests'] ?? 0, 'Le quote devono essere ripristinate dopo la scadenza.');
+                $this->assertArrayHasKey('updated_at', $usage['google']['it'], 'L\'aggiornamento deve essere presente dopo una traduzione.');
+                $this->assertGreaterThan(
+                        time() - 5,
+                        (int) $usage['google']['it']['updated_at'],
+                        'La data di aggiornamento deve riflettere la nuova richiesta.'
+                );
 	}
 
 	public function test_exposes_quota_usage_stats(): void

@@ -28,22 +28,22 @@ class Settings {
 		'source_language'   => 'en',
 		'fallback_language' => 'en',
 		'target_languages'  => array( 'it' ),
-                'providers'         => array(
-                        'google' => array(
-                                'enabled'              => false,
-                                'api_key'              => '',
-                                'timeout'              => 20,
-                                'glossary_id'          => '',
-                                'glossary_ignore_case' => false,
-                        ),
-                        'deepl'  => array(
-                                'enabled'     => false,
-                                'api_key'     => '',
-                                'endpoint'    => 'https://api.deepl.com/v2/translate',
-                                'glossary_id' => '',
-                                'formality'   => 'default',
-                        ),
-                ),
+		'providers'         => array(
+			'google' => array(
+				'enabled'              => false,
+				'api_key'              => '',
+				'timeout'              => 20,
+				'glossary_id'          => '',
+				'glossary_ignore_case' => false,
+			),
+			'deepl'  => array(
+				'enabled'     => false,
+				'api_key'     => '',
+				'endpoint'    => 'https://api.deepl.com/v2/translate',
+				'glossary_id' => '',
+				'formality'   => 'default',
+			),
+		),
 		'auto_translate'    => true,
 		'seo'               => array(
 			'hreflang'   => true,
@@ -327,71 +327,71 @@ class Settings {
 		<?php
 	}
 
-        public function render_google_field(): void {
-                $options  = $this->get_options();
-                $provider = $options['providers']['google'] ?? array();
-                ?>
-                <label>
+	public function render_google_field(): void {
+			$options  = $this->get_options();
+			$provider = $options['providers']['google'] ?? array();
+		?>
+				<label>
 			<input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][enabled]" value="1" <?php checked( ! empty( $provider['enabled'] ) ); ?>>
 			<?php esc_html_e( 'Abilita Google Cloud Translation', 'fp-multilanguage' ); ?>
 		</label>
-                <input type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][api_key]" value="<?php echo esc_attr( $provider['api_key'] ?? '' ); ?>">
-                <p class="description"><?php esc_html_e( 'Chiave API del progetto Google Cloud con Translation API abilitata.', 'fp-multilanguage' ); ?></p>
-                <p>
-                        <label for="fp-multilanguage-google-glossary">
-                                <?php esc_html_e( 'ID glossario personalizzato', 'fp-multilanguage' ); ?>
-                        </label>
-                        <input id="fp-multilanguage-google-glossary" type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][glossary_id]" value="<?php echo esc_attr( $provider['glossary_id'] ?? '' ); ?>" placeholder="projects/xxx/locations/xx/glossaries/xxx">
-                        <span class="description"><?php esc_html_e( 'Percorso completo della risorsa glossario. Lascia vuoto per disabilitare.', 'fp-multilanguage' ); ?></span>
-                </p>
-                <p>
-                        <label>
-                                <input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][glossary_ignore_case]" value="1" <?php checked( ! empty( $provider['glossary_ignore_case'] ) ); ?>>
-                                <?php esc_html_e( 'Applica il glossario ignorando maiuscole/minuscole.', 'fp-multilanguage' ); ?>
-                        </label>
-                </p>
-                <?php
-        }
+				<input type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][api_key]" value="<?php echo esc_attr( $provider['api_key'] ?? '' ); ?>">
+				<p class="description"><?php esc_html_e( 'Chiave API del progetto Google Cloud con Translation API abilitata.', 'fp-multilanguage' ); ?></p>
+				<p>
+						<label for="fp-multilanguage-google-glossary">
+							<?php esc_html_e( 'ID glossario personalizzato', 'fp-multilanguage' ); ?>
+						</label>
+						<input id="fp-multilanguage-google-glossary" type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][glossary_id]" value="<?php echo esc_attr( $provider['glossary_id'] ?? '' ); ?>" placeholder="projects/xxx/locations/xx/glossaries/xxx">
+						<span class="description"><?php esc_html_e( 'Percorso completo della risorsa glossario. Lascia vuoto per disabilitare.', 'fp-multilanguage' ); ?></span>
+				</p>
+				<p>
+						<label>
+								<input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][google][glossary_ignore_case]" value="1" <?php checked( ! empty( $provider['glossary_ignore_case'] ) ); ?>>
+							<?php esc_html_e( 'Applica il glossario ignorando maiuscole/minuscole.', 'fp-multilanguage' ); ?>
+						</label>
+				</p>
+				<?php
+	}
 
-        public function render_deepl_field(): void {
-                $options  = $this->get_options();
-                $provider = $options['providers']['deepl'] ?? array();
-                ?>
-                <label>
-                        <input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][enabled]" value="1" <?php checked( ! empty( $provider['enabled'] ) ); ?>>
-                        <?php esc_html_e( 'Abilita DeepL', 'fp-multilanguage' ); ?>
-                </label>
-                <input type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][api_key]" value="<?php echo esc_attr( $provider['api_key'] ?? '' ); ?>">
-                <p class="description"><?php esc_html_e( 'Utilizza endpoint EU/US personalizzato se necessario.', 'fp-multilanguage' ); ?></p>
-                <p>
-                        <label for="fp-multilanguage-deepl-glossary">
-                                <?php esc_html_e( 'ID glossario DeepL', 'fp-multilanguage' ); ?>
-                        </label>
-                        <input id="fp-multilanguage-deepl-glossary" type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][glossary_id]" value="<?php echo esc_attr( $provider['glossary_id'] ?? '' ); ?>" placeholder="1234-5678-...">
-                        <span class="description"><?php esc_html_e( 'Inserisci l\'ID del glossario pubblicato su DeepL (opzionale).', 'fp-multilanguage' ); ?></span>
-                </p>
-                <p>
-                        <label for="fp-multilanguage-deepl-formality">
-                                <?php esc_html_e( 'Livello di formalità', 'fp-multilanguage' ); ?>
-                        </label>
-                        <select id="fp-multilanguage-deepl-formality" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][formality]">
-                                <?php
-                                $formalities = array(
-                                        'default' => __( 'Predefinito', 'fp-multilanguage' ),
-                                        'more'    => __( 'Più formale', 'fp-multilanguage' ),
-                                        'less'    => __( 'Meno formale', 'fp-multilanguage' ),
-                                );
-                                $selected   = isset( $provider['formality'] ) ? (string) $provider['formality'] : 'default';
-                                foreach ( $formalities as $value => $label ) :
-                                        ?>
-                                        <option value="<?php echo esc_attr( $value ); ?>" <?php selected( $selected, $value ); ?>><?php echo esc_html( $label ); ?></option>
-                                        <?php
-                                endforeach;
-                                ?>
-                        </select>
-                </p>
-                <?php
-        }
+	public function render_deepl_field(): void {
+			$options  = $this->get_options();
+			$provider = $options['providers']['deepl'] ?? array();
+		?>
+				<label>
+						<input type="checkbox" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][enabled]" value="1" <?php checked( ! empty( $provider['enabled'] ) ); ?>>
+					<?php esc_html_e( 'Abilita DeepL', 'fp-multilanguage' ); ?>
+				</label>
+				<input type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][api_key]" value="<?php echo esc_attr( $provider['api_key'] ?? '' ); ?>">
+				<p class="description"><?php esc_html_e( 'Utilizza endpoint EU/US personalizzato se necessario.', 'fp-multilanguage' ); ?></p>
+				<p>
+						<label for="fp-multilanguage-deepl-glossary">
+							<?php esc_html_e( 'ID glossario DeepL', 'fp-multilanguage' ); ?>
+						</label>
+						<input id="fp-multilanguage-deepl-glossary" type="text" class="regular-text" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][glossary_id]" value="<?php echo esc_attr( $provider['glossary_id'] ?? '' ); ?>" placeholder="1234-5678-...">
+						<span class="description"><?php esc_html_e( 'Inserisci l\'ID del glossario pubblicato su DeepL (opzionale).', 'fp-multilanguage' ); ?></span>
+				</p>
+				<p>
+						<label for="fp-multilanguage-deepl-formality">
+							<?php esc_html_e( 'Livello di formalità', 'fp-multilanguage' ); ?>
+						</label>
+						<select id="fp-multilanguage-deepl-formality" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[providers][deepl][formality]">
+							<?php
+							$formalities = array(
+								'default' => __( 'Predefinito', 'fp-multilanguage' ),
+								'more'    => __( 'Più formale', 'fp-multilanguage' ),
+								'less'    => __( 'Meno formale', 'fp-multilanguage' ),
+							);
+							$selected    = isset( $provider['formality'] ) ? (string) $provider['formality'] : 'default';
+							foreach ( $formalities as $value => $label ) :
+								?>
+										<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $selected, $value ); ?>><?php echo esc_html( $label ); ?></option>
+										<?php
+								endforeach;
+							?>
+						</select>
+				</p>
+				<?php
+	}
 
 	public function render_seo_field(): void {
 		$options = $this->get_options();
@@ -496,56 +496,56 @@ class Settings {
 
 			$sanitized['auto_translate'] = ! empty( $sanitized['auto_translate'] );
 
-                foreach ( array( 'google', 'deepl' ) as $provider ) {
-                                $providerOptions            = $sanitized['providers'][ $provider ] ?? array();
-                                $providerOptions            = wp_parse_args( $providerOptions, self::$defaults['providers'][ $provider ] );
-                                $providerOptions['enabled'] = ! empty( $providerOptions['enabled'] );
-                                $providerOptions['api_key'] = sanitize_text_field( $providerOptions['api_key'] );
-                        if ( isset( $providerOptions['timeout'] ) ) {
-                                $providerOptions['timeout'] = max( 5, (int) $providerOptions['timeout'] );
-                        }
-                        if ( $providerOptions['enabled'] && '' === $providerOptions['api_key'] ) {
-                                        $providerOptions['enabled'] = false;
+		foreach ( array( 'google', 'deepl' ) as $provider ) {
+						$providerOptions            = $sanitized['providers'][ $provider ] ?? array();
+						$providerOptions            = wp_parse_args( $providerOptions, self::$defaults['providers'][ $provider ] );
+						$providerOptions['enabled'] = ! empty( $providerOptions['enabled'] );
+						$providerOptions['api_key'] = sanitize_text_field( $providerOptions['api_key'] );
+			if ( isset( $providerOptions['timeout'] ) ) {
+						$providerOptions['timeout'] = max( 5, (int) $providerOptions['timeout'] );
+			}
+			if ( $providerOptions['enabled'] && '' === $providerOptions['api_key'] ) {
+									$providerOptions['enabled'] = false;
 
-                                        $providerLabel = 'deepl' === $provider ? 'DeepL' : ucfirst( $provider );
-                                        $message       = sprintf(
-							/* translators: %s is the provider name. */
-						__( 'Il provider %s è stato disabilitato perché manca la chiave API.', 'fp-multilanguage' ),
-						$providerLabel
-					);
+									$providerLabel = 'deepl' === $provider ? 'DeepL' : ucfirst( $provider );
+									$message       = sprintf(
+						/* translators: %s is the provider name. */
+										__( 'Il provider %s è stato disabilitato perché manca la chiave API.', 'fp-multilanguage' ),
+										$providerLabel
+									);
 
-					$this->notices->add_notice( $message, 'warning', false );
-                        }
-                        if ( isset( $providerOptions['endpoint'] ) ) {
-                                        $providerOptions['endpoint'] = esc_url_raw( $providerOptions['endpoint'] );
-                        }
-                        if ( isset( $providerOptions['glossary_id'] ) ) {
-                                $glossaryId = sanitize_text_field( $providerOptions['glossary_id'] );
-                                $glossaryId = html_entity_decode( $glossaryId, ENT_QUOTES, 'UTF-8' );
-                                $glossaryId = preg_replace( '/[\r\n]+/', '', $glossaryId );
-                                if ( null === $glossaryId ) {
-                                        $glossaryId = '';
-                                }
+						$this->notices->add_notice( $message, 'warning', false );
+			}
+			if ( isset( $providerOptions['endpoint'] ) ) {
+						$providerOptions['endpoint'] = esc_url_raw( $providerOptions['endpoint'] );
+			}
+			if ( isset( $providerOptions['glossary_id'] ) ) {
+				$glossaryId = sanitize_text_field( $providerOptions['glossary_id'] );
+				$glossaryId = html_entity_decode( $glossaryId, ENT_QUOTES, 'UTF-8' );
+				$glossaryId = preg_replace( '/[\r\n]+/', '', $glossaryId );
+				if ( null === $glossaryId ) {
+						$glossaryId = '';
+				}
 
-                                $providerOptions['glossary_id'] = trim( $glossaryId );
-                        }
-                        if ( 'google' === $provider ) {
-                                $providerOptions['glossary_ignore_case'] = ! empty( $providerOptions['glossary_ignore_case'] );
-                                if ( '' === $providerOptions['glossary_id'] ) {
-                                        $providerOptions['glossary_ignore_case'] = false;
-                                }
-                        }
-                        if ( 'deepl' === $provider ) {
-                                $formality = strtolower( sanitize_text_field( (string) ( $providerOptions['formality'] ?? '' ) ) );
-                                $allowed   = array( 'default', 'more', 'less' );
-                                if ( ! in_array( $formality, $allowed, true ) ) {
-                                        $formality = 'default';
-                                }
+				$providerOptions['glossary_id'] = trim( $glossaryId );
+			}
+			if ( 'google' === $provider ) {
+				$providerOptions['glossary_ignore_case'] = ! empty( $providerOptions['glossary_ignore_case'] );
+				if ( '' === $providerOptions['glossary_id'] ) {
+						$providerOptions['glossary_ignore_case'] = false;
+				}
+			}
+			if ( 'deepl' === $provider ) {
+				$formality = strtolower( sanitize_text_field( (string) ( $providerOptions['formality'] ?? '' ) ) );
+				$allowed   = array( 'default', 'more', 'less' );
+				if ( ! in_array( $formality, $allowed, true ) ) {
+						$formality = 'default';
+				}
 
-                                $providerOptions['formality'] = $formality;
-                        }
-                                $sanitized['providers'][ $provider ] = $providerOptions;
-                }
+				$providerOptions['formality'] = $formality;
+			}
+						$sanitized['providers'][ $provider ] = $providerOptions;
+		}
 
 		if ( ! isset( $sanitized['seo'] ) || ! is_array( $sanitized['seo'] ) ) {
 			$sanitized['seo'] = self::$defaults['seo'];

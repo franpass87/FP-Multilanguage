@@ -14,12 +14,10 @@ class TranslationService {
 	private const QUOTA_OPTION = 'fp_multilanguage_quota';
 
 	private const DEFAULT_QUOTA_WINDOW = 86400;
-
 	/**
 	 * @var array<string, TranslationProviderInterface>
 	 */
 	private array $providers = array();
-
 	private Logger $logger;
 
 	private AdminNotices $notices;
@@ -396,7 +394,7 @@ class TranslationService {
 	}
 
 	/**
-	 * @param array<string, array<string, array{requests:mixed,characters:mixed,updated_at:mixed}>> $stored
+	 * @param array<string, mixed> $stored Raw data stored in the option table.
 	 *
 	 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
 	 */

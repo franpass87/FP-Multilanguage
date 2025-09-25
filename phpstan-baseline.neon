@@ -436,21 +436,6 @@ parameters:
 			path: tests/stubs/wordpress.php
 
 		-
-			message: "#^Function checked\\(\\) has no return type specified\\.$#"
-			count: 1
-			path: tests/stubs/wordpress.php
-
-		-
-			message: "#^Function checked\\(\\) has parameter \\$checked with no type specified\\.$#"
-			count: 1
-			path: tests/stubs/wordpress.php
-
-		-
-			message: "#^Function checked\\(\\) has parameter \\$current with no type specified\\.$#"
-			count: 1
-			path: tests/stubs/wordpress.php
-
-		-
 			message: "#^Function current_time\\(\\) has no return type specified\\.$#"
 			count: 1
 			path: tests/stubs/wordpress.php
