@@ -36,6 +36,16 @@ if (! isset($wp_remote_post_requests)) {
     $wp_remote_post_requests = [];
 }
 
+global $fp_test_comments;
+if (! isset($fp_test_comments)) {
+    $fp_test_comments = [];
+}
+
+global $fp_test_comment_meta;
+if (! isset($fp_test_comment_meta)) {
+    $fp_test_comment_meta = [];
+}
+
 global $wp_test_filters;
 if (! isset($wp_test_filters)) {
     $wp_test_filters = [];
@@ -706,6 +716,85 @@ if (! function_exists('get_post_meta')) {
 if (! function_exists('update_post_meta')) {
     function update_post_meta($post_id, $key, $value)
     {
+        return true;
+    }
+}
+
+if (! function_exists('get_comment')) {
+    function get_comment(int|\WP_Comment|null $comment = null): ?\WP_Comment
+    {
+        global $fp_test_comments;
+
+        if ($comment instanceof \WP_Comment) {
+            return $comment;
+        }
+
+        if (is_numeric($comment)) {
+            $comment_id = (int) $comment;
+            if (isset($fp_test_comments[$comment_id])) {
+                return $fp_test_comments[$comment_id];
+            }
+        }
+
+        if ($comment === null && isset($GLOBALS['comment']) && $GLOBALS['comment'] instanceof \WP_Comment) {
+            return $GLOBALS['comment'];
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('get_comment_meta')) {
+    function get_comment_meta(int $comment_id, string $key = '', bool $single = false): mixed
+    {
+        global $fp_test_comment_meta;
+
+        if (! isset($fp_test_comment_meta[$comment_id])) {
+            return $single ? '' : [];
+        }
+
+        if ($key === '') {
+            return $fp_test_comment_meta[$comment_id];
+        }
+
+        if (! isset($fp_test_comment_meta[$comment_id][$key])) {
+            return $single ? '' : [];
+        }
+
+        $value = $fp_test_comment_meta[$comment_id][$key];
+
+        return $single ? $value : [$value];
+    }
+}
+
+if (! function_exists('update_comment_meta')) {
+    function update_comment_meta(int $comment_id, string $key, mixed $value): bool
+    {
+        global $fp_test_comment_meta;
+
+        if (! isset($fp_test_comment_meta[$comment_id])) {
+            $fp_test_comment_meta[$comment_id] = [];
+        }
+
+        $fp_test_comment_meta[$comment_id][$key] = $value;
+
+        return true;
+    }
+}
+
+if (! function_exists('delete_comment_meta')) {
+    function delete_comment_meta(int $comment_id, string $key): bool
+    {
+        global $fp_test_comment_meta;
+
+        if (isset($fp_test_comment_meta[$comment_id][$key])) {
+            unset($fp_test_comment_meta[$comment_id][$key]);
+        }
+
+        if (isset($fp_test_comment_meta[$comment_id]) && empty($fp_test_comment_meta[$comment_id])) {
+            unset($fp_test_comment_meta[$comment_id]);
+        }
+
         return true;
     }
 }

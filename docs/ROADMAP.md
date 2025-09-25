@@ -5,12 +5,12 @@ Ultimo aggiornamento: settembre 2024 – Maintainer: Francesco Passeri ([info@fr
 ## In lavorazione
 
 - Traduzione media (alt text, caption, file names) e sincronizzazione su CDN.
-- Localizzazione commenti front-end con moderazione multilingua.
 - Integrazione con cache page builders (Elementor, Gutenberg patterns complessi).
 
 ## Completate
 
 - Supporto glossari personalizzati per provider (Google/DeepL) con UI dedicata.
+- Localizzazione commenti front-end con traduzione automatica e sincronizzazione REST.
 
 ## Idee future
 
