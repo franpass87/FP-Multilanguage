@@ -1,6 +1,13 @@
 {
     "name": "fp/multilanguage",
     "description": "Plugin WordPress per la gestione multilingua avanzata.",
+    "authors": [
+        {
+            "name": "Francesco Passeri",
+            "email": "info@francescopasseri.com",
+            "homepage": "https://francescopasseri.com"
+        }
+    ],
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {

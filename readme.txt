@@ -1,14 +1,18 @@
 === FP Multilanguage ===
-Contributors: fp-team
+Contributors: francescopasseri
 Tags: multilingual, translation, seo, deepl, google
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Gestione multilingua avanzata per contenuti, stringhe dinamiche e SEO con provider Google e DeepL.
+
+== Author ==
+
+Francesco Passeri – [francescopasseri.com](https://francescopasseri.com) – info@francescopasseri.com
 
 == Description ==
 
@@ -44,10 +48,18 @@ Sì, tramite il filtro `fp_multilanguage_provider_sequence` e l’hook `fp_multi
 
 == Changelog ==
 
+= 1.1.0 =
+* Allineamento della documentazione (README, docs/ e QA report) con panoramica storica delle versioni.
+* Aggiornamento dei metadati del plugin e dei riferimenti all'autore ufficiale (Francesco Passeri).
+* Bump versione asset JS e file principale per coerenza con la release documentale.
+
 = 1.0.0 =
 * Prima release pubblica con orchestratore, providers Google/DeepL, dynamic strings, SEO e CLI.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Aggiornamento consigliato per ottenere la nuova documentazione unificata e i riferimenti ufficiali all'autore.
 
 = 1.0.0 =
 Release iniziale.
