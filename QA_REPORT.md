@@ -1,4 +1,6 @@
-# QA Report – FP Multilanguage
+# QA Report – FP Multilanguage (v1.1.0)
+
+Maintainer: Francesco Passeri – [francescopasseri.com](https://francescopasseri.com) – [info@francescopasseri.com](mailto:info@francescopasseri.com)
 
 ## Ambiente di test
 
@@ -26,3 +28,8 @@
 ## Note
 
 Eventuali regressioni devono essere accompagnate da test unitari. Per nuove feature aggiornare `docs/ROADMAP.md` e `README.md`.
+
+## Cronologia release monitorate
+
+- **1.1.0 (settembre 2024)** – Revisione documentazione, aggiornamento metadati autore e verifica regressioni generali (nessun nuovo bug rilevato).
+- **1.0.0 (giugno 2024)** – Validazione iniziale delle funzionalità core (traduzioni automatiche/manuali, SEO, CLI, dynamic strings).

@@ -2,6 +2,12 @@
 
 FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenuti multilingua, traduzioni automatiche/manuali e SEO avanzata. Fornisce un service container per il bootstrapping dei componenti principali (impostazioni, traduzione, gestione post, stringhe dinamiche, SEO, widget e CLI) e integra provider esterni come Google Cloud Translation e DeepL.
 
+## Autore
+
+- **Nome:** Francesco Passeri
+- **Sito web:** [francescopasseri.com](https://francescopasseri.com)
+- **Email di contatto:** [info@francescopasseri.com](mailto:info@francescopasseri.com)
+
 ## Caratteristiche principali
 
 - **Bootstrap modulare** con container PSR-4 e dependency injection per semplificare i test.
@@ -118,3 +124,8 @@ fp-multilanguage/
 - I provider custom possono registrarsi via `fp_multilanguage_provider_register` / `fp_multilanguage_provider_sequence`.
 - Per modificare i meta SEO generati usare `fp_multilanguage_seo_meta` o i filtri WordPress standard.
 - Per contribuire apri una issue o proponi una pull request seguendo lo stile WordPress-Core (PHPCS).
+
+## Cronologia versioni
+
+- **1.1.0 (settembre 2024)** – Aggiornamento completo della documentazione, nuova titolarità del plugin (Francesco Passeri) e riallineamento dei metadati tecnici.
+- **1.0.0 (giugno 2024)** – Prima release pubblica con orchestratore, provider Google/DeepL, stringhe dinamiche, strumenti SEO e comandi CLI.

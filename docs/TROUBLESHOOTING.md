@@ -22,4 +22,4 @@
 - Verificare che gli elementi HTML abbiano attributo `data-fp-translatable` coerente con la chiave generata (`sha1(context|stringa)`).
 - In ambiente headless, includere `dynamic-translations.js` manualmente e passare i dati necessari a `fpMultilanguageDynamic`.
 
-Per problemi non elencati aprire una issue con log dettagliati.
+Per problemi non elencati aprire una issue con log dettagliati o contattare [info@francescopasseri.com](mailto:info@francescopasseri.com).

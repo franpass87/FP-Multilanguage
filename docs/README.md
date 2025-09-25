@@ -1,6 +1,6 @@
 # Documentazione sviluppatore
 
-Questa cartella raccoglie risorse dedicate a sviluppatori e integratori che desiderano estendere FP Multilanguage.
+Questa cartella raccoglie risorse dedicate a sviluppatori e integratori che desiderano estendere FP Multilanguage e include una panoramica cronologica delle evoluzioni principali.
 
 ## Architettura
 
@@ -41,5 +41,15 @@ Tutte le route richiedono utenti con `manage_options` (o `edit_posts` per il tra
 - Avvolgere le stringhe con funzioni i18n (`__`, `_x`, `esc_html__`, ecc.).
 - Seguire gli standard WordPress-Core (PHPCS già configurato via composer).
 - Le chiamate HTTP dei provider utilizzano gli helper WP (`wp_remote_post`).
+
+## Cronologia release
+
+- **1.1.0 (settembre 2024)** – Aggiornamento della documentazione di progetto, introduzione dei riferimenti ufficiali a Francesco Passeri e riallineamento dei metadati (versione plugin e asset).
+- **1.0.0 (giugno 2024)** – Prima release pubblica con orchestratore di servizi, provider Google/DeepL, gestione stringhe dinamiche, meta SEO e CLI.
+
+## Contatti
+
+- Sito web: [francescopasseri.com](https://francescopasseri.com)
+- Email: [info@francescopasseri.com](mailto:info@francescopasseri.com)
 
 Per ulteriori dettagli vedere gli altri documenti in `docs/`.

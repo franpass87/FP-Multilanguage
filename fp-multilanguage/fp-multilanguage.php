@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: FP Multilanguage
- * Plugin URI: https://example.com/fp-multilanguage
+ * Plugin URI: https://francescopasseri.com/progetti/fp-multilanguage
  * Description: Gestione avanzata delle traduzioni multilingua per contenuti, stringhe dinamiche e SEO in WordPress.
- * Version: 1.0.0
- * Author: FP Team
- * Author URI: https://example.com
+ * Version: 1.1.0
+ * Author: Francesco Passeri
+ * Author URI: https://francescopasseri.com
  * License: GPL2
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: fp-multilanguage
@@ -29,7 +29,7 @@ if ( ! defined( 'FP_MULTILANGUAGE_URL' ) ) {
 }
 
 if ( ! defined( 'FP_MULTILANGUAGE_VERSION' ) ) {
-	define( 'FP_MULTILANGUAGE_VERSION', '1.0.0' );
+        define( 'FP_MULTILANGUAGE_VERSION', '1.1.0' );
 }
 
 $autoload_paths = array(
