@@ -1,6 +1,8 @@
 <?php
 namespace FPMultilanguage\Tests;
 
+use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\Install\Migrator;
 use FPMultilanguage\Plugin;
 use PHPUnit\Framework\TestCase;
 
@@ -94,5 +96,46 @@ class PluginTest extends TestCase
             get_option('fp_multilanguage_cache_version'),
             'Non devono esserci modifiche alla cache quando la versione coincide.'
         );
+    }
+
+    public function test_uninstall_cleans_options_and_drops_tables(): void
+    {
+        if (! defined('FP_MULTILANGUAGE_PATH')) {
+            define('FP_MULTILANGUAGE_PATH', dirname(__DIR__) . '/fp-multilanguage/');
+        }
+
+        if (! defined('FP_MULTILANGUAGE_VERSION')) {
+            define('FP_MULTILANGUAGE_VERSION', '1.0.0');
+        }
+
+        Plugin::instance()->init();
+
+        $plugin     = Plugin::instance();
+        $container  = $plugin->get_container();
+        $dropper    = new class() extends Migrator {
+            public int $dropCalls = 0;
+
+            public function drop_tables(): void
+            {
+                $this->dropCalls++;
+            }
+        };
+
+        $container->set('migrator', $dropper);
+
+        update_option(Settings::OPTION_NAME, ['foo' => 'bar']);
+        update_option(Settings::MANUAL_STRINGS_OPTION, ['manual' => []]);
+        update_option('fp_multilanguage_quota', ['google' => []]);
+        update_option('fp_multilanguage_version', '0.9.0');
+        update_option('fp_multilanguage_slug_index', ['slug' => ['post_id' => 123]]);
+
+        Plugin::uninstall();
+
+        $this->assertSame('missing', get_option(Settings::OPTION_NAME, 'missing'));
+        $this->assertSame('missing', get_option(Settings::MANUAL_STRINGS_OPTION, 'missing'));
+        $this->assertSame('missing', get_option('fp_multilanguage_quota', 'missing'));
+        $this->assertSame('missing', get_option('fp_multilanguage_version', 'missing'));
+        $this->assertSame('missing', get_option('fp_multilanguage_slug_index', 'missing'));
+        $this->assertSame(1, $dropper->dropCalls, 'La tabella personalizzata deve essere eliminata.');
     }
 }

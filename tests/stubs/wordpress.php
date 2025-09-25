@@ -121,6 +121,17 @@ if (! function_exists('update_option')) {
     }
 }
 
+if (! function_exists('delete_option')) {
+    function delete_option($name)
+    {
+        global $wp_test_options;
+
+        unset($wp_test_options[$name]);
+
+        return true;
+    }
+}
+
 if (! function_exists('wp_parse_args')) {
     function wp_parse_args($args, $defaults = [])
     {
