@@ -306,6 +306,30 @@ class TranslationServiceTest extends TestCase
 		$this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
 	}
 
+	public function test_stale_quota_entries_do_not_trigger_rate_limit(): void
+	{
+		update_option('fp_multilanguage_quota', [
+			'google' => [
+				'it' => [
+					'requests' => 5000,
+					'characters' => 999999,
+					'updated_at' => time() - (86400 * 3),
+				],
+			],
+		]);
+
+		TranslationService::flush_cache();
+
+		$result = $this->service->translate_text('Quota scaduta', 'en', 'it');
+
+		$this->assertSame('google:Quota scaduta', $result, 'Le quote scadute non devono bloccare il provider principale.');
+
+		$usage = TranslationService::get_usage_stats();
+
+		$this->assertSame(1, $usage['google']['it']['requests'] ?? 0, 'Le quote devono essere ripristinate dopo la scadenza.');
+		$this->assertGreaterThan(time() - 5, $usage['google']['it']['updated_at'] ?? 0, 'La data di aggiornamento deve riflettere la nuova richiesta.');
+	}
+
 	public function test_exposes_quota_usage_stats(): void
 	{
 		$this->service->translate_text('Quota check', 'en', 'it');
