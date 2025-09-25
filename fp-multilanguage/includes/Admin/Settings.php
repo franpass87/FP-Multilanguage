@@ -811,8 +811,14 @@ class Settings {
 		$context  = '';
 		$original = '';
 
-                $existing = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$wpdb->prepare( "SELECT context, original FROM {$table} WHERE string_key = %s", $key ),
+		$table_name = esc_sql( $table );
+// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared -- table name sanitized above.
+		$existing = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare(
+				"SELECT context, original FROM {$table_name} WHERE string_key = %s",
+				$key
+			),
+// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
 			'ARRAY_A'
 		);
 
@@ -855,16 +861,16 @@ class Settings {
 			array( '%s', '%s', '%s', '%s', '%s' )
 		);
 	}
-        private static function manual_strings_table_exists( string $table ): bool {
-			global $wpdb;
+	private static function manual_strings_table_exists( string $table ): bool {
+		global $wpdb;
 
 		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
 				return false;
 		}
 
-			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
-			return null !== $exists;
+		return null !== $exists;
 	}
 
 	private static function sync_manual_string_fallback( string $key, array $translations ): void {
