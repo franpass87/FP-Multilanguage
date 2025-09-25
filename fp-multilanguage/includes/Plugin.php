@@ -4,6 +4,7 @@ namespace FPMultilanguage;
 use FPMultilanguage\Admin\AdminNotices;
 use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\CLI\Commands;
+use FPMultilanguage\Content\CommentTranslationManager;
 use FPMultilanguage\Content\PostTranslationManager;
 use FPMultilanguage\Dynamic\DynamicStrings;
 use FPMultilanguage\Install\Migrator;
@@ -72,10 +73,15 @@ class Plugin {
 			$translationService->register();
 		}
 
-		$postTranslationManager = $this->container->get( 'post_translation_manager' );
-		if ( $postTranslationManager instanceof PostTranslationManager ) {
-			$postTranslationManager->register();
-		}
+                $postTranslationManager = $this->container->get( 'post_translation_manager' );
+                if ( $postTranslationManager instanceof PostTranslationManager ) {
+                        $postTranslationManager->register();
+                }
+
+                $commentTranslationManager = $this->container->get( 'comment_translation_manager' );
+                if ( $commentTranslationManager instanceof CommentTranslationManager ) {
+                        $commentTranslationManager->register();
+                }
 
 		$dynamicStrings = $this->container->get( 'dynamic_strings' );
 		if ( $dynamicStrings instanceof DynamicStrings ) {
@@ -236,17 +242,29 @@ class Plugin {
 			}
 		);
 
-		$container->set(
-			'post_translation_manager',
-			static function ( Container $c ): PostTranslationManager {
-				return new PostTranslationManager(
-					$c->get( 'translation_service' ),
+                $container->set(
+                        'post_translation_manager',
+                        static function ( Container $c ): PostTranslationManager {
+                                return new PostTranslationManager(
+                                        $c->get( 'translation_service' ),
 					$c->get( 'settings' ),
 					$c->get( 'notices' ),
 					$c->get( 'logger' )
-				);
-			}
-		);
+                                );
+                        }
+                );
+
+                $container->set(
+                        'comment_translation_manager',
+                        static function ( Container $c ): CommentTranslationManager {
+                                return new CommentTranslationManager(
+                                        $c->get( 'translation_service' ),
+                                        $c->get( 'settings' ),
+                                        $c->get( 'notices' ),
+                                        $c->get( 'logger' )
+                                );
+                        }
+                );
 
 		$container->set(
 			'dynamic_strings',
