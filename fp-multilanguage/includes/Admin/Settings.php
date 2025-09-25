@@ -733,35 +733,80 @@ class Settings {
 	}
 
 	private static function sync_manual_string_table( string $key, array $translations ): void {
-			global $wpdb;
+		global $wpdb;
 
 		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
-				return;
+			return;
 		}
 
 		if ( empty( $wpdb->prefix ) ) {
-				return;
+			return;
 		}
 
-			$table = $wpdb->prefix . 'fp_multilanguage_strings';
+		$table = $wpdb->prefix . 'fp_multilanguage_strings';
 
 		if ( ! self::manual_strings_table_exists( $table ) ) {
-				return;
+			return;
 		}
 
-			$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		if ( empty( $translations ) ) {
+			$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 				$table,
-				array(
-					'translations' => wp_json_encode( $translations ),
-					'updated_at'   => current_time( 'mysql', true ),
-				),
 				array( 'string_key' => $key ),
-				array( '%s', '%s' ),
 				array( '%s' )
 			);
-	}
 
-	private static function manual_strings_table_exists( string $table ): bool {
+			return;
+		}
+
+		$context  = '';
+		$original = '';
+
+		$existing = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare( "SELECT context, original FROM {$table} WHERE string_key = %s", $key ),
+			'ARRAY_A'
+		);
+
+		if ( is_array( $existing ) ) {
+			$context  = isset( $existing['context'] ) ? (string) $existing['context'] : '';
+			$original = isset( $existing['original'] ) ? (string) $existing['original'] : '';
+		} else {
+			$fallback = get_option( 'fp_multilanguage_strings', array() );
+			if ( isset( $fallback[ $key ] ) && is_array( $fallback[ $key ] ) ) {
+				$context  = isset( $fallback[ $key ]['context'] ) ? (string) $fallback[ $key ]['context'] : '';
+				$original = isset( $fallback[ $key ]['original'] ) ? (string) $fallback[ $key ]['original'] : '';
+			}
+		}
+
+		if ( function_exists( 'wp_json_encode' ) ) {
+			$translationsJson = wp_json_encode( $translations );
+			if ( false === $translationsJson ) {
+				$translationsJson = wp_json_encode( array() );
+			}
+		} else {
+			$translationsJson = json_encode( $translations );
+			if ( false === $translationsJson ) {
+				$translationsJson = json_encode( array() );
+			}
+		}
+
+		if ( false === $translationsJson || null === $translationsJson ) {
+			$translationsJson = '[]';
+		}
+
+		$wpdb->replace( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$table,
+			array(
+				'string_key'   => $key,
+				'context'      => $context,
+				'original'     => $original,
+				'translations' => $translationsJson,
+				'updated_at'   => current_time( 'mysql', true ),
+			),
+			array( '%s', '%s', '%s', '%s', '%s' )
+		);
+	}
+        private static function manual_strings_table_exists( string $table ): bool {
 			global $wpdb;
 
 		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
