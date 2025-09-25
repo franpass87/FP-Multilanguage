@@ -33,22 +33,22 @@ class GoogleProvider implements TranslationProviderInterface {
 			'format' => $format,
 		);
 
-                $glossaryConfig = array();
-                if ( ! empty( $options['glossary'] ) && is_array( $options['glossary'] ) ) {
-                        $glossaryConfig = $options['glossary'];
-                }
+				$glossaryConfig = array();
+		if ( ! empty( $options['glossary'] ) && is_array( $options['glossary'] ) ) {
+				$glossaryConfig = $options['glossary'];
+		}
 
-                $glossaryId = isset( $options['glossary_id'] ) ? (string) $options['glossary_id'] : '';
-                if ( $glossaryId !== '' ) {
-                        $glossaryConfig = array( 'glossary' => $glossaryId );
-                        if ( ! empty( $options['glossary_ignore_case'] ) ) {
-                                $glossaryConfig['ignoreCase'] = true;
-                        }
-                }
+				$glossaryId = isset( $options['glossary_id'] ) ? (string) $options['glossary_id'] : '';
+		if ( $glossaryId !== '' ) {
+				$glossaryConfig = array( 'glossary' => $glossaryId );
+			if ( ! empty( $options['glossary_ignore_case'] ) ) {
+						$glossaryConfig['ignoreCase'] = true;
+			}
+		}
 
-                if ( ! empty( $glossaryConfig ) ) {
-                        $body['glossaryConfig'] = $glossaryConfig;
-                }
+		if ( ! empty( $glossaryConfig ) ) {
+				$body['glossaryConfig'] = $glossaryConfig;
+		}
 
 		$response = wp_remote_post(
 			$url,

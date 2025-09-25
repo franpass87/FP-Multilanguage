@@ -468,20 +468,36 @@ if (! function_exists('apply_filters')) {
 }
 
 if (! function_exists('checked')) {
-    function checked($checked, $current = true)
+    function checked(mixed $checked, mixed $current = true, bool $echo = true): string
     {
+        $result = '';
+
         if ((bool) $checked === (bool) $current) {
-            echo 'checked="checked"';
+            $result = 'checked="checked"';
         }
+
+        if ($echo) {
+            echo $result;
+        }
+
+        return $result;
     }
 }
 
 if (! function_exists('selected')) {
-    function selected($selected, $current = true)
+    function selected(mixed $selected, mixed $current = true, bool $echo = true): string
     {
+        $result = '';
+
         if ((string) $selected === (string) $current) {
-            echo 'selected="selected"';
+            $result = 'selected="selected"';
         }
+
+        if ($echo) {
+            echo $result;
+        }
+
+        return $result;
     }
 }
 
