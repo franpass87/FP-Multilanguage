@@ -26,13 +26,8 @@ parameters:
 			path: fp-multilanguage/includes/Admin/Settings.php
 
 		-
-			message: "#^Parameter \\#3 \\$previous of class WP_Error constructor expects Throwable\\|null, array\\<string, int\\> given\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Admin/Settings.php
-
-		-
 			message: "#^Call to static method error\\(\\) on an unknown class WP_CLI\\.$#"
-			count: 1
+			count: 2
 			path: fp-multilanguage/includes/CLI/Commands.php
 
 		-
@@ -152,11 +147,6 @@ parameters:
 
 		-
 			message: "#^Method FPMultilanguage\\\\Dynamic\\\\DynamicStrings\\:\\:translate_dynamic_string\\(\\) has parameter \\$value with no type specified\\.$#"
-			count: 1
-			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
-
-		-
-			message: "#^Parameter \\#3 \\$previous of class WP_Error constructor expects Throwable\\|null, array\\<string, int\\> given\\.$#"
 			count: 1
 			path: fp-multilanguage/includes/Dynamic/DynamicStrings.php
 

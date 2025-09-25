@@ -6,6 +6,8 @@ use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
+use ArrayAccess;
+use WP_Error;
 use WP_Post;
 
 class PostTranslationManager {
@@ -38,6 +40,8 @@ class PostTranslationManager {
 		add_filter( 'the_title', array( $this, 'filter_title' ), 10, 2 );
 		add_filter( 'get_the_excerpt', array( $this, 'filter_excerpt' ), 10, 2 );
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'filter_attachment_attributes' ), 10, 2 );
+		add_filter( 'wp_get_attachment_caption', array( $this, 'filter_attachment_caption' ), 10, 2 );
+		add_filter( 'get_post_metadata', array( $this, 'filter_attachment_meta' ), 10, 4 );
 		add_filter( 'rest_prepare_post', array( $this, 'expose_translations' ), 10, 3 );
 		add_filter( 'rest_prepare_page', array( $this, 'expose_translations' ), 10, 3 );
 		add_filter( 'rest_prepare_attachment', array( $this, 'expose_translations' ), 10, 3 );
@@ -71,15 +75,94 @@ class PostTranslationManager {
 			return;
 		}
 
-		if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
-				return;
-		}
-
 		if ( ! Settings::is_auto_translate_enabled() ) {
-				return;
+			return;
 		}
 
-				$this->translate_post( $postId );
+		if ( 'attachment' === $post->post_type ) {
+			$this->translate_attachment( $postId );
+
+			return;
+		}
+
+		if ( ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) {
+			return;
+		}
+
+		$this->translate_post( $postId );
+	}
+
+	public function translate_attachment( int $postId, ?string $language = null, bool $force = false ): array {
+		$post = get_post( $postId );
+		if ( ! $post instanceof WP_Post ) {
+			return array();
+		}
+
+		$sourceLanguage  = Settings::get_source_language();
+		$targetLanguages = Settings::get_target_languages();
+		if ( null !== $language ) {
+			$targetLanguages = array_intersect( $targetLanguages, array( $language ) );
+		}
+
+		$translations = $this->get_post_translations( $postId );
+		$altText      = (string) get_post_meta( $postId, '_wp_attachment_image_alt', true );
+		$hasChanges   = false;
+
+		foreach ( $targetLanguages as $target ) {
+			if ( $target === $sourceLanguage ) {
+				continue;
+			}
+
+			$existing             = $translations[ $target ] ?? array();
+			$updated              = $existing;
+			$languageHasChanges = $force;
+
+			$title = $this->translationService->translate_text( $post->post_title, $sourceLanguage, $target );
+			if ( ! isset( $existing['title'] ) || $existing['title'] !== $title ) {
+				$updated['title']    = $title;
+				$languageHasChanges = true;
+			}
+
+			$description = $this->translationService->translate_text( $post->post_content, $sourceLanguage, $target, array( 'format' => 'html' ) );
+			if ( ! isset( $existing['content'] ) || $existing['content'] !== $description ) {
+				$updated['content']  = $description;
+				$languageHasChanges = true;
+			}
+
+			$caption_source = '' !== $post->post_excerpt ? $post->post_excerpt : $post->post_title;
+			$caption        = $this->translationService->translate_text( $caption_source, $sourceLanguage, $target, array( 'format' => 'html' ) );
+			if ( ! isset( $existing['excerpt'] ) || $existing['excerpt'] !== $caption ) {
+				$updated['excerpt']  = $caption;
+				$languageHasChanges = true;
+			}
+
+			if ( ! isset( $updated['meta'] ) || ! is_array( $updated['meta'] ) ) {
+				$updated['meta'] = array();
+			}
+
+			if ( '' !== $altText ) {
+				$translatedAlt = $this->translationService->translate_text( $altText, $sourceLanguage, $target );
+				if ( ! isset( $updated['meta']['_wp_attachment_image_alt'] ) || $updated['meta']['_wp_attachment_image_alt'] !== $translatedAlt ) {
+					$updated['meta']['_wp_attachment_image_alt'] = $translatedAlt;
+					$languageHasChanges                          = true;
+				}
+			}
+
+			if ( $languageHasChanges ) {
+				$updated['updated_at']   = time();
+				$updated['status']       = 'synced';
+				$translations[ $target ] = $updated;
+				$hasChanges             = true;
+			}
+		}
+
+		if ( $hasChanges ) {
+			update_post_meta( $postId, self::META_KEY, $translations );
+		}
+
+		$this->persist_relations( $postId, $translations, $sourceLanguage );
+
+		return $translations;
 	}
 
 	public function translate_post( int $postId, ?string $language = null, bool $force = false ): array {
@@ -198,10 +281,48 @@ class PostTranslationManager {
 		}
 
 		if ( isset( $attributes['alt'] ) ) {
-			$attributes['alt'] = $this->get_translated_value( $post, 'title', $attributes['alt'] );
+			$attributes['alt'] = $this->get_translated_meta_value( $post, '_wp_attachment_image_alt', $attributes['alt'] );
 		}
 
 		return $attributes;
+	}
+
+	/**
+	 * @param string|null $caption
+	 */
+	public function filter_attachment_caption( ?string $caption, int $postId ): string {
+		$post = get_post( $postId );
+		if ( ! $post instanceof WP_Post ) {
+			return is_string( $caption ) ? $caption : '';
+		}
+
+		return $this->get_translated_value( $post, 'excerpt', (string) $caption, array( 'format' => 'html' ) );
+	}
+
+	/**
+	 * @param mixed $value
+	 * @return array<int, string>|string
+	 */
+	public function filter_attachment_meta( $value, int $objectId, string $metaKey, bool $single ): array|string {
+		if ( '_wp_attachment_image_alt' !== $metaKey ) {
+			return $value;
+		}
+
+		$post = get_post( $objectId );
+		if ( ! $post instanceof WP_Post ) {
+			return $value;
+		}
+
+		$translated = $this->get_translated_meta_value( $post, $metaKey, '' );
+		if ( '' === $translated ) {
+			return $value;
+		}
+
+		if ( $single ) {
+			return $translated;
+		}
+
+		return array( $translated );
 	}
 
 	public function filter_body_class( array $classes ): array {
@@ -230,33 +351,72 @@ class PostTranslationManager {
 		return $response;
 	}
 
-	public function register_rest_routes(): void {
-		register_rest_route(
-			'fp-multilanguage/v1',
-			'/posts/(?P<id>\\d+)/translate',
-			array(
-				'methods'             => array( 'POST' ),
-				'callback'            => array( $this, 'rest_translate_post' ),
-				'permission_callback' => function () {
-					return current_user_can( 'edit_posts' );
-				},
-			)
-		);
-	}
+        public function register_rest_routes(): void {
+                $routeArgs = array(
+                        'methods'             => array( 'POST' ),
+                        'callback'            => array( $this, 'rest_translate_post' ),
+                        'permission_callback' => static function () {
+                                return current_user_can( 'edit_posts' );
+                        },
+                );
 
-	public function rest_translate_post( $request ) {
-			$postId   = (int) $request['id'];
-			$language = $request->get_param( 'language' );
-			$language = is_string( $language ) ? sanitize_key( $language ) : null;
+                register_rest_route(
+                        'fp-multilanguage/v1',
+                        '/posts/(?P<id>\\d+)/translate',
+                        $routeArgs
+                );
 
-			$translations = $this->translate_post( $postId, $language, true );
+                register_rest_route(
+                        'fp-multilanguage/v1',
+                        '/attachments/(?P<id>\\d+)/translate',
+                        $routeArgs
+                );
+        }
 
-		return rest_ensure_response(
-			array(
-				'translations' => $translations,
-			)
-		);
-	}
+        public function rest_translate_post( $request ) {
+                $postId = (int) $this->get_request_param( $request, 'id', 0 );
+                if ( $postId <= 0 ) {
+                        return new WP_Error(
+                                'rest_post_invalid_id',
+                                __( 'Contenuto non trovato.', 'fp-multilanguage' ),
+                                array( 'status' => 404 )
+                        );
+                }
+
+                $languageParam = $this->get_request_param( $request, 'language' );
+                $language      = is_string( $languageParam ) ? sanitize_key( $languageParam ) : null;
+
+                $forceParam = $this->get_request_param( $request, 'force', true );
+                if ( is_string( $forceParam ) || is_int( $forceParam ) ) {
+                        $force = filter_var( $forceParam, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+                        if ( null === $force ) {
+                                $force = true;
+                        }
+                } else {
+                        $force = (bool) $forceParam;
+                }
+
+                $post = get_post( $postId );
+                if ( ! $post instanceof WP_Post ) {
+                        return new WP_Error(
+                                'rest_post_invalid_id',
+                                __( 'Contenuto non trovato.', 'fp-multilanguage' ),
+                                array( 'status' => 404 )
+                        );
+                }
+
+                if ( 'attachment' === $post->post_type ) {
+                        $translations = $this->translate_attachment( $postId, $language, $force );
+                } else {
+                        $translations = $this->translate_post( $postId, $language, $force );
+                }
+
+                return rest_ensure_response(
+                        array(
+                                'translations' => $translations,
+                        )
+                );
+        }
 
 	public function get_post_translations( int $postId ): array {
 		$stored = get_post_meta( $postId, self::META_KEY, true );
@@ -302,19 +462,68 @@ class PostTranslationManager {
 			return $default_value;
 	}
 
-	/**
-	 * @return array<string, string>
-	 */
-	private function get_custom_fields( WP_Post $post ): array {
-		$fields   = array();
-		$metaKeys = apply_filters( 'fp_multilanguage_custom_fields', array() );
-		foreach ( $metaKeys as $metaKey ) {
-			$value = get_post_meta( $post->ID, $metaKey, true );
-			if ( is_string( $value ) && $value !== '' ) {
-				$fields[ $metaKey ] = $value;
+	private function get_translated_meta_value( WP_Post $post, string $metaKey, string $default_value ): string {
+		$language = CurrentLanguage::resolve();
+		$source   = Settings::get_source_language();
+
+		if ( $language === '' || $language === $source ) {
+			return $default_value;
+		}
+
+		$translations = $this->get_post_translations( $post->ID );
+		if ( isset( $translations[ $language ]['meta'][ $metaKey ] ) && '' !== $translations[ $language ]['meta'][ $metaKey ] ) {
+			return $translations[ $language ]['meta'][ $metaKey ];
+		}
+
+		if ( '' !== $default_value ) {
+			$translated = $this->translationService->translate_text( $default_value, $source, $language );
+			if ( '' !== $translated ) {
+				return $translated;
 			}
 		}
 
-		return $fields;
+		$fallback = Settings::get_fallback_language();
+		if ( $fallback !== $language && isset( $translations[ $fallback ]['meta'][ $metaKey ] ) && '' !== $translations[ $fallback ]['meta'][ $metaKey ] ) {
+			return $translations[ $fallback ]['meta'][ $metaKey ];
+		}
+
+		return $default_value;
 	}
+
+	/**
+	 * @return array<string, string>
+	 */
+        private function get_custom_fields( WP_Post $post ): array {
+                $fields   = array();
+                $metaKeys = apply_filters( 'fp_multilanguage_custom_fields', array() );
+                foreach ( $metaKeys as $metaKey ) {
+                        $value = get_post_meta( $post->ID, $metaKey, true );
+                        if ( is_string( $value ) && $value !== '' ) {
+                                $fields[ $metaKey ] = $value;
+                        }
+                }
+
+                return $fields;
+        }
+
+        /**
+         * @param mixed $request
+         * @param mixed $default
+         * @return mixed
+         */
+        private function get_request_param( $request, string $key, $default = null ) {
+                if ( is_array( $request ) ) {
+                        return $request[ $key ] ?? $default;
+                }
+
+                if ( $request instanceof ArrayAccess && $request->offsetExists( $key ) ) {
+                        return $request[ $key ];
+                }
+
+                if ( is_object( $request ) && method_exists( $request, 'get_param' ) ) {
+                        return $request->get_param( $key );
+                }
+
+                return $default;
+        }
 }
