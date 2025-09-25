@@ -13,6 +13,8 @@ class TranslationService {
 
 	private const QUOTA_OPTION = 'fp_multilanguage_quota';
 
+	private const DEFAULT_QUOTA_WINDOW = 86400;
+
 	/**
 	 * @var array<string, TranslationProviderInterface>
 	 */
@@ -145,26 +147,7 @@ class TranslationService {
 			return array();
 		}
 
-		$normalized = array();
-		foreach ( $stored as $provider => $languages ) {
-			if ( ! is_array( $languages ) ) {
-				continue;
-			}
-
-			foreach ( $languages as $language => $usage ) {
-				if ( ! is_array( $usage ) ) {
-					continue;
-				}
-
-				$normalized[ $provider ][ $language ] = array(
-					'requests'   => (int) ( $usage['requests'] ?? 0 ),
-					'characters' => (int) ( $usage['characters'] ?? 0 ),
-					'updated_at' => isset( $usage['updated_at'] ) ? (int) $usage['updated_at'] : 0,
-				);
-			}
-		}
-
-		return $normalized;
+		return self::normalize_quota_data( $stored );
 	}
 
 	/**
@@ -375,17 +358,19 @@ class TranslationService {
 			$quota[ $provider ] = array();
 		}
 
+		$now = time();
+
 		if ( ! isset( $quota[ $provider ][ $language ] ) ) {
 			$quota[ $provider ][ $language ] = array(
 				'requests'   => 0,
 				'characters' => 0,
-				'updated_at' => time(),
+				'updated_at' => $now,
 			);
 		}
 
 		++$quota[ $provider ][ $language ]['requests'];
 		$quota[ $provider ][ $language ]['characters'] += $length;
-		$quota[ $provider ][ $language ]['updated_at']  = time();
+		$quota[ $provider ][ $language ]['updated_at']  = $now;
 
 		update_option( self::QUOTA_OPTION, $quota );
 	}
@@ -395,6 +380,70 @@ class TranslationService {
 	 */
 	private function get_quota(): array {
 		return self::get_usage_stats();
+	}
+
+	private static function get_quota_window(): int {
+		$default = defined( 'DAY_IN_SECONDS' ) ? (int) DAY_IN_SECONDS : self::DEFAULT_QUOTA_WINDOW;
+
+		if ( function_exists( 'apply_filters' ) ) {
+			$filtered = (int) apply_filters( 'fp_multilanguage_quota_window', $default );
+			if ( $filtered > 0 ) {
+				return $filtered;
+			}
+		}
+
+		return $default;
+	}
+
+	/**
+	 * @param array<string, array<string, array{requests:mixed,characters:mixed,updated_at:mixed}>> $stored
+	 *
+	 * @return array<string, array<string, array{requests:int,characters:int,updated_at:int}>>
+	 */
+	private static function normalize_quota_data( array $stored ): array {
+		$normalized = array();
+		$threshold  = time() - self::get_quota_window();
+		$threshold  = max( 0, $threshold );
+		$changed    = false;
+
+		foreach ( $stored as $provider => $languages ) {
+			if ( ! is_array( $languages ) ) {
+				$changed = true;
+				continue;
+			}
+
+			foreach ( $languages as $language => $usage ) {
+				if ( ! is_array( $usage ) ) {
+					$changed = true;
+					continue;
+				}
+
+				$requests   = (int) ( $usage['requests'] ?? 0 );
+				$characters = (int) ( $usage['characters'] ?? 0 );
+				$updatedAt  = isset( $usage['updated_at'] ) ? (int) $usage['updated_at'] : 0;
+
+				if ( $updatedAt <= $threshold ) {
+					$changed = true;
+					continue;
+				}
+
+				$normalized[ $provider ][ $language ] = array(
+					'requests'   => $requests,
+					'characters' => $characters,
+					'updated_at' => $updatedAt,
+				);
+
+				if ( $requests !== ( $usage['requests'] ?? null ) || $characters !== ( $usage['characters'] ?? null ) || $updatedAt !== ( $usage['updated_at'] ?? null ) ) {
+					$changed = true;
+				}
+			}
+		}
+
+		if ( $changed && function_exists( 'update_option' ) ) {
+			update_option( self::QUOTA_OPTION, $normalized );
+		}
+
+		return $normalized;
 	}
 
 	protected function get_text_length( string $text ): int {
