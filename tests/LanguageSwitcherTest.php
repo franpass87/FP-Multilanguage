@@ -168,6 +168,63 @@ class LanguageSwitcherTest extends TestCase
         $this->assertSame('https://example.com/category/news/?paged=2&fp_lang=it', $languages['it']);
     }
 
+    public function test_append_current_query_args_sanitizes_and_filters_request_parameters(): void
+    {
+        $_GET = [
+            'fp_lang' => 'it',
+            'FP_LANG' => 'de',
+            ' foo ' => ' value ',
+            '<>' => 'should-be-removed',
+            'capsKey' => 'Value',
+            'empty' => '   ',
+            'array' => [
+                ' keep ' => '   value   ',
+                'bad key' => '<script>alert(1)</script>',
+                '<>' => 'value',
+                'nested' => [
+                    ' inner ' => ' test ',
+                    'empty' => '   ',
+                ],
+                2 => 'first',
+                3 => ['sub' => ' value '],
+            ],
+            'object' => (object) ['foo' => 'bar'],
+            'bool' => false,
+            'int' => 123,
+            'duplicate' => 'first',
+            ' Duplicate ' => 'second',
+        ];
+
+        $switcher = new LanguageSwitcher();
+        $url = $this->invokeAppendCurrentQueryArgs($switcher, 'https://example.com/post/42');
+
+        $this->assertStringStartsWith('https://example.com/post/42', $url);
+
+        $query = parse_url($url, PHP_URL_QUERY) ?? '';
+        parse_str($query, $parsed);
+
+        $this->assertSame(
+            [
+                'foo' => 'value',
+                'capskey' => 'Value',
+                'array' => [
+                    'keep' => 'value',
+                    'badkey' => '&#60;script&#62;alert(1)&#60;/script&#62;',
+                    'nested' => [
+                        'inner' => 'test',
+                    ],
+                    '0' => 'first',
+                    '1' => [
+                        'sub' => 'value',
+                    ],
+                ],
+                'int' => '123',
+                'duplicate' => 'second',
+            ],
+            $parsed
+        );
+    }
+
     private function invokeGetLanguages(LanguageSwitcher $switcher): array
     {
         $reflection = new ReflectionClass(LanguageSwitcher::class);
@@ -175,6 +232,15 @@ class LanguageSwitcherTest extends TestCase
         $method->setAccessible(true);
 
         return $method->invoke($switcher);
+    }
+
+    private function invokeAppendCurrentQueryArgs(LanguageSwitcher $switcher, string $baseUrl): string
+    {
+        $reflection = new ReflectionClass(LanguageSwitcher::class);
+        $method = $reflection->getMethod('append_current_query_args');
+        $method->setAccessible(true);
+
+        return $method->invoke($switcher, $baseUrl);
     }
 }
 }
