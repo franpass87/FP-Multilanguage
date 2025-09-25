@@ -48,15 +48,17 @@ class Plugin {
 				add_shortcode( 'fp_language_switcher', array( $this, 'render_language_switcher' ) );
 	}
 
-	public function bootstrap(): void {
-		if ( $this->bootstrapped ) {
-			return;
-		}
+        public function bootstrap(): void {
+                if ( $this->bootstrapped ) {
+                        return;
+                }
 
-		$settings = $this->container->get( 'settings' );
-		if ( ! $settings instanceof Settings ) {
-			throw new RuntimeException( 'Unable to bootstrap plugin: invalid settings service.' );
-		}
+                $this->maybe_upgrade();
+
+                $settings = $this->container->get( 'settings' );
+                if ( ! $settings instanceof Settings ) {
+                        throw new RuntimeException( 'Unable to bootstrap plugin: invalid settings service.' );
+                }
 
 		$settings->register();
 
@@ -162,18 +164,12 @@ class Plugin {
 			return $this->container;
 	}
 
-	public static function activate(): void {
-		$instance = self::instance();
-		$instance->register_services();
+        public static function activate(): void {
+                $instance = self::instance();
+                $instance->register_services();
 
-		/** @var Migrator $migrator */
-		$migrator = $instance->container->get( 'migrator' );
-		$migrator->maybe_migrate();
-
-		Settings::bootstrap_defaults();
-
-		update_option( self::VERSION_OPTION, FP_MULTILANGUAGE_VERSION );
-	}
+                $instance->maybe_upgrade( true );
+        }
 
 	public static function deactivate(): void {
 		TranslationService::flush_cache();
@@ -188,11 +184,11 @@ class Plugin {
 
 		/** @var Migrator $migrator */
 		$migrator = self::instance()->container->get( 'migrator' );
-		$migrator->drop_tables();
-	}
+                $migrator->drop_tables();
+        }
 
-	private function register_services(): void {
-		$container = $this->container;
+        private function register_services(): void {
+                $container = $this->container;
 
 		if ( ! $container->has( 'logger' ) ) {
 			$container->set(
@@ -284,11 +280,43 @@ class Plugin {
 			}
 		);
 
-		$container->set(
-			'cli_commands',
-			static function ( Container $c ): Commands {
-				return new Commands( $c->get( 'post_translation_manager' ), $c->get( 'translation_service' ), $c->get( 'logger' ) );
-			}
-		);
-	}
+                $container->set(
+                        'cli_commands',
+                        static function ( Container $c ): Commands {
+                                return new Commands( $c->get( 'post_translation_manager' ), $c->get( 'translation_service' ), $c->get( 'logger' ) );
+                        }
+                );
+        }
+
+        private function maybe_upgrade( bool $force = false ): void {
+                if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
+                        return;
+                }
+
+                $storedVersion = (string) get_option( self::VERSION_OPTION, '' );
+
+                if ( ! $force && '' !== $storedVersion && version_compare( $storedVersion, FP_MULTILANGUAGE_VERSION, '>=' ) ) {
+                        return;
+                }
+
+                /** @var Migrator $migrator */
+                $migrator = $this->container->get( 'migrator' );
+                $migrator->maybe_migrate();
+
+                Settings::bootstrap_defaults();
+                TranslationService::flush_cache();
+
+                update_option( self::VERSION_OPTION, FP_MULTILANGUAGE_VERSION );
+
+                $logger = $this->container->get( 'logger' );
+                if ( $logger instanceof Logger ) {
+                        $logger->info(
+                                'Plugin upgraded.',
+                                array(
+                                        'previous_version' => $storedVersion !== '' ? $storedVersion : null,
+                                        'current_version'  => FP_MULTILANGUAGE_VERSION,
+                                )
+                        );
+                }
+        }
 }
