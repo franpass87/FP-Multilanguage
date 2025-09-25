@@ -176,16 +176,25 @@ class Plugin {
 	}
 
 	public static function uninstall(): void {
+		$instance  = self::instance();
+		$container = $instance->get_container();
+
+		if ( ! $container->has( 'migrator' ) ) {
+			$instance->register_services();
+			$container = $instance->get_container();
+		}
+
 		delete_option( Settings::OPTION_NAME );
 		delete_option( Settings::MANUAL_STRINGS_OPTION );
 		delete_option( 'fp_multilanguage_quota' );
 		delete_option( self::VERSION_OPTION );
 		delete_option( SEO::SLUG_INDEX_OPTION );
 
-		/** @var Migrator $migrator */
-		$migrator = self::instance()->container->get( 'migrator' );
-                $migrator->drop_tables();
-        }
+		$migrator = $container->get( 'migrator' );
+		if ( $migrator instanceof Migrator ) {
+			$migrator->drop_tables();
+		}
+	}
 
         private function register_services(): void {
                 $container = $this->container;
