@@ -204,13 +204,22 @@ class Settings {
 	}
 
 	public function rest_update_settings( WP_REST_Request $request ) {
-			$params = $request->get_json_params();
-		if ( ! is_array( $params ) ) {
-				$message = __( 'Payload non valido', 'fp-multilanguage' );
-				$this->logger->error( $message );
-				$this->notices->add_error( $message );
+		if ( ! $this->verify_rest_nonce( $request ) ) {
+			$message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
 
-				return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
+			$this->logger->warning( $message );
+			$this->notices->add_error( $message );
+
+			return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
+		}
+
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$message = __( 'Payload non valido', 'fp-multilanguage' );
+			$this->logger->error( $message );
+			$this->notices->add_error( $message );
+
+			return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
 		}
 
 		$options = $this->sanitize( $params );
@@ -224,6 +233,46 @@ class Settings {
 		return rest_ensure_response( $options );
 	}
 
+
+	private function verify_rest_nonce( WP_REST_Request $request ): bool {
+		$nonce = '';
+
+		if ( method_exists( $request, 'get_header' ) ) {
+			$headerNonce = $request->get_header( 'X-WP-Nonce' );
+			if ( is_string( $headerNonce ) ) {
+				$nonce = $headerNonce;
+			}
+		}
+
+		if ( '' === $nonce && method_exists( $request, 'get_param' ) ) {
+			$paramNonce = $request->get_param( '_wpnonce' );
+			if ( is_string( $paramNonce ) ) {
+				$nonce = $paramNonce;
+			}
+		}
+
+		if ( '' === $nonce ) {
+			return false;
+		}
+
+		if ( function_exists( 'wp_unslash' ) ) {
+			$nonce = wp_unslash( $nonce );
+		}
+
+		if ( function_exists( 'sanitize_text_field' ) ) {
+			$nonce = sanitize_text_field( $nonce );
+		}
+
+		if ( '' === $nonce ) {
+			return false;
+		}
+
+		if ( function_exists( 'wp_verify_nonce' ) ) {
+			return false !== wp_verify_nonce( $nonce, self::NONCE_ACTION );
+		}
+
+		return true;
+	}
 	public function enqueue_assets( string $hook ): void {
 		if ( $hook !== 'settings_page_fp-multilanguage-settings' ) {
 			return;
