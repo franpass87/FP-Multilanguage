@@ -158,18 +158,67 @@ class LanguageSwitcher extends WP_Widget {
 
 			$queryArgs = array();
 
-		foreach ( wp_unslash( (array) $_GET ) as $key => $value ) {
-			if ( strtolower( (string) $key ) === 'fp_lang' ) {
-					continue;
-			}
+                foreach ( wp_unslash( (array) $_GET ) as $key => $value ) {
+                        if ( strtolower( (string) $key ) === 'fp_lang' ) {
+                                continue;
+                        }
 
-				$queryArgs[ $key ] = $value;
-		}
+                        $sanitizedKey = sanitize_key( (string) $key );
+                        if ( '' === $sanitizedKey ) {
+                                continue;
+                        }
+
+                        $sanitizedValue = $this->sanitize_query_arg_value( $value );
+                        if ( null === $sanitizedValue ) {
+                                continue;
+                        }
+
+                        $queryArgs[ $sanitizedKey ] = $sanitizedValue;
+                }
 
 		if ( empty( $queryArgs ) ) {
 			return $baseUrl;
 		}
 
-			return add_query_arg( $queryArgs, $baseUrl );
-	}
+                        return add_query_arg( $queryArgs, $baseUrl );
+        }
+
+        /**
+         * @param mixed $value Query arg value provided by the current request.
+         *
+         * @return mixed|null Sanitized value ready for add_query_arg() or null if it should be dropped.
+         */
+        private function sanitize_query_arg_value( $value ) {
+                if ( is_array( $value ) ) {
+                        $sanitized = array();
+
+                        foreach ( $value as $key => $item ) {
+                                $item = $this->sanitize_query_arg_value( $item );
+                                if ( null === $item ) {
+                                        continue;
+                                }
+
+                                if ( is_string( $key ) ) {
+                                        $sanitizedKey = sanitize_key( $key );
+                                        if ( '' === $sanitizedKey ) {
+                                                continue;
+                                        }
+
+                                        $sanitized[ $sanitizedKey ] = $item;
+                                } else {
+                                        $sanitized[] = $item;
+                                }
+                        }
+
+                        return empty( $sanitized ) ? null : $sanitized;
+                }
+
+                if ( is_scalar( $value ) ) {
+                        $value = sanitize_text_field( (string) $value );
+
+                        return '' === $value ? null : $value;
+                }
+
+                return null;
+        }
 }
