@@ -186,4 +186,41 @@ class SettingsTest extends TestCase
         $fallback = get_option( 'fp_multilanguage_strings', array() );
         $this->assertArrayNotHasKey( $key, $fallback );
     }
+
+    public function test_rest_update_settings_requires_valid_nonce(): void
+    {
+        global $wp_test_nonce_expectations;
+
+        $wp_test_nonce_expectations = array(
+            'fp_multilanguage_settings' => array( 'valid-rest-nonce' ),
+        );
+
+        $request = new \WP_REST_Request();
+        $request->set_json_params(
+            array(
+                'source_language'   => 'en',
+                'fallback_language' => 'en',
+                'target_languages'  => array( 'it' ),
+                'providers'         => array(),
+                'seo'               => array(),
+                'quote_tracking'    => array(),
+            )
+        );
+
+        $response = $this->settings->rest_update_settings( $request );
+        $this->assertInstanceOf( \WP_Error::class, $response );
+        $this->assertSame( 'invalid_nonce', $response->get_error_code() );
+
+        $request->set_header( 'X-WP-Nonce', 'invalid' );
+        $response = $this->settings->rest_update_settings( $request );
+        $this->assertInstanceOf( \WP_Error::class, $response );
+        $this->assertSame( 'invalid_nonce', $response->get_error_code() );
+
+        $request->set_header( 'X-WP-Nonce', 'valid-rest-nonce' );
+        $response = $this->settings->rest_update_settings( $request );
+        $this->assertIsArray( $response );
+        $this->assertSame( 'en', $response['source_language'] );
+
+        $wp_test_nonce_expectations = array();
+    }
 }

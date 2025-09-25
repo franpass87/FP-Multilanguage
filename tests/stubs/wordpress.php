@@ -56,6 +56,11 @@ if (! isset($wp_test_actions)) {
     $wp_test_actions = [];
 }
 
+global $wp_test_nonce_expectations;
+if (! isset($wp_test_nonce_expectations)) {
+    $wp_test_nonce_expectations = [];
+}
+
 global $wp_test_textdomains;
 if (! isset($wp_test_textdomains)) {
     $wp_test_textdomains = [];
@@ -802,7 +807,85 @@ if (! function_exists('delete_comment_meta')) {
 if (! function_exists('wp_verify_nonce')) {
     function wp_verify_nonce($nonce, $action)
     {
+        global $wp_test_nonce_expectations;
+
+        if (isset($wp_test_nonce_expectations[$action])) {
+            return in_array($nonce, (array) $wp_test_nonce_expectations[$action], true);
+        }
+
         return true;
+    }
+}
+
+if (! class_exists('WP_REST_Request')) {
+    class WP_REST_Request
+    {
+        /** @var array<string, mixed> */
+        private array $params = [];
+
+        /** @var array<string, mixed> */
+        private array $json_params = [];
+
+        /** @var array<string, mixed> */
+        private array $headers = [];
+
+        /**
+         * @param array<string, mixed> $params
+         */
+        public function __construct(array $params = [])
+        {
+            $this->params = $params;
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function get_json_params()
+        {
+            return $this->json_params;
+        }
+
+        /**
+         * @param array<string, mixed> $params
+         */
+        public function set_json_params(array $params): void
+        {
+            $this->json_params = $params;
+        }
+
+        /**
+         * @return mixed
+         */
+        public function get_param(string $key)
+        {
+            return $this->params[$key] ?? null;
+        }
+
+        /**
+         * @param mixed $value
+         */
+        public function set_param(string $key, $value): void
+        {
+            $this->params[$key] = $value;
+        }
+
+        /**
+         * @return mixed
+         */
+        public function get_header(string $key)
+        {
+            $key = strtolower($key);
+
+            return $this->headers[$key] ?? '';
+        }
+
+        /**
+         * @param mixed $value
+         */
+        public function set_header(string $key, $value): void
+        {
+            $this->headers[strtolower($key)] = $value;
+        }
     }
 }
 
