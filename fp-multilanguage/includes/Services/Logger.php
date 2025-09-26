@@ -6,11 +6,11 @@ use WP_CLI;
 
 class Logger {
 
-        public const LOG_STORE_OPTION = 'fp_multilanguage_logs';
+	public const LOG_STORE_OPTION = 'fp_multilanguage_logs';
 
-        private const LOG_ENTRY_LIMIT = 200;
+	private const LOG_ENTRY_LIMIT = 200;
 
-        private ?WC_Logger $woocommerceLogger = null;
+	private ?WC_Logger $woocommerceLogger = null;
 
 	public function info( string $message, array $context = array() ): void {
 		$this->log( 'info', $message, $context );
@@ -28,10 +28,10 @@ class Logger {
 		$this->log( 'debug', $message, $context );
 	}
 
-        private function log( string $level, string $message, array $context = array() ): void {
-                $formatted = $this->interpolate( $message, $context );
+	private function log( string $level, string $message, array $context = array() ): void {
+			$formatted = $this->interpolate( $message, $context );
 
-                if ( class_exists( WC_Logger::class ) && function_exists( 'wc_get_logger' ) ) {
+		if ( class_exists( WC_Logger::class ) && function_exists( 'wc_get_logger' ) ) {
 			if ( ! $this->woocommerceLogger instanceof WC_Logger ) {
 				$this->woocommerceLogger = wc_get_logger();
 			}
@@ -41,8 +41,8 @@ class Logger {
 			error_log( sprintf( '[fp-multilanguage:%s] %s', $level, $formatted ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 
-                if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( WP_CLI::class ) ) {
-                        switch ( $level ) {
+		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( WP_CLI::class ) ) {
+			switch ( $level ) {
 				case 'error':
 				case 'warning':
 					WP_CLI::warning( $formatted );
@@ -52,14 +52,14 @@ class Logger {
 					break;
 				default:
 					WP_CLI::log( $formatted );
-                        }
-                }
+			}
+		}
 
-                $this->store_entry( $level, $formatted );
-        }
+			$this->store_entry( $level, $formatted );
+	}
 
-        private function interpolate( string $message, array $context = array() ): string {
-                $replace = array();
+	private function interpolate( string $message, array $context = array() ): string {
+			$replace = array();
 		foreach ( $context as $key => $value ) {
 			if ( ! is_scalar( $value ) ) {
 				$value = wp_json_encode( $value );
@@ -68,45 +68,45 @@ class Logger {
 			$replace[ '{' . $key . '}' ] = (string) $value;
 		}
 
-                return strtr( $message, $replace );
-        }
+			return strtr( $message, $replace );
+	}
 
-        private function store_entry( string $level, string $message ): void {
-                if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
-                        return;
-                }
+	private function store_entry( string $level, string $message ): void {
+		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
+				return;
+		}
 
-                $entries = get_option( self::LOG_STORE_OPTION, array() );
-                if ( ! is_array( $entries ) ) {
-                        $entries = array();
-                }
+			$entries = get_option( self::LOG_STORE_OPTION, array() );
+		if ( ! is_array( $entries ) ) {
+				$entries = array();
+		}
 
-                $entries[] = array(
-                        'timestamp' => time(),
-                        'level'     => $level,
-                        'message'   => $message,
-                );
+			$entries[] = array(
+				'timestamp' => time(),
+				'level'     => $level,
+				'message'   => $message,
+			);
 
-                $entries = array_slice( $entries, -self::LOG_ENTRY_LIMIT );
+			$entries = array_slice( $entries, -self::LOG_ENTRY_LIMIT );
 
-                update_option( self::LOG_STORE_OPTION, $entries );
-        }
+			update_option( self::LOG_STORE_OPTION, $entries );
+	}
 
-        public static function get_stored_entries(): array {
-                if ( ! function_exists( 'get_option' ) ) {
-                        return array();
-                }
+	public static function get_stored_entries(): array {
+		if ( ! function_exists( 'get_option' ) ) {
+				return array();
+		}
 
-                $entries = get_option( self::LOG_STORE_OPTION, array() );
+			$entries = get_option( self::LOG_STORE_OPTION, array() );
 
-                return is_array( $entries ) ? $entries : array();
-        }
+			return is_array( $entries ) ? $entries : array();
+	}
 
-        public static function clear_stored_entries(): void {
-                if ( ! function_exists( 'update_option' ) ) {
-                        return;
-                }
+	public static function clear_stored_entries(): void {
+		if ( ! function_exists( 'update_option' ) ) {
+				return;
+		}
 
-                update_option( self::LOG_STORE_OPTION, array() );
-        }
+			update_option( self::LOG_STORE_OPTION, array() );
+	}
 }

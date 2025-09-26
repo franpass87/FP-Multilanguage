@@ -28,6 +28,7 @@ use FPMultilanguage\Content\PostTranslationManager;
 use FPMultilanguage\SEO\SEO;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class SEOTest extends TestCase
@@ -48,7 +49,7 @@ class SEOTest extends TestCase
     {
         $logger = new Logger();
         $notices = new AdminNotices($logger);
-        $settings = new Settings($logger, $notices);
+        $settings = SettingsFactory::create($logger, $notices);
         $translationService = new TranslationService($logger, $notices, $settings);
 
         $translations = [
@@ -136,7 +137,7 @@ class SEOTest extends TestCase
     {
         $logger = new Logger();
         $notices = new AdminNotices($logger);
-        $settings = new Settings($logger, $notices);
+        $settings = SettingsFactory::create($logger, $notices);
         $translationService = new TranslationService($logger, $notices, $settings);
 
         $postTranslationManager = new class extends PostTranslationManager {
@@ -165,7 +166,7 @@ class SEOTest extends TestCase
     {
         $logger = new Logger();
         $notices = new AdminNotices($logger);
-        $settings = new Settings($logger, $notices);
+        $settings = SettingsFactory::create($logger, $notices);
         $translationService = new TranslationService($logger, $notices, $settings);
 
         $postTranslationManager = new class extends PostTranslationManager {

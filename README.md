@@ -129,5 +129,12 @@ fp-multilanguage/
 
 ## Cronologia versioni
 
+- **1.2.0 (ottobre 2024)** – Audit completo con hardening sicurezza REST/AJAX, caching delle impostazioni, bootstrap modulare, logger runtime, compatibilità Gutenberg 6.5 e routine di upgrade con flush cache automatico.
 - **1.1.0 (settembre 2024)** – Aggiornamento completo della documentazione, nuova titolarità del plugin (Francesco Passeri) e riallineamento dei metadati tecnici.
 - **1.0.0 (giugno 2024)** – Prima release pubblica con orchestratore, provider Google/DeepL, stringhe dinamiche, strumenti SEO e comandi CLI.
+
+## Build & Release (CI)
+- Gli artefatti di build (zip) **non** sono versionati nel repo.
+- La CI su **Pull Request** crea lo zip e lo pubblica come **artifact**.
+- Il push di un tag `v*` crea una **GitHub Release** e allega lo zip + checksum.
+- Build locale: `bash scripts/build-plugin-zip.sh` → output in `dist/`.

@@ -34,7 +34,7 @@ class CurrentLanguage {
 
 		if ( '' === $language && function_exists( 'wp_get_current_user' ) ) {
 				$user = wp_get_current_user();
-			if ( $user && isset( $user->ID ) && $user->ID > 0 ) {
+			if ( $user && $user->ID > 0 ) {
 					$userLanguage = get_user_meta( $user->ID, 'fp_multilanguage_language', true );
 				if ( is_string( $userLanguage ) ) {
 					$language = self::match_allowed_language( $userLanguage, $allowedLanguages );
@@ -106,7 +106,7 @@ class CurrentLanguage {
 
 		if ( function_exists( 'wp_get_current_user' ) ) {
 			$user = wp_get_current_user();
-			if ( $user && isset( $user->ID ) && $user->ID > 0 ) {
+			if ( $user && $user->ID > 0 ) {
 					update_user_meta( $user->ID, 'fp_multilanguage_language', $language );
 			}
 		}

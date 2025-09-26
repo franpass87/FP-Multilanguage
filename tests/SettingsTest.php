@@ -14,6 +14,8 @@ class SettingsTest extends TestCase
 {
     private Settings $settings;
 
+    private SettingsRestController $restController;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -48,6 +50,7 @@ class SettingsTest extends TestCase
         $providerTester = new ProviderTester( $logger, $repository );
         $restController = new SettingsRestController( $repository, $logger, $notices, $providerTester );
         $this->settings = new Settings( $logger, $notices, $repository, $manualStrings, $restController );
+        $this->restController = $restController;
     }
 
     public function test_sanitize_ensures_fallback_added_to_targets(): void
@@ -338,19 +341,21 @@ class SettingsTest extends TestCase
             )
         );
 
-        $response = $this->settings->rest_update_settings( $request );
+        $response = $this->restController->rest_update_settings( $request );
         $this->assertInstanceOf( \WP_Error::class, $response );
         $this->assertSame( 'invalid_nonce', $response->get_error_code() );
 
         $request->set_header( 'X-WP-Nonce', 'invalid' );
-        $response = $this->settings->rest_update_settings( $request );
+        $response = $this->restController->rest_update_settings( $request );
         $this->assertInstanceOf( \WP_Error::class, $response );
         $this->assertSame( 'invalid_nonce', $response->get_error_code() );
 
         $request->set_header( 'X-WP-Nonce', 'valid-rest-nonce' );
-        $response = $this->settings->rest_update_settings( $request );
-        $this->assertIsArray( $response );
-        $this->assertSame( 'en', $response['source_language'] );
+        $response = $this->restController->rest_update_settings( $request );
+        $this->assertInstanceOf( \WP_REST_Response::class, $response );
+        $data = $response->get_data();
+        $this->assertIsArray( $data );
+        $this->assertSame( 'en', $data['source_language'] );
 
         $wp_test_nonce_expectations = array();
     }

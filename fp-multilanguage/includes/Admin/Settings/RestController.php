@@ -8,178 +8,197 @@ use WP_REST_Request;
 use WP_REST_Response;
 
 class RestController {
-    public const REST_NAMESPACE = 'fp-multilanguage/v1';
-    public const NONCE_ACTION = 'fp_multilanguage_settings';
+	public const REST_NAMESPACE = 'fp-multilanguage/v1';
+	public const NONCE_ACTION   = 'fp_multilanguage_settings';
 
-    private Repository $repository;
+	private Repository $repository;
 
-    private Logger $logger;
+	private Logger $logger;
 
-    private AdminNotices $notices;
+	private AdminNotices $notices;
 
-    private ProviderTester $providerTester;
+	private ProviderTester $providerTester;
 
-    public function __construct( Repository $repository, Logger $logger, AdminNotices $notices, ProviderTester $providerTester ) {
-        $this->repository     = $repository;
-        $this->logger         = $logger;
-        $this->notices        = $notices;
-        $this->providerTester = $providerTester;
-    }
+	public function __construct( Repository $repository, Logger $logger, AdminNotices $notices, ProviderTester $providerTester ) {
+		$this->repository     = $repository;
+		$this->logger         = $logger;
+		$this->notices        = $notices;
+		$this->providerTester = $providerTester;
+	}
 
-    public function register_hooks(): void {
-        add_action( 'rest_api_init', array( $this, 'register_routes' ) );
-    }
+	public function register_hooks(): void {
+		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+	}
 
-    public function register_routes(): void {
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/settings',
-            array(
-                array(
-                    'methods'             => 'GET',
-                    'callback'            => array( $this, 'rest_get_settings' ),
-                    'permission_callback' => array( $this, 'rest_permissions' ),
-                ),
-                array(
-                    'methods'             => 'POST',
-                    'callback'            => array( $this, 'rest_update_settings' ),
-                    'permission_callback' => array( $this, 'rest_permissions' ),
-                ),
-            )
-        );
+	public function register_routes(): void {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/settings',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'rest_get_settings' ),
+					'permission_callback' => array( $this, 'rest_permissions' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'rest_update_settings' ),
+					'permission_callback' => array( $this, 'rest_permissions' ),
+				),
+			)
+		);
 
-        register_rest_route(
-            self::REST_NAMESPACE,
-            '/providers/test',
-            array(
-                array(
-                    'methods'             => 'POST',
-                    'callback'            => array( $this, 'rest_test_provider' ),
-                    'permission_callback' => array( $this, 'rest_permissions' ),
-                ),
-            )
-        );
-    }
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/providers/test',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'rest_test_provider' ),
+					'permission_callback' => array( $this, 'rest_permissions' ),
+				),
+			)
+		);
+	}
 
-    public function rest_permissions(): bool {
-        return current_user_can( 'manage_options' );
-    }
+		/**
+		 * @param WP_REST_Request<array<string, mixed>> $request
+		 *
+		 * @return bool|WP_Error
+		 */
+	public function rest_permissions( WP_REST_Request $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+				return false;
+		}
 
-    public function rest_get_settings( WP_REST_Request $request ): WP_REST_Response {
-        unset( $request );
+		if ( 'GET' === $request->get_method() && ! $this->verify_rest_nonce( $request ) ) {
+				return new WP_Error( 'invalid_nonce', __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' ), array( 'status' => 403 ) );
+		}
 
-        return rest_ensure_response( $this->repository->get_options() );
-    }
+			return true;
+	}
 
-    /**
-     * @return WP_Error|WP_REST_Response
-     */
-    public function rest_update_settings( WP_REST_Request $request ) {
-        if ( ! $this->verify_rest_nonce( $request ) ) {
-            $message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
+		/**
+		 * @param WP_REST_Request<array<string, mixed>> $request
+		 */
+	public function rest_get_settings( WP_REST_Request $request ): WP_REST_Response {
+		unset( $request );
 
-            $this->logger->warning( $message );
-            $this->notices->add_error( $message );
+		return rest_ensure_response( $this->repository->get_options() );
+	}
 
-            return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
-        }
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 * @return WP_Error|WP_REST_Response
+	 */
+	public function rest_update_settings( WP_REST_Request $request ) {
+		if ( ! $this->verify_rest_nonce( $request ) ) {
+			$message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
 
-        $params = $request->get_json_params();
-        if ( ! is_array( $params ) ) {
-            $message = __( 'Payload non valido', 'fp-multilanguage' );
-            $this->logger->error( $message );
-            $this->notices->add_error( $message );
+			$this->logger->warning( $message );
+			$this->notices->add_error( $message );
 
-            return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
-        }
+			return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
+		}
 
-        $options = $this->repository->sanitize_options( $params );
-        $this->repository->update_options( $options );
+		$params = $request->get_json_params();
+		if ( ! is_array( $params ) ) {
+			$message = __( 'Payload non valido', 'fp-multilanguage' );
+			$this->logger->error( $message );
+			$this->notices->add_error( $message );
 
-        $options = $this->repository->get_options();
-        $this->logger->info( 'Settings updated via REST API.' );
-        $this->notices->add_notice( __( 'Impostazioni aggiornate correttamente.', 'fp-multilanguage' ) );
+			return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
+		}
 
-        return rest_ensure_response( $options );
-    }
+		$options = $this->repository->sanitize_options( $params );
+		$this->repository->update_options( $options );
 
-    /**
-     * @return WP_Error|WP_REST_Response
-     */
-    public function rest_test_provider( WP_REST_Request $request ) {
-        if ( ! $this->verify_rest_nonce( $request ) ) {
-            $message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
+		$options = $this->repository->get_options();
+		$this->logger->info( 'Settings updated via REST API.' );
+		$this->notices->add_notice( __( 'Impostazioni aggiornate correttamente.', 'fp-multilanguage' ) );
 
-            $this->logger->warning( 'Provider test blocked by invalid nonce.' );
+		return rest_ensure_response( $options );
+	}
 
-            return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
-        }
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 * @return WP_Error|WP_REST_Response
+	 */
+	public function rest_test_provider( WP_REST_Request $request ) {
+		if ( ! $this->verify_rest_nonce( $request ) ) {
+			$message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
 
-        $params   = $request->get_json_params();
-        $provider = is_array( $params ) ? sanitize_key( (string) ( $params['provider'] ?? '' ) ) : '';
-        $options  = is_array( $params['options'] ?? null ) ? (array) $params['options'] : array();
+			$this->logger->warning( 'Provider test blocked by invalid nonce.' );
 
-        if ( '' === $provider ) {
-            $message = __( 'Provider non valido.', 'fp-multilanguage' );
+			return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
+		}
 
-            return new WP_Error( 'invalid_provider', $message, array( 'status' => 400 ) );
-        }
+		$params   = $request->get_json_params();
+		$provider = is_array( $params ) ? sanitize_key( (string) ( $params['provider'] ?? '' ) ) : '';
+		$options  = is_array( $params['options'] ?? null ) ? (array) $params['options'] : array();
 
-        $sanitized = $this->providerTester->sanitize_options( $provider, $options );
-        if ( is_wp_error( $sanitized ) ) {
-            return $sanitized;
-        }
+		if ( '' === $provider ) {
+			$message = __( 'Provider non valido.', 'fp-multilanguage' );
 
-        $result = $this->providerTester->test_credentials( $provider, $sanitized );
+			return new WP_Error( 'invalid_provider', $message, array( 'status' => 400 ) );
+		}
 
-        return rest_ensure_response( $result );
-    }
+		$sanitized = $this->providerTester->sanitize_options( $provider, $options );
+		if ( is_wp_error( $sanitized ) ) {
+			return $sanitized;
+		}
 
-    public function get_rest_namespace(): string {
-        return self::REST_NAMESPACE;
-    }
+		$result = $this->providerTester->test_credentials( $provider, $sanitized );
 
-    public function get_nonce_action(): string {
-        return self::NONCE_ACTION;
-    }
+		return rest_ensure_response( $result );
+	}
 
-    private function verify_rest_nonce( WP_REST_Request $request ): bool {
-        $nonce = '';
+	public function get_rest_namespace(): string {
+		return self::REST_NAMESPACE;
+	}
 
-        if ( method_exists( $request, 'get_header' ) ) {
-            $headerNonce = $request->get_header( 'X-WP-Nonce' );
-            if ( is_string( $headerNonce ) ) {
-                $nonce = $headerNonce;
-            }
-        }
+	public function get_nonce_action(): string {
+		return self::NONCE_ACTION;
+	}
 
-        if ( '' === $nonce && method_exists( $request, 'get_param' ) ) {
-            $paramNonce = $request->get_param( '_wpnonce' );
-            if ( is_string( $paramNonce ) ) {
-                $nonce = $paramNonce;
-            }
-        }
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 */
+	private function verify_rest_nonce( WP_REST_Request $request ): bool {
+		$nonce = '';
 
-        if ( '' === $nonce ) {
-            return false;
-        }
+		$headerNonce = $request->get_header( 'X-WP-Nonce' );
+		if ( is_string( $headerNonce ) ) {
+			$nonce = $headerNonce;
+		}
 
-        if ( function_exists( 'wp_unslash' ) ) {
-            $nonce = wp_unslash( $nonce );
-        }
+		if ( '' === $nonce ) {
+			$paramNonce = $request->get_param( '_wpnonce' );
+			if ( is_string( $paramNonce ) ) {
+				$nonce = $paramNonce;
+			}
+		}
 
-        if ( function_exists( 'sanitize_text_field' ) ) {
-            $nonce = sanitize_text_field( $nonce );
-        }
+		if ( '' === $nonce ) {
+			return false;
+		}
 
-        if ( '' === $nonce ) {
-            return false;
-        }
+		if ( function_exists( 'wp_unslash' ) ) {
+			$nonce = wp_unslash( $nonce );
+		}
 
-        if ( function_exists( 'wp_verify_nonce' ) ) {
-            return false !== wp_verify_nonce( $nonce, self::NONCE_ACTION );
-        }
+		if ( function_exists( 'sanitize_text_field' ) ) {
+			$nonce = sanitize_text_field( $nonce );
+		}
 
-        return true;
-    }
+		if ( '' === $nonce ) {
+			return false;
+		}
+
+		if ( function_exists( 'wp_verify_nonce' ) ) {
+			return false !== wp_verify_nonce( $nonce, self::NONCE_ACTION );
+		}
+
+		return true;
+	}
 }

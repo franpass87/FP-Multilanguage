@@ -6,6 +6,7 @@ use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Support\RestNonceValidator;
 use ArrayAccess;
 use WP_Error;
 use WP_Post;
@@ -13,11 +14,11 @@ use WP_REST_Request;
 
 class PostTranslationManager {
 
-        public const META_KEY = '_fp_multilanguage_translations';
+	public const META_KEY = '_fp_multilanguage_translations';
 
-        public const RELATION_META_KEY = '_fp_multilanguage_relations';
+	public const RELATION_META_KEY = '_fp_multilanguage_relations';
 
-        private const TRANSLATION_EVENT = 'fp_multilanguage_process_translation';
+	private const TRANSLATION_EVENT = 'fp_multilanguage_process_translation';
 
 	private TranslationService $translationService;
 
@@ -27,31 +28,34 @@ class PostTranslationManager {
 
 	private Logger $logger;
 
-	public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger ) {
+	private RestNonceValidator $restNonceValidator;
+
+	public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger, ?RestNonceValidator $restNonceValidator = null ) {
 		$this->translationService = $translationService;
 		$this->settings           = $settings;
 		$this->notices            = $notices;
 		$this->logger             = $logger;
+		$this->restNonceValidator = $restNonceValidator ?? new RestNonceValidator();
 	}
 
-        public function register(): void {
-                add_action( 'init', array( $this, 'register_query_var' ) );
-                add_action( 'save_post', array( $this, 'handle_post_save' ), 20, 3 );
-                add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-                add_action( self::TRANSLATION_EVENT, array( $this, 'process_translation_job' ), 10, 4 );
+	public function register(): void {
+			add_action( 'init', array( $this, 'register_query_var' ) );
+			add_action( 'save_post', array( $this, 'handle_post_save' ), 20, 3 );
+			add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+			add_action( self::TRANSLATION_EVENT, array( $this, 'process_translation_job' ), 10, 4 );
 
-                add_filter( 'the_content', array( $this, 'filter_content' ) );
+			add_filter( 'the_content', array( $this, 'filter_content' ) );
 		add_filter( 'the_title', array( $this, 'filter_title' ), 10, 2 );
 		add_filter( 'get_the_excerpt', array( $this, 'filter_excerpt' ), 10, 2 );
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'filter_attachment_attributes' ), 10, 2 );
 		add_filter( 'wp_get_attachment_caption', array( $this, 'filter_attachment_caption' ), 10, 2 );
 		add_filter( 'get_post_metadata', array( $this, 'filter_attachment_meta' ), 10, 4 );
-                foreach ( Settings::get_translatable_post_types() as $postType ) {
-                        add_filter( 'rest_prepare_' . $postType, array( $this, 'expose_translations' ), 10, 3 );
-                }
-                add_filter( 'rest_prepare_attachment', array( $this, 'expose_translations' ), 10, 3 );
+		foreach ( Settings::get_translatable_post_types() as $postType ) {
+				add_filter( 'rest_prepare_' . $postType, array( $this, 'expose_translations' ), 10, 3 );
+		}
+			add_filter( 'rest_prepare_attachment', array( $this, 'expose_translations' ), 10, 3 );
 
-		add_filter( 'body_class', array( $this, 'filter_body_class' ) );
+			add_filter( 'body_class', array( $this, 'filter_body_class' ) );
 	}
 
 	public function register_query_var(): void {
@@ -84,92 +88,92 @@ class PostTranslationManager {
 			return;
 		}
 
-                if ( ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) && 'attachment' !== $post->post_type ) {
-                        return;
-                }
+		if ( ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) && 'attachment' !== $post->post_type ) {
+				return;
+		}
 
-                $this->queue_translation_job( $postId, $post->post_type );
-        }
+				$this->queue_translation_job( $postId, $post->post_type );
+	}
 
-        public function queue_translation_job( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
-                if ( 'attachment' !== $postType && ! in_array( $postType, Settings::get_translatable_post_types(), true ) ) {
-                        return;
-                }
+	public function queue_translation_job( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
+		if ( 'attachment' !== $postType && ! in_array( $postType, Settings::get_translatable_post_types(), true ) ) {
+				return;
+		}
 
-                if ( ! function_exists( 'wp_schedule_single_event' ) ) {
-                        $this->run_translation_immediately( $postId, $postType, $language, $force );
+		if ( ! function_exists( 'wp_schedule_single_event' ) ) {
+				$this->run_translation_immediately( $postId, $postType, $language, $force );
 
-                        return;
-                }
+				return;
+		}
 
-                $args = array( $postId, $postType, $language, $force );
+			$args = array( $postId, $postType, $language, $force );
 
-                if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
-                        wp_clear_scheduled_hook( self::TRANSLATION_EVENT, $args );
-                }
+		if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
+				wp_clear_scheduled_hook( self::TRANSLATION_EVENT, $args );
+		}
 
-                $timestamp = time() + 5;
-                $scheduled = wp_schedule_single_event( $timestamp, self::TRANSLATION_EVENT, $args );
+			$timestamp = time() + 5;
+			$scheduled = wp_schedule_single_event( $timestamp, self::TRANSLATION_EVENT, $args );
 
-                if ( false === $scheduled ) {
-                        $this->logger->warning(
-                                'Unable to schedule translation job for post {post_id}. Executing synchronously.',
-                                array( 'post_id' => $postId )
-                        );
-                        $this->run_translation_immediately( $postId, $postType, $language, $force );
+		if ( false === $scheduled ) {
+				$this->logger->warning(
+					'Unable to schedule translation job for post {post_id}. Executing synchronously.',
+					array( 'post_id' => $postId )
+				);
+				$this->run_translation_immediately( $postId, $postType, $language, $force );
 
-                        return;
-                }
+				return;
+		}
 
-                $this->logger->debug(
-                        'Scheduled translation job for post {post_id} ({post_type}).',
-                        array(
-                                'post_id'   => $postId,
-                                'post_type' => $postType,
-                                'language'  => $language,
-                                'force'     => $force ? '1' : '0',
-                        )
-                );
-        }
+			$this->logger->debug(
+				'Scheduled translation job for post {post_id} ({post_type}).',
+				array(
+					'post_id'   => $postId,
+					'post_type' => $postType,
+					'language'  => $language,
+					'force'     => $force ? '1' : '0',
+				)
+			);
+	}
 
-        public function process_translation_job( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
-                $post = get_post( $postId );
-                if ( ! $post instanceof WP_Post ) {
-                        $this->logger->debug(
-                                'Skipping translation job for missing post {post_id}.',
-                                array( 'post_id' => $postId )
-                        );
+	public function process_translation_job( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
+			$post = get_post( $postId );
+		if ( ! $post instanceof WP_Post ) {
+				$this->logger->debug(
+					'Skipping translation job for missing post {post_id}.',
+					array( 'post_id' => $postId )
+				);
 
-                        return;
-                }
+				return;
+		}
 
-                if ( 'attachment' === $postType ) {
-                        $this->translate_attachment( $postId, $language, $force );
+		if ( 'attachment' === $postType ) {
+				$this->translate_attachment( $postId, $language, $force );
 
-                        return;
-                }
+				return;
+		}
 
-                if ( ! in_array( $postType, Settings::get_translatable_post_types(), true ) ) {
-                        $this->logger->debug(
-                                'Skipping translation job for non-translatable post type {post_type}.',
-                                array( 'post_type' => $postType )
-                        );
+		if ( ! in_array( $postType, Settings::get_translatable_post_types(), true ) ) {
+				$this->logger->debug(
+					'Skipping translation job for non-translatable post type {post_type}.',
+					array( 'post_type' => $postType )
+				);
 
-                        return;
-                }
+				return;
+		}
 
-                $this->translate_post( $postId, $language, $force );
-        }
+			$this->translate_post( $postId, $language, $force );
+	}
 
-        private function run_translation_immediately( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
-                if ( 'attachment' === $postType ) {
-                        $this->translate_attachment( $postId, $language, $force );
+	private function run_translation_immediately( int $postId, string $postType, ?string $language = null, bool $force = false ): void {
+		if ( 'attachment' === $postType ) {
+				$this->translate_attachment( $postId, $language, $force );
 
-                        return;
-                }
+				return;
+		}
 
-                $this->translate_post( $postId, $language, $force );
-        }
+			$this->translate_post( $postId, $language, $force );
+	}
 
 	public function translate_attachment( int $postId, ?string $language = null, bool $force = false ): array {
 		$post = get_post( $postId );
@@ -192,26 +196,26 @@ class PostTranslationManager {
 				continue;
 			}
 
-			$existing             = $translations[ $target ] ?? array();
-			$updated              = $existing;
+			$existing           = $translations[ $target ] ?? array();
+			$updated            = $existing;
 			$languageHasChanges = $force;
 
 			$title = $this->translationService->translate_text( $post->post_title, $sourceLanguage, $target );
 			if ( ! isset( $existing['title'] ) || $existing['title'] !== $title ) {
-				$updated['title']    = $title;
+				$updated['title']   = $title;
 				$languageHasChanges = true;
 			}
 
 			$description = $this->translationService->translate_text( $post->post_content, $sourceLanguage, $target, array( 'format' => 'html' ) );
 			if ( ! isset( $existing['content'] ) || $existing['content'] !== $description ) {
-				$updated['content']  = $description;
+				$updated['content'] = $description;
 				$languageHasChanges = true;
 			}
 
 			$caption_source = '' !== $post->post_excerpt ? $post->post_excerpt : $post->post_title;
 			$caption        = $this->translationService->translate_text( $caption_source, $sourceLanguage, $target, array( 'format' => 'html' ) );
 			if ( ! isset( $existing['excerpt'] ) || $existing['excerpt'] !== $caption ) {
-				$updated['excerpt']  = $caption;
+				$updated['excerpt'] = $caption;
 				$languageHasChanges = true;
 			}
 
@@ -231,7 +235,7 @@ class PostTranslationManager {
 				$updated['updated_at']   = time();
 				$updated['status']       = 'synced';
 				$translations[ $target ] = $updated;
-				$hasChanges             = true;
+				$hasChanges              = true;
 			}
 		}
 
@@ -244,25 +248,25 @@ class PostTranslationManager {
 		return $translations;
 	}
 
-        public function translate_post( int $postId, ?string $language = null, bool $force = false ): array {
-                $post = get_post( $postId );
-                if ( ! $post instanceof WP_Post ) {
-                        return array();
-                }
+	public function translate_post( int $postId, ?string $language = null, bool $force = false ): array {
+			$post = get_post( $postId );
+		if ( ! $post instanceof WP_Post ) {
+				return array();
+		}
 
-                if ( ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) ) {
-                        return array();
-                }
+		if ( ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) ) {
+				return array();
+		}
 
-                $sourceLanguage  = Settings::get_source_language();
-                $targetLanguages = Settings::get_target_languages();
+			$sourceLanguage  = Settings::get_source_language();
+			$targetLanguages = Settings::get_target_languages();
 		if ( $language !== null ) {
 			$targetLanguages = array_intersect( $targetLanguages, array( $language ) );
 		}
 
-		$translations = $this->get_post_translations( $postId );
-		$customFields = $this->get_custom_fields( $post );
-		$hasChanges   = false;
+			$translations = $this->get_post_translations( $postId );
+			$customFields = $this->get_custom_fields( $post );
+			$hasChanges   = false;
 
 		foreach ( $targetLanguages as $target ) {
 			if ( $target === $sourceLanguage ) {
@@ -313,9 +317,9 @@ class PostTranslationManager {
 			update_post_meta( $postId, self::META_KEY, $translations );
 		}
 
-		$this->persist_relations( $postId, $translations, $sourceLanguage );
+			$this->persist_relations( $postId, $translations, $sourceLanguage );
 
-		return $translations;
+			return $translations;
 	}
 
 	public function filter_content( string $content ): string {
@@ -434,117 +438,152 @@ class PostTranslationManager {
 		return $response;
 	}
 
-        public function register_rest_routes(): void {
-                $routeArgs = array(
-                        'methods'             => array( 'POST' ),
-                        'callback'            => array( $this, 'rest_translate_post' ),
-                        'permission_callback' => static function ( WP_REST_Request $request ): bool {
-                                $postId = (int) $request->get_param( 'id' );
-                                if ( $postId <= 0 ) {
-                                        return false;
-                                }
+	public function register_rest_routes(): void {
+			$routeArgs = array(
+				'methods'             => array( 'POST' ),
+				'callback'            => array( $this, 'rest_translate_post' ),
+				'permission_callback' => static function ( WP_REST_Request $request ): bool {
+							$postId = (int) $request->get_param( 'id' );
+					if ( $postId <= 0 ) {
+							return false;
+					}
 
-                                return current_user_can( 'edit_post', $postId );
-                        },
-                );
+							return current_user_can( 'edit_post', $postId );
+				},
+			);
 
-                register_rest_route(
-                        'fp-multilanguage/v1',
-                        '/posts/(?P<id>\\d+)/translate',
-                        $routeArgs
-                );
+			register_rest_route(
+				'fp-multilanguage/v1',
+				'/posts/(?P<id>\\d+)/translate',
+				$routeArgs
+			);
 
-                register_rest_route(
-                        'fp-multilanguage/v1',
-                        '/attachments/(?P<id>\\d+)/translate',
-                        $routeArgs
-                );
+			register_rest_route(
+				'fp-multilanguage/v1',
+				'/attachments/(?P<id>\\d+)/translate',
+				$routeArgs
+			);
 
-                $contentRouteArgs           = $routeArgs;
-                $contentRouteArgs['args'] = array(
-                        'type' => array(
-                                'sanitize_callback' => 'sanitize_key',
-                        ),
-                );
+			$contentRouteArgs         = $routeArgs;
+			$contentRouteArgs['args'] = array(
+				'type' => array(
+					'sanitize_callback' => 'sanitize_key',
+				),
+			);
 
-                register_rest_route(
-                        'fp-multilanguage/v1',
-                        '/content/(?P<type>[a-z0-9_-]+)/(?P<id>\\d+)/translate',
-                        $contentRouteArgs
-                );
-        }
+			register_rest_route(
+				'fp-multilanguage/v1',
+				'/content/(?P<type>[a-z0-9_-]+)/(?P<id>\\d+)/translate',
+				$contentRouteArgs
+			);
+	}
 
-        public function rest_translate_post( $request ) {
-                $postId = (int) $this->get_request_param( $request, 'id', 0 );
-                if ( $postId <= 0 ) {
-                        return new WP_Error(
-                                'rest_post_invalid_id',
-                                __( 'Contenuto non trovato.', 'fp-multilanguage' ),
-                                array( 'status' => 404 )
-                        );
-                }
 
-                $languageParam = $this->get_request_param( $request, 'language' );
-                $language      = is_string( $languageParam ) ? sanitize_key( $languageParam ) : null;
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 *
+	 * @return bool|WP_Error
+	 */
+	public function rest_permissions( WP_REST_Request $request ) {
+		$postId = (int) $this->get_request_param( $request, 'id', 0 );
+		if ( $postId <= 0 ) {
+			return new WP_Error(
+				'rest_post_invalid_id',
+				__( 'Contenuto non trovato.', 'fp-multilanguage' ),
+				array( 'status' => 404 )
+			);
+		}
 
-                $forceParam = $this->get_request_param( $request, 'force', true );
-                if ( is_string( $forceParam ) || is_int( $forceParam ) ) {
-                        $force = filter_var( $forceParam, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
-                        if ( null === $force ) {
-                                $force = true;
-                        }
-                } else {
-                        $force = (bool) $forceParam;
-                }
+		if ( ! current_user_can( 'edit_post', $postId ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'Non hai il permesso di tradurre questo contenuto.', 'fp-multilanguage' ),
+				array( 'status' => 403 )
+			);
+		}
 
-                $typeParam = $this->get_request_param( $request, 'type' );
-                $requestedType = is_string( $typeParam ) ? sanitize_key( $typeParam ) : null;
+		if ( ! $this->restNonceValidator->validate( $request, array( 'fp_multilanguage_translate_post', 'wp_rest' ) ) ) {
+			return new WP_Error(
+				'invalid_nonce',
+				__( 'Nonce di sicurezza non valido.', 'fp-multilanguage' ),
+				array( 'status' => 403 )
+			);
+		}
 
-                $post = get_post( $postId );
-                if ( ! $post instanceof WP_Post ) {
-                        return new WP_Error(
-                                'rest_post_invalid_id',
-                                __( 'Contenuto non trovato.', 'fp-multilanguage' ),
-                                array( 'status' => 404 )
-                        );
-                }
+		return true;
+	}
 
-                if ( ! current_user_can( 'edit_post', $postId ) ) {
-                        return new WP_Error(
-                                'rest_forbidden',
-                                __( 'Non hai il permesso di tradurre questo contenuto.', 'fp-multilanguage' ),
-                                array( 'status' => 403 )
-                        );
-                }
+	public function rest_translate_post( $request ) {
+			$postId = (int) $this->get_request_param( $request, 'id', 0 );
+		if ( $postId <= 0 ) {
+				return new WP_Error(
+					'rest_post_invalid_id',
+					__( 'Contenuto non trovato.', 'fp-multilanguage' ),
+					array( 'status' => 404 )
+				);
+		}
 
-                if ( null !== $requestedType && $post->post_type !== $requestedType ) {
-                        return new WP_Error(
-                                'rest_post_invalid_type',
-                                __( 'Il tipo di contenuto richiesto non corrisponde alla risorsa selezionata.', 'fp-multilanguage' ),
-                                array( 'status' => 400 )
-                        );
-                }
+			$languageParam = $this->get_request_param( $request, 'language' );
+			$language      = is_string( $languageParam ) ? sanitize_key( $languageParam ) : null;
 
-                if ( 'attachment' !== $post->post_type && ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) ) {
-                        return new WP_Error(
-                                'rest_post_unsupported_type',
-                                __( 'Questo tipo di contenuto non supporta la traduzione automatica.', 'fp-multilanguage' ),
-                                array( 'status' => 400 )
-                        );
-                }
+			$forceParam = $this->get_request_param( $request, 'force', true );
+		if ( is_string( $forceParam ) || is_int( $forceParam ) ) {
+				$force = filter_var( $forceParam, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+			if ( null === $force ) {
+					$force = true;
+			}
+		} else {
+				$force = (bool) $forceParam;
+		}
 
-                if ( 'attachment' === $post->post_type ) {
-                        $translations = $this->translate_attachment( $postId, $language, $force );
-                } else {
-                        $translations = $this->translate_post( $postId, $language, $force );
-                }
+			$typeParam     = $this->get_request_param( $request, 'type' );
+			$requestedType = is_string( $typeParam ) ? sanitize_key( $typeParam ) : null;
 
-                return rest_ensure_response(
-                        array(
-                                'translations' => $translations,
-                        )
-                );
-        }
+			$post = get_post( $postId );
+		if ( ! $post instanceof WP_Post ) {
+				return new WP_Error(
+					'rest_post_invalid_id',
+					__( 'Contenuto non trovato.', 'fp-multilanguage' ),
+					array( 'status' => 404 )
+				);
+		}
+
+		if ( ! current_user_can( 'edit_post', $postId ) ) {
+				return new WP_Error(
+					'rest_forbidden',
+					__( 'Non hai il permesso di tradurre questo contenuto.', 'fp-multilanguage' ),
+					array( 'status' => 403 )
+				);
+		}
+
+		if ( null !== $requestedType && $post->post_type !== $requestedType ) {
+				return new WP_Error(
+					'rest_post_invalid_type',
+					__( 'Il tipo di contenuto richiesto non corrisponde alla risorsa selezionata.', 'fp-multilanguage' ),
+					array( 'status' => 400 )
+				);
+		}
+
+		if ( 'attachment' !== $post->post_type && ! in_array( $post->post_type, Settings::get_translatable_post_types(), true ) ) {
+				return new WP_Error(
+					'rest_post_unsupported_type',
+					__( 'Questo tipo di contenuto non supporta la traduzione automatica.', 'fp-multilanguage' ),
+					array( 'status' => 400 )
+				);
+		}
+
+		if ( 'attachment' === $post->post_type ) {
+				$translations = $this->translate_attachment( $postId, $language, $force );
+		} else {
+				$translations = $this->translate_post( $postId, $language, $force );
+		}
+
+			return rest_ensure_response(
+				array(
+					'translations' => $translations,
+				)
+			);
+	}
 
 	public function get_post_translations( int $postId ): array {
 		$stored = get_post_meta( $postId, self::META_KEY, true );
@@ -621,42 +660,42 @@ class PostTranslationManager {
 	/**
 	 * @return array<string, string>
 	 */
-        private function get_custom_fields( WP_Post $post ): array {
-                $fields   = array();
-                $metaKeys = array_merge(
-                        Settings::get_translatable_meta_keys(),
-                        apply_filters( 'fp_multilanguage_custom_fields', array() )
-                );
+	private function get_custom_fields( WP_Post $post ): array {
+			$fields   = array();
+			$metaKeys = array_merge(
+				Settings::get_translatable_meta_keys(),
+				apply_filters( 'fp_multilanguage_custom_fields', array() )
+			);
 
-                $metaKeys = array_values( array_unique( array_filter( array_map( 'strval', $metaKeys ) ) ) );
-                foreach ( $metaKeys as $metaKey ) {
-                        $value = get_post_meta( $post->ID, $metaKey, true );
-                        if ( is_string( $value ) && $value !== '' ) {
-                                $fields[ $metaKey ] = $value;
-                        }
-                }
+			$metaKeys = array_values( array_unique( array_filter( array_map( 'strval', $metaKeys ) ) ) );
+		foreach ( $metaKeys as $metaKey ) {
+				$value = get_post_meta( $post->ID, $metaKey, true );
+			if ( is_string( $value ) && $value !== '' ) {
+				$fields[ $metaKey ] = $value;
+			}
+		}
 
-                return $fields;
-        }
+			return $fields;
+	}
 
-        /**
-         * @param mixed $request
-         * @param mixed $default
-         * @return mixed
-         */
-        private function get_request_param( $request, string $key, $default = null ) {
-                if ( is_array( $request ) ) {
-                        return $request[ $key ] ?? $default;
-                }
+		/**
+		* @param mixed $request
+		* @param mixed $fallback
+		* @return mixed
+		*/
+	private function get_request_param( $request, string $key, $fallback = null ) {
+		if ( is_array( $request ) ) {
+						return $request[ $key ] ?? $fallback;
+		}
 
-                if ( $request instanceof ArrayAccess && $request->offsetExists( $key ) ) {
-                        return $request[ $key ];
-                }
+		if ( $request instanceof ArrayAccess && $request->offsetExists( $key ) ) {
+							return $request[ $key ];
+		}
 
-                if ( is_object( $request ) && method_exists( $request, 'get_param' ) ) {
-                        return $request->get_param( $key );
-                }
+		if ( is_object( $request ) && method_exists( $request, 'get_param' ) ) {
+				return $request->get_param( $key );
+		}
 
-                return $default;
-        }
+			return $fallback;
+	}
 }

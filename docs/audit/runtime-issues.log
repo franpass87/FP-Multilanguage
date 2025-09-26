@@ -1,0 +1,13 @@
+# Runtime logging session - Phase 3
+
+## Context
+- Environment: container CLI without a full WordPress stack.
+- Logger: `FPMultilanguage\Services\RuntimeLogger` hooked into PHP error handling and WordPress deprecation notices.
+
+## Observations
+- Instrumentation successfully registers on `plugins_loaded` and funnels PHP notices, warnings, and errors through the existing plugin logger store.
+- Unable to reproduce admin or front-end requests because WordPress is not available in the execution environment. No runtime log entries were generated.
+
+## Follow-up
+- Re-run the runtime logger on a WordPress instance to capture actual admin/settings interactions.
+- Confirm log persistence in the `fp_multilanguage_logs` option and export entries for later phases.

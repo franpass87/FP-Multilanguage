@@ -7,6 +7,7 @@ use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\Providers\DeepLProvider;
 use FPMultilanguage\Services\Providers\GoogleProvider;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class TranslationServiceTest extends TestCase
@@ -58,10 +59,12 @@ class TranslationServiceTest extends TestCase
             ],
             'quote_tracking' => [],
         ]);
+        Settings::clear_cache();
 
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
-        $this->settings = new Settings($this->logger, $this->notices);
+        $this->settings = SettingsFactory::create($this->logger, $this->notices);
+        $this->assertContains('google', Settings::get_enabled_providers(), 'Il provider Google deve essere abilitato per i test.');
         $this->service = new TranslationService($this->logger, $this->notices, $this->settings, [
             new GoogleProvider($this->logger),
             new DeepLProvider($this->logger),
@@ -105,6 +108,7 @@ class TranslationServiceTest extends TestCase
         ]);
 
         TranslationService::flush_cache();
+        Settings::clear_cache();
         $result = $this->service->translate_text('Test string', 'en', 'it');
 
         $this->assertSame('deepl:Test string', $result);
@@ -116,6 +120,7 @@ class TranslationServiceTest extends TestCase
         $wp_remote_post_invalid_json['translation.googleapis.com'] = 3;
 
         TranslationService::flush_cache();
+        Settings::clear_cache();
         $result = $this->service->translate_text('Trigger invalid JSON', 'en', 'it');
 
         $this->assertSame('deepl:Trigger invalid JSON', $result, 'Il servizio deve passare al provider successivo quando la risposta JSON è non valida.');
@@ -149,6 +154,7 @@ class TranslationServiceTest extends TestCase
         ]);
 
         TranslationService::flush_cache();
+        Settings::clear_cache();
         $result = $this->service->translate_text($text, 'en', 'it');
 
         $this->assertSame('Manuale personalizzato', $result);
@@ -193,6 +199,7 @@ class TranslationServiceTest extends TestCase
         ]);
 
         TranslationService::flush_cache();
+        Settings::clear_cache();
         $result = $this->service->translate_text('Glossary content', 'en', 'it');
 
         $this->assertSame('google:Glossary content', $result);
@@ -258,6 +265,7 @@ class TranslationServiceTest extends TestCase
         ]);
 
         TranslationService::flush_cache();
+        Settings::clear_cache();
         $result = $this->service->translate_text('DeepL request', 'en', 'it');
 
         $this->assertSame('deepl:DeepL request', $result);
@@ -298,12 +306,13 @@ class TranslationServiceTest extends TestCase
             'quote_tracking' => [],
         ]);
 
-		TranslationService::flush_cache();
+        TranslationService::flush_cache();
+        Settings::clear_cache();
 
-		$deeplHtml = '<div>Altro <em>contenuto</em> di prova</div>';
-		$deeplTranslation = $this->service->translate_text($deeplHtml, 'en', 'it', ['format' => 'html']);
+        $deeplHtml = '<div>Altro <em>contenuto</em> di prova</div>';
+        $deeplTranslation = $this->service->translate_text($deeplHtml, 'en', 'it', ['format' => 'html']);
 
-		$this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
+        $this->assertSame('deepl:' . $deeplHtml, $deeplTranslation, 'DeepL deve mantenere i tag HTML quando richiesto.');
 	}
 
 	public function test_stale_quota_entries_do_not_trigger_rate_limit(): void

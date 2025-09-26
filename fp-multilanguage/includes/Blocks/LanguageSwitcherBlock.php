@@ -1,74 +1,102 @@
 <?php
+
 namespace FPMultilanguage\Blocks;
 
 use FPMultilanguage\Widgets\LanguageSwitcher;
+use WP_Block;
 
 class LanguageSwitcherBlock {
 
-        private LanguageSwitcher $languageSwitcher;
+	private LanguageSwitcher $languageSwitcher;
 
-        public function __construct( LanguageSwitcher $languageSwitcher ) {
-                $this->languageSwitcher = $languageSwitcher;
-        }
+	public function __construct( LanguageSwitcher $languageSwitcher ) {
+			$this->languageSwitcher = $languageSwitcher;
+	}
 
-        public function register(): void {
-                add_action( 'init', array( $this, 'register_block' ) );
-        }
+	public function register(): void {
+			add_action( 'init', array( $this, 'register_block' ) );
+	}
 
-        public function register_block(): void {
-                if ( ! function_exists( 'register_block_type' ) ) {
-                        return;
-                }
+	public function register_block(): void {
+		if ( ! function_exists( 'register_block_type' ) ) {
+						return;
+		}
 
-                wp_register_script(
-                        'fp-multilanguage-language-switcher-block',
-                        FP_MULTILANGUAGE_URL . 'assets/js/language-switcher-block.js',
-                        array( 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor', 'wp-server-side-render' ),
-                        FP_MULTILANGUAGE_VERSION,
-                        true
-                );
+					$assetPath    = FP_MULTILANGUAGE_PATH . 'assets/js/language-switcher-block.asset.php';
+					$dependencies = array( 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor', 'wp-server-side-render' );
+					$version      = FP_MULTILANGUAGE_VERSION;
 
-                register_block_type(
-                        'fp-multilanguage/language-switcher',
-                        array(
-                                'editor_script' => 'fp-multilanguage-language-switcher-block',
-                                'render_callback' => array( $this, 'render_block' ),
-                                'attributes'      => array(
-                                        'layout' => array(
-                                                'type'    => 'string',
-                                                'default' => 'list',
-                                        ),
-                                ),
-                                'supports'       => array(
-                                        'html' => false,
-                                ),
-                        )
-                );
+		if ( is_readable( $assetPath ) ) {
+						$asset = require $assetPath;
+			if ( is_array( $asset ) ) {
+				if ( isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] ) ) {
+					$dependencies = array_values( array_unique( array_map( 'strval', $asset['dependencies'] ) ) );
+				}
 
-                if ( function_exists( 'wp_set_script_translations' ) ) {
-                        wp_set_script_translations(
-                                'fp-multilanguage-language-switcher-block',
-                                'fp-multilanguage',
-                                FP_MULTILANGUAGE_PATH . 'languages'
-                        );
-                }
-        }
+				if ( isset( $asset['version'] ) && ( is_string( $asset['version'] ) || is_int( $asset['version'] ) ) ) {
+					$version = (string) $asset['version'];
+				}
+			}
+		}
 
-        /**
-         * @param array<string, mixed> $attributes
-         */
-        public function render_block( array $attributes = array(), string $content = '' ): string {
-                unset( $content );
+					wp_register_script(
+						'fp-multilanguage-language-switcher-block',
+						FP_MULTILANGUAGE_URL . 'assets/js/language-switcher-block.js',
+						$dependencies,
+						$version,
+						true
+					);
 
-                $layout = isset( $attributes['layout'] ) ? (string) $attributes['layout'] : 'list';
-                if ( ! in_array( $layout, array( 'list', 'inline' ), true ) ) {
-                        $layout = 'list';
-                }
+		if ( function_exists( 'register_block_type_from_metadata' ) && file_exists( __DIR__ . '/language-switcher/block.json' ) ) {
+						register_block_type_from_metadata(
+							__DIR__ . '/language-switcher',
+							array(
+								'render_callback' => array( $this, 'render_block' ),
+							)
+						);
+		} else {
+						register_block_type(
+							'fp-multilanguage/language-switcher',
+							array(
+								'editor_script'   => 'fp-multilanguage-language-switcher-block',
+								'render_callback' => array( $this, 'render_block' ),
+								'attributes'      => array(
+									'layout' => array(
+										'type'    => 'string',
+										'default' => 'list',
+									),
+								),
+								'supports'        => array(
+									'html' => false,
+								),
+							)
+						);
+		}
 
-                return $this->languageSwitcher->render_shortcode(
-                        array(
-                                'layout' => $layout,
-                        )
-                );
-        }
+		if ( function_exists( 'wp_set_script_translations' ) ) {
+						wp_set_script_translations(
+							'fp-multilanguage-language-switcher-block',
+							'fp-multilanguage',
+							FP_MULTILANGUAGE_PATH . 'languages'
+						);
+		}
+	}
+
+				/**
+				 * @param array<string, mixed> $attributes
+				 */
+	public function render_block( array $attributes = array(), string $content = '', ?WP_Block $block = null ): string {
+					unset( $content, $block );
+
+					$layout = isset( $attributes['layout'] ) ? (string) $attributes['layout'] : 'list';
+		if ( ! in_array( $layout, array( 'list', 'inline' ), true ) ) {
+						$layout = 'list';
+		}
+
+					return $this->languageSwitcher->render_shortcode(
+						array(
+							'layout' => $layout,
+						)
+					);
+	}
 }

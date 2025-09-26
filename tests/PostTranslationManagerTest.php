@@ -90,6 +90,7 @@ use FPMultilanguage\Content\PostTranslationManager;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\Providers\GoogleProvider;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class PostTranslationManagerTest extends TestCase
@@ -181,10 +182,12 @@ class PostTranslationManagerTest extends TestCase
         $options['providers']['google']['enabled'] = true;
         $options['providers']['google']['api_key'] = 'unit-test-key';
         update_option(Settings::OPTION_NAME, $options);
+        Settings::clear_cache();
+        $this->assertContains('google', Settings::get_enabled_providers(), 'Il provider Google deve essere abilitato per i test.');
 
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
-        $this->settings = new Settings($this->logger, $this->notices);
+        $this->settings = SettingsFactory::create($this->logger, $this->notices);
         $this->service = new TranslationService($this->logger, $this->notices, $this->settings, [new GoogleProvider($this->logger)]);
     }
 
@@ -216,6 +219,7 @@ class PostTranslationManagerTest extends TestCase
         $options = Settings::get_options();
         $options['auto_translate'] = false;
         update_option(Settings::OPTION_NAME, $options);
+        Settings::clear_cache();
 
         $postId = 77;
         $post = new \WP_Post([
@@ -386,9 +390,11 @@ class PostTranslationManagerTest extends TestCase
             'force' => '0',
         ]));
 
-        $this->assertIsArray($response);
-        $this->assertArrayHasKey('translations', $response);
-        $translations = $response['translations'];
+        $this->assertInstanceOf(\WP_REST_Response::class, $response);
+        $data = $response->get_data();
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('translations', $data);
+        $translations = $data['translations'];
         $this->assertArrayHasKey('it', $translations);
         $this->assertSame('google:Gallery image', $translations['it']['title']);
         $this->assertSame('google:Descrizione galleria', $translations['it']['content']);

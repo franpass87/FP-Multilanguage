@@ -44,6 +44,7 @@ Tutte le route richiedono utenti con `manage_options` (o `edit_posts` per il tra
 
 ## Cronologia release
 
+- **1.2.0 (ottobre 2024)** – Conclusione audit iterativo con hardening sicurezza, cache impostazioni/stringhe, bootstrap modulare, runtime logger e manager di upgrade con flush cache automatico.
 - **1.1.0 (settembre 2024)** – Aggiornamento della documentazione di progetto, introduzione dei riferimenti ufficiali a Francesco Passeri e riallineamento dei metadati (versione plugin e asset).
 - **1.0.0 (giugno 2024)** – Prima release pubblica con orchestratore di servizi, provider Google/DeepL, gestione stringhe dinamiche, meta SEO e CLI.
 
