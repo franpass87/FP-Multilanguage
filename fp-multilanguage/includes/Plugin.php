@@ -3,6 +3,10 @@ namespace FPMultilanguage;
 
 use FPMultilanguage\Admin\AdminNotices;
 use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\Admin\Settings\ManualStringsUI;
+use FPMultilanguage\Admin\Settings\ProviderTester;
+use FPMultilanguage\Admin\Settings\Repository as SettingsRepository;
+use FPMultilanguage\Admin\Settings\RestController as SettingsRestController;
 use FPMultilanguage\Blocks\LanguageSwitcherBlock;
 use FPMultilanguage\CLI\Commands;
 use FPMultilanguage\Content\CommentTranslationManager;
@@ -237,9 +241,48 @@ class Plugin {
 		);
 
 		$container->set(
+			'settings_repository',
+			static function ( Container $c ): SettingsRepository {
+				return new SettingsRepository( $c->get( 'notices' ) );
+			}
+		);
+
+		$container->set(
+			'manual_strings_ui',
+			static function ( Container $c ): ManualStringsUI {
+				return new ManualStringsUI( $c->get( 'settings_repository' ), $c->get( 'logger' ) );
+			}
+		);
+
+		$container->set(
+			'provider_tester',
+			static function ( Container $c ): ProviderTester {
+				return new ProviderTester( $c->get( 'logger' ), $c->get( 'settings_repository' ) );
+			}
+		);
+
+		$container->set(
+			'settings_rest_controller',
+			static function ( Container $c ): SettingsRestController {
+				return new SettingsRestController(
+					$c->get( 'settings_repository' ),
+					$c->get( 'logger' ),
+					$c->get( 'notices' ),
+					$c->get( 'provider_tester' )
+				);
+			}
+		);
+
+		$container->set(
 			'settings',
 			static function ( Container $c ): Settings {
-				return new Settings( $c->get( 'logger' ), $c->get( 'notices' ) );
+				return new Settings(
+					$c->get( 'logger' ),
+					$c->get( 'notices' ),
+					$c->get( 'settings_repository' ),
+					$c->get( 'manual_strings_ui' ),
+					$c->get( 'settings_rest_controller' )
+				);
 			}
 		);
 
