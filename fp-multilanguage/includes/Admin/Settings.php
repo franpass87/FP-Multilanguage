@@ -1,101 +1,61 @@
 <?php
 namespace FPMultilanguage\Admin;
 
-use FPMultilanguage\CurrentLanguage;
+use FPMultilanguage\Admin\AdminNotices;
+use FPMultilanguage\Admin\Settings\ManualStringsUI;
+use FPMultilanguage\Admin\Settings\Repository as SettingsRepository;
+use FPMultilanguage\Admin\Settings\RestController as SettingsRestController;
 use FPMultilanguage\Services\Logger;
-use FPMultilanguage\Services\TranslationService;
-use WP_Error;
-use WP_REST_Request;
-use WP_REST_Response;
 
 class Settings {
 
-	public const OPTION_NAME = 'fp_multilanguage_options';
+	public const OPTION_NAME = SettingsRepository::OPTION_NAME;
 
-	public const MANUAL_STRINGS_OPTION = 'fp_multilanguage_manual_strings';
+	public const MANUAL_STRINGS_OPTION = SettingsRepository::MANUAL_STRINGS_OPTION;
 
-	private const NONCE_ACTION = 'fp_multilanguage_settings';
+	public const NONCE_ACTION = SettingsRestController::NONCE_ACTION;
 
-	private const REST_NAMESPACE = 'fp-multilanguage/v1';
+	public const REST_NAMESPACE = SettingsRestController::REST_NAMESPACE;
 
 	private Logger $logger;
 
 	private AdminNotices $notices;
 
-	private static ?array $cachedOptions = null;
+	private SettingsRepository $repository;
 
-	private static array $defaults = array(
-		'source_language'   => 'en',
-		'fallback_language' => 'en',
-                'target_languages'  => array( 'it' ),
-                'post_types'        => array( 'post', 'page' ),
-                'taxonomies'        => array( 'category', 'post_tag' ),
-                'custom_fields'     => array(),
-		'providers'         => array(
-			'google' => array(
-				'enabled'              => false,
-				'api_key'              => '',
-				'timeout'              => 20,
-				'glossary_id'          => '',
-				'glossary_ignore_case' => false,
-			),
-			'deepl'  => array(
-				'enabled'     => false,
-				'api_key'     => '',
-				'endpoint'    => 'https://api.deepl.com/v2/translate',
-				'glossary_id' => '',
-				'formality'   => 'default',
-			),
-		),
-		'auto_translate'    => true,
-		'seo'               => array(
-			'hreflang'   => true,
-			'canonical'  => true,
-			'open_graph' => true,
-		),
-		'quote_tracking'    => array(),
-	);
+	private ManualStringsUI $manualStrings;
 
-	public function __construct( Logger $logger, AdminNotices $notices ) {
-			$this->logger  = $logger;
-			$this->notices = $notices;
+	private SettingsRestController $restController;
 
-			self::clear_cache();
+	private static ?SettingsRepository $repositoryInstance = null;
 
-		if ( function_exists( 'add_action' ) ) {
-				add_action( 'update_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
-				add_action( 'add_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
-				add_action( 'delete_option_' . self::OPTION_NAME, array( __CLASS__, 'clear_cache' ), 10, 0 );
-		}
+	public function __construct(
+		Logger $logger,
+		AdminNotices $notices,
+		SettingsRepository $repository,
+		ManualStringsUI $manualStrings,
+		SettingsRestController $restController
+	) {
+		$this->logger		 = $logger;
+		$this->notices	 = $notices;
+		$this->repository	 = $repository;
+		$this->manualStrings = $manualStrings;
+		$this->restController = $restController;
+
+		self::$repositoryInstance = $repository;
+		$this->repository->register_cache_hooks();
 	}
 
 	public static function bootstrap_defaults(): void {
-		if ( ! function_exists( 'get_option' ) ) {
-				return;
-		}
-
-			$options = get_option( self::OPTION_NAME, array() );
-		if ( ! is_array( $options ) || empty( $options ) ) {
-				$options = self::$defaults;
-		} else {
-				$options = wp_parse_args( $options, self::$defaults );
-		}
-
-			update_option( self::OPTION_NAME, $options );
-
-			self::set_cached_options( $options );
-
-		if ( false === get_option( self::MANUAL_STRINGS_OPTION, false ) ) {
-				update_option( self::MANUAL_STRINGS_OPTION, array() );
-		}
+		self::repository()->bootstrap_defaults();
 	}
 
-        public function register(): void {
+public function register(): void {
                 add_action( 'admin_menu', array( $this, 'register_menu' ) );
                 add_action( 'admin_init', array( $this, 'register_settings' ) );
                 add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-                add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-                add_action( 'admin_post_fp_multilanguage_save_strings', array( $this, 'handle_strings_save' ) );
+                $this->restController->register_hooks();
+                add_action( 'admin_post_fp_multilanguage_save_strings', array( $this->manualStrings, 'handle_save' ) );
         }
 
         public function register_menu(): void {
@@ -141,7 +101,7 @@ class Settings {
 			self::OPTION_NAME,
 			array(
 				'sanitize_callback' => array( $this, 'sanitize' ),
-				'default'           => self::$defaults,
+				'default'           => $this->repository->get_defaults(),
 			)
 		);
 
@@ -229,147 +189,6 @@ class Settings {
 		);
 	}
 
-        public function register_rest_routes(): void {
-                register_rest_route(
-                        self::REST_NAMESPACE,
-                        '/settings',
-                        array(
-				array(
-					'methods'             => 'GET',
-					'callback'            => array( $this, 'rest_get_settings' ),
-					'permission_callback' => array( $this, 'rest_permissions' ),
-				),
-				array(
-					'methods'             => 'POST',
-					'callback'            => array( $this, 'rest_update_settings' ),
-					'permission_callback' => array( $this, 'rest_permissions' ),
-                                ),
-                        )
-                );
-
-                register_rest_route(
-                        self::REST_NAMESPACE,
-                        '/providers/test',
-                        array(
-                                array(
-                                        'methods'             => 'POST',
-                                        'callback'            => array( $this, 'rest_test_provider' ),
-                                        'permission_callback' => array( $this, 'rest_permissions' ),
-                                ),
-                        )
-                );
-        }
-
-	public function rest_permissions(): bool {
-		return current_user_can( 'manage_options' );
-	}
-
-	public function rest_get_settings( WP_REST_Request $request ): WP_REST_Response {
-			unset( $request );
-
-			return rest_ensure_response( $this->get_options() );
-	}
-
-        public function rest_update_settings( WP_REST_Request $request ) {
-                if ( ! $this->verify_rest_nonce( $request ) ) {
-                        $message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
-
-                        $this->logger->warning( $message );
-			$this->notices->add_error( $message );
-
-			return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
-		}
-
-		$params = $request->get_json_params();
-		if ( ! is_array( $params ) ) {
-			$message = __( 'Payload non valido', 'fp-multilanguage' );
-			$this->logger->error( $message );
-			$this->notices->add_error( $message );
-
-			return new WP_Error( 'invalid_payload', $message, array( 'status' => 400 ) );
-		}
-
-		$options = $this->sanitize( $params );
-		update_option( self::OPTION_NAME, $options );
-		TranslationService::flush_cache();
-
-		$options = $this->get_options();
-		$this->logger->info( 'Settings updated via REST API.' );
-		$this->notices->add_notice( __( 'Impostazioni aggiornate correttamente.', 'fp-multilanguage' ) );
-
-                return rest_ensure_response( $options );
-        }
-
-
-        public function rest_test_provider( WP_REST_Request $request ) {
-                if ( ! $this->verify_rest_nonce( $request ) ) {
-                        $message = __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' );
-
-                        $this->logger->warning( 'Provider test blocked by invalid nonce.' );
-
-                        return new WP_Error( 'invalid_nonce', $message, array( 'status' => 403 ) );
-                }
-
-                $params   = $request->get_json_params();
-                $provider = is_array( $params ) ? sanitize_key( (string) ( $params['provider'] ?? '' ) ) : '';
-                $options  = is_array( $params['options'] ?? null ) ? (array) $params['options'] : array();
-
-                if ( '' === $provider ) {
-                        $message = __( 'Provider non valido.', 'fp-multilanguage' );
-
-                        return new WP_Error( 'invalid_provider', $message, array( 'status' => 400 ) );
-                }
-
-                $sanitized = $this->sanitize_provider_options( $provider, $options );
-                if ( is_wp_error( $sanitized ) ) {
-                        return $sanitized;
-                }
-
-                $result = $this->test_provider_credentials( $provider, $sanitized );
-
-                return rest_ensure_response( $result );
-        }
-
-
-	private function verify_rest_nonce( WP_REST_Request $request ): bool {
-		$nonce = '';
-
-		if ( method_exists( $request, 'get_header' ) ) {
-			$headerNonce = $request->get_header( 'X-WP-Nonce' );
-			if ( is_string( $headerNonce ) ) {
-				$nonce = $headerNonce;
-			}
-		}
-
-		if ( '' === $nonce && method_exists( $request, 'get_param' ) ) {
-			$paramNonce = $request->get_param( '_wpnonce' );
-			if ( is_string( $paramNonce ) ) {
-				$nonce = $paramNonce;
-			}
-		}
-
-		if ( '' === $nonce ) {
-			return false;
-		}
-
-		if ( function_exists( 'wp_unslash' ) ) {
-			$nonce = wp_unslash( $nonce );
-		}
-
-		if ( function_exists( 'sanitize_text_field' ) ) {
-			$nonce = sanitize_text_field( $nonce );
-		}
-
-		if ( '' === $nonce ) {
-			return false;
-		}
-
-		if ( function_exists( 'wp_verify_nonce' ) ) {
-			return false !== wp_verify_nonce( $nonce, self::NONCE_ACTION );
-		}
-
-		return true;
-	}
         public function enqueue_assets( string $hook ): void {
                 $allowedHooks = array(
                         'settings_page_fp-multilanguage-settings',
@@ -592,195 +411,7 @@ class Settings {
         }
 
         public function render_strings_page(): void {
-                if ( ! current_user_can( 'manage_options' ) ) {
-                        return;
-                }
-
-                $strings   = self::get_manual_strings_catalog();
-                $languages = $this->get_manual_string_languages( $strings );
-
-                $updatedFlag = isset( $_GET['strings-updated'] ) ? sanitize_key( (string) $_GET['strings-updated'] ) : '';// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-                $showSuccess = '1' === $updatedFlag;
-
-                echo '<div class="wrap fp-multilanguage-strings">';
-                echo '<h1>' . esc_html__( 'Stringhe dinamiche', 'fp-multilanguage' ) . '</h1>';
-
-                if ( $showSuccess ) {
-                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Traduzioni manuali aggiornate.', 'fp-multilanguage' ) . '</p></div>';
-                }
-
-                if ( empty( $strings ) ) {
-                        echo '<p>' . esc_html__( 'Non sono ancora state intercettate stringhe dinamiche. Aggiungi l\'attributo data-fp-translatable agli elementi front-end e visita le pagine per popolare l\'elenco.', 'fp-multilanguage' ) . '</p>';
-                        echo '</div>';
-
-                        return;
-                }
-
-                echo '<p>' . esc_html__( 'Rivedi e sovrascrivi le traduzioni manuali salvate dal front-end. Lascia vuoto un campo per ripristinare la traduzione automatica.', 'fp-multilanguage' ) . '</p>';
-
-                echo '<div class="fp-multilanguage-strings-toolbar" style="margin:1em 0;">';
-                echo '<label for="fp-multilanguage-strings-search" class="screen-reader-text">' . esc_html__( 'Cerca stringhe', 'fp-multilanguage' ) . '</label>';
-                echo '<input type="search" id="fp-multilanguage-strings-search" class="regular-text" placeholder="' . esc_attr__( 'Cerca per testo o contesto…', 'fp-multilanguage' ) . '">';
-                echo '</div>';
-
-                echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="fp-multilanguage-strings-form">';
-                wp_nonce_field( 'fp_multilanguage_save_strings' );
-                echo '<input type="hidden" name="action" value="fp_multilanguage_save_strings">';
-
-                echo '<table class="widefat fixed striped" id="fp-multilanguage-strings-table">';
-                echo '<thead><tr>';
-                echo '<th style="width:15%;">' . esc_html__( 'Chiave', 'fp-multilanguage' ) . '</th>';
-                echo '<th style="width:30%;">' . esc_html__( 'Originale', 'fp-multilanguage' ) . '</th>';
-                echo '<th style="width:20%;">' . esc_html__( 'Contesto', 'fp-multilanguage' ) . '</th>';
-
-                foreach ( $languages as $language ) {
-                        echo '<th>' . esc_html( sprintf( __( 'Traduzione (%s)', 'fp-multilanguage' ), strtoupper( $language ) ) ) . '</th>';
-                }
-
-                echo '</tr></thead><tbody>';
-
-                foreach ( $strings as $string ) {
-                        $key          = isset( $string['key'] ) ? (string) $string['key'] : '';
-                        $original     = isset( $string['original'] ) ? (string) $string['original'] : '';
-                        $context      = isset( $string['context'] ) ? (string) $string['context'] : '';
-                        $translations = isset( $string['translations'] ) && is_array( $string['translations'] ) ? $string['translations'] : array();
-
-                        $contextDisplay = $context !== '' ? str_replace( '|', ' → ', $context ) : '—';
-
-                        echo '<tr>';
-                        echo '<td><code>' . esc_html( $key ) . '</code></td>';
-                        echo '<td>' . ( $original !== '' ? nl2br( esc_html( $original ) ) : '<span class="description">' . esc_html__( 'Non disponibile', 'fp-multilanguage' ) . '</span>' ) . '</td>';
-                        echo '<td>' . ( $contextDisplay !== '—' ? esc_html( $contextDisplay ) : '&#8212;' ) . '</td>';
-
-                        foreach ( $languages as $language ) {
-                                $value = isset( $translations[ $language ] ) ? (string) $translations[ $language ] : '';
-                                $rows  = max( 2, min( 6, substr_count( $value, "\n" ) + 1 ) );
-
-                                echo '<td>';
-                                echo '<textarea class="large-text code" name="strings[' . esc_attr( $key ) . '][' . esc_attr( $language ) . ']" rows="' . esc_attr( (string) $rows ) . '">' . esc_textarea( $value ) . '</textarea>';
-                                echo '</td>';
-                        }
-
-                        echo '</tr>';
-                }
-
-                echo '</tbody></table>';
-                echo '<p id="fp-multilanguage-strings-empty" class="description" style="display:none;margin-top:1em;">' . esc_html__( 'Nessuna stringa corrisponde ai criteri di ricerca.', 'fp-multilanguage' ) . '</p>';
-                submit_button( __( 'Salva traduzioni', 'fp-multilanguage' ) );
-                echo '</form>';
-                echo '</div>';
-        }
-
-        public function handle_strings_save(): void {
-                if ( ! current_user_can( 'manage_options' ) ) {
-                        if ( function_exists( 'wp_die' ) ) {
-                                wp_die( esc_html__( 'Non hai i permessi per aggiornare le traduzioni manuali.', 'fp-multilanguage' ) );
-                        }
-
-                        return;
-                }
-
-                check_admin_referer( 'fp_multilanguage_save_strings' );
-
-                $submitted = isset( $_POST['strings'] ) ? wp_unslash( $_POST['strings'] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-                if ( ! is_array( $submitted ) ) {
-                        $submitted = array();
-                }
-
-                $updates = 0;
-
-                foreach ( $submitted as $key => $translations ) {
-                        $normalizedKey = sanitize_key( (string) $key );
-                        if ( '' === $normalizedKey || ! is_array( $translations ) ) {
-                                continue;
-                        }
-
-                        foreach ( $translations as $language => $value ) {
-                                $normalizedLanguage = sanitize_key( (string) $language );
-                                if ( '' === $normalizedLanguage ) {
-                                        continue;
-                                }
-
-                                $stringValue = is_scalar( $value ) ? (string) $value : '';
-                                self::update_manual_string( $normalizedKey, $normalizedLanguage, $stringValue );
-                                ++$updates;
-                        }
-                }
-
-                $this->logger->info(
-                        'Manual strings updated via admin page.',
-                        array(
-                                'updates' => $updates,
-                        )
-                );
-
-                $redirect = add_query_arg(
-                        array(
-                                'page'            => 'fp-multilanguage-strings',
-                                'strings-updated' => '1',
-                        ),
-                        admin_url( 'options-general.php' )
-                );
-
-                wp_safe_redirect( $redirect );
-                exit;
-        }
-
-        /**
-         * @param array<string, array<string, mixed>> $strings
-         *
-         * @return array<int, string>
-         */
-        private function get_manual_string_languages( array $strings ): array {
-                $languages = array();
-
-                foreach ( (array) self::get_target_languages() as $language ) {
-                        $languages[] = (string) $language;
-                }
-
-                $fallback = self::get_fallback_language();
-                if ( $fallback !== '' ) {
-                        $languages[] = $fallback;
-                }
-
-                foreach ( $strings as $string ) {
-                        if ( empty( $string['translations'] ) || ! is_array( $string['translations'] ) ) {
-                                continue;
-                        }
-
-                        foreach ( $string['translations'] as $language => $value ) {
-                                unset( $value );
-                                $languages[] = (string) $language;
-                        }
-                }
-
-                $languages = array_filter(
-                        array_map(
-                                static function ( $language ): string {
-                                        return strtolower( trim( (string) $language ) );
-                                },
-                                $languages
-                        )
-                );
-
-                $source = strtolower( self::get_source_language() );
-                $languages = array_filter(
-                        $languages,
-                        static function ( string $language ) use ( $source ): bool {
-                                return $language !== '' && $language !== $source;
-                        }
-                );
-
-                $unique = array();
-                foreach ( $languages as $language ) {
-                        if ( in_array( $language, $unique, true ) ) {
-                                continue;
-                        }
-
-                        $unique[] = $language;
-                }
-
-                return $unique;
+                $this->manualStrings->render_page();
         }
 
         public function render_post_types_field(): void {
@@ -1213,902 +844,74 @@ class Settings {
 	}
 
         public function sanitize( $input ): array {
-			$sanitized = wp_parse_args( is_array( $input ) ? $input : array(), self::$defaults );
-
-			$sanitized['source_language']   = $this->sanitize_language( $sanitized['source_language'] );
-			$sanitized['fallback_language'] = $this->sanitize_language( $sanitized['fallback_language'] );
-
-		if ( '' === $sanitized['fallback_language'] ) {
-				$sanitized['fallback_language'] = $sanitized['source_language'];
-		}
-
-			$targets = $sanitized['target_languages'];
-		if ( is_string( $targets ) ) {
-				$targets = preg_split( '/[,\s]+/', $targets );
-		}
-			$targets = array_map( array( $this, 'sanitize_language' ), (array) $targets );
-			$targets = array_filter( $targets );
-			$targets = array_values( array_unique( $targets ) );
-			$targets = array_values(
-				array_filter(
-					$targets,
-					static function ( string $language ) use ( $sanitized ): bool {
-									return $language !== $sanitized['source_language'];
-					}
-				)
-			);
-
-		if ( $sanitized['fallback_language'] !== $sanitized['source_language'] && ! in_array( $sanitized['fallback_language'], $targets, true ) ) {
-				$targets[] = $sanitized['fallback_language'];
-		}
-
-		if ( empty( $targets ) ) {
-				$defaultTargets = array_map( array( $this, 'sanitize_language' ), (array) self::$defaults['target_languages'] );
-				$defaultTargets = array_filter(
-					$defaultTargets,
-					static function ( string $language ) use ( $sanitized ): bool {
-								return $language !== $sanitized['source_language'];
-					}
-				);
-
-			if ( empty( $defaultTargets ) && $sanitized['fallback_language'] !== $sanitized['source_language'] ) {
-				$defaultTargets = array( $sanitized['fallback_language'] );
-			}
-
-				$targets = array_values( array_unique( $defaultTargets ) );
-		}
-
-			$sanitized['target_languages'] = array_values( array_unique( $targets ) );
-
-                $sanitized['auto_translate'] = ! empty( $sanitized['auto_translate'] );
-
-                $postTypes = $sanitized['post_types'] ?? array();
-                if ( is_string( $postTypes ) ) {
-                        $postTypes = preg_split( '/[,\s]+/', $postTypes );
-                }
-                $postTypes = array_map( 'sanitize_key', (array) $postTypes );
-                $postTypes = array_filter( $postTypes );
-                $postTypes = array_values( array_unique( $postTypes ) );
-
-                if ( function_exists( 'post_type_exists' ) ) {
-                        $postTypes = array_values(
-                                array_filter(
-                                        $postTypes,
-                                        static function ( string $postType ): bool {
-                                                return post_type_exists( $postType );
-                                        }
-                                )
-                        );
-                }
-
-                if ( empty( $postTypes ) ) {
-                        $postTypes = array_map( 'sanitize_key', (array) self::$defaults['post_types'] );
-                }
-
-                $sanitized['post_types'] = $postTypes;
-
-                $taxonomies = $sanitized['taxonomies'] ?? array();
-                if ( is_string( $taxonomies ) ) {
-                        $taxonomies = preg_split( '/[,\s]+/', $taxonomies );
-                }
-
-                $taxonomies = array_map( 'sanitize_key', (array) $taxonomies );
-                $taxonomies = array_filter( $taxonomies );
-                $taxonomies = array_values( array_unique( $taxonomies ) );
-
-                if ( function_exists( 'taxonomy_exists' ) ) {
-                        $taxonomies = array_values(
-                                array_filter(
-                                        $taxonomies,
-                                        static function ( string $taxonomy ): bool {
-                                                return taxonomy_exists( $taxonomy );
-                                        }
-                                )
-                        );
-                }
-
-                if ( empty( $taxonomies ) ) {
-                        $taxonomies = array_map( 'sanitize_key', (array) self::$defaults['taxonomies'] );
-                }
-
-                $sanitized['taxonomies'] = $taxonomies;
-
-                $customFields = $sanitized['custom_fields'] ?? array();
-                if ( is_string( $customFields ) ) {
-                        $customFields = preg_split( '/[\r\n,]+/', $customFields );
-                }
-
-                $customFields = array_map( array( $this, 'sanitize_custom_field_key' ), (array) $customFields );
-                $customFields = array_filter( $customFields );
-                $sanitized['custom_fields'] = array_values( array_unique( $customFields ) );
-
-                foreach ( array( 'google', 'deepl' ) as $provider ) {
-						$providerOptions            = $sanitized['providers'][ $provider ] ?? array();
-						$providerOptions            = wp_parse_args( $providerOptions, self::$defaults['providers'][ $provider ] );
-						$providerOptions['enabled'] = ! empty( $providerOptions['enabled'] );
-						$providerOptions['api_key'] = sanitize_text_field( $providerOptions['api_key'] );
-			if ( isset( $providerOptions['timeout'] ) ) {
-						$providerOptions['timeout'] = max( 5, (int) $providerOptions['timeout'] );
-			}
-			if ( $providerOptions['enabled'] && '' === $providerOptions['api_key'] ) {
-									$providerOptions['enabled'] = false;
-
-									$providerLabel = 'deepl' === $provider ? 'DeepL' : ucfirst( $provider );
-									$message       = sprintf(
-						/* translators: %s is the provider name. */
-										__( 'Il provider %s è stato disabilitato perché manca la chiave API.', 'fp-multilanguage' ),
-										$providerLabel
-									);
-
-						$this->notices->add_notice( $message, 'warning', false );
-			}
-			if ( isset( $providerOptions['endpoint'] ) ) {
-						$providerOptions['endpoint'] = esc_url_raw( $providerOptions['endpoint'] );
-			}
-			if ( isset( $providerOptions['glossary_id'] ) ) {
-				$glossaryId = sanitize_text_field( $providerOptions['glossary_id'] );
-				$glossaryId = html_entity_decode( $glossaryId, ENT_QUOTES, 'UTF-8' );
-				$glossaryId = preg_replace( '/[\r\n]+/', '', $glossaryId );
-				if ( null === $glossaryId ) {
-						$glossaryId = '';
-				}
-
-				$providerOptions['glossary_id'] = trim( $glossaryId );
-			}
-			if ( 'google' === $provider ) {
-				$providerOptions['glossary_ignore_case'] = ! empty( $providerOptions['glossary_ignore_case'] );
-				if ( '' === $providerOptions['glossary_id'] ) {
-						$providerOptions['glossary_ignore_case'] = false;
-				}
-			}
-			if ( 'deepl' === $provider ) {
-				$formality = strtolower( sanitize_text_field( (string) ( $providerOptions['formality'] ?? '' ) ) );
-				$allowed   = array( 'default', 'more', 'less' );
-				if ( ! in_array( $formality, $allowed, true ) ) {
-						$formality = 'default';
-				}
-
-				$providerOptions['formality'] = $formality;
-			}
-						$sanitized['providers'][ $provider ] = $providerOptions;
-		}
-
-		if ( ! isset( $sanitized['seo'] ) || ! is_array( $sanitized['seo'] ) ) {
-			$sanitized['seo'] = self::$defaults['seo'];
-		} else {
-			foreach ( self::$defaults['seo'] as $key => $default ) {
-				$sanitized['seo'][ $key ] = isset( $sanitized['seo'][ $key ] ) ? (bool) $sanitized['seo'][ $key ] : (bool) $default;
-			}
-		}
-
-			$sanitized['quote_tracking'] = self::get_quote_tracking();
-
-			TranslationService::flush_cache();
-
-						self::set_cached_options( $sanitized );
-						CurrentLanguage::clear_cache();
-
-                        return $sanitized;
+                return $this->repository->sanitize_options( $input );
         }
 
-
-        /**
-         * @param array<string, mixed> $options
-         * @return array<string, mixed>|WP_Error
-         */
-        private function sanitize_provider_options( string $provider, array $options ) {
-                if ( ! isset( self::$defaults['providers'][ $provider ] ) ) {
-                        $message = __( 'Provider non valido.', 'fp-multilanguage' );
-
-                        return new WP_Error( 'invalid_provider', $message, array( 'status' => 400 ) );
-                }
-
-                $sanitized = wp_parse_args( $options, self::$defaults['providers'][ $provider ] );
-                $sanitized['enabled'] = ! empty( $sanitized['enabled'] );
-                $sanitized['api_key'] = sanitize_text_field( (string) ( $sanitized['api_key'] ?? '' ) );
-
-                if ( isset( $sanitized['timeout'] ) ) {
-                        $sanitized['timeout'] = max( 5, (int) $sanitized['timeout'] );
-                } else {
-                        $sanitized['timeout'] = 20;
-                }
-
-                if ( isset( $sanitized['endpoint'] ) ) {
-                        $sanitized['endpoint'] = esc_url_raw( (string) $sanitized['endpoint'] );
-                }
-
-                if ( isset( $sanitized['glossary_id'] ) ) {
-                        $glossaryId = sanitize_text_field( (string) $sanitized['glossary_id'] );
-                        $glossaryId = html_entity_decode( $glossaryId, ENT_QUOTES, 'UTF-8' );
-                        $glossaryId = preg_replace( '/[\r\n]+/', '', $glossaryId );
-                        if ( null === $glossaryId ) {
-                                $glossaryId = '';
-                        }
-
-                        $sanitized['glossary_id'] = trim( $glossaryId );
-                }
-
-                if ( 'google' === $provider ) {
-                        $sanitized['glossary_ignore_case'] = ! empty( $sanitized['glossary_ignore_case'] ) && '' !== $sanitized['glossary_id'];
-                }
-
-                if ( 'deepl' === $provider ) {
-                        $formality = strtolower( sanitize_text_field( (string) ( $sanitized['formality'] ?? '' ) ) );
-                        $allowed   = array( 'default', 'more', 'less' );
-                        if ( ! in_array( $formality, $allowed, true ) ) {
-                                $formality = 'default';
-                        }
-
-                        $sanitized['formality'] = $formality;
-                }
-
-                return $sanitized;
+        public static function get_options(): array {
+                return self::repository()->get_options();
         }
-
-
-        /**
-         * @param array<string, mixed> $options
-         * @return array{success:bool,message:string,details:array<string,mixed>}
-         */
-        private function test_provider_credentials( string $provider, array $options ): array {
-                switch ( $provider ) {
-                        case 'google':
-                                return $this->test_google_credentials( $options );
-                        case 'deepl':
-                                return $this->test_deepl_credentials( $options );
-                        default:
-                                return $this->provider_test_response( false, __( 'Provider non supportato.', 'fp-multilanguage' ) );
-                }
-        }
-
-
-        /**
-         * @param array<string, mixed> $options
-         * @return array{success:bool,message:string,details:array<string,mixed>}
-         */
-        private function test_google_credentials( array $options ): array {
-                $apiKey = (string) ( $options['api_key'] ?? '' );
-
-                if ( '' === $apiKey ) {
-                        return $this->provider_test_response( false, __( 'Inserisci una chiave API Google prima di avviare la verifica.', 'fp-multilanguage' ) );
-                }
-
-                if ( ! function_exists( 'wp_remote_get' ) ) {
-                        return $this->provider_test_response( false, __( 'La funzione di rete di WordPress non è disponibile.', 'fp-multilanguage' ) );
-                }
-
-                $endpoint = add_query_arg(
-                        array(
-                                'key'    => $apiKey,
-                                'target' => 'en',
-                        ),
-                        'https://translation.googleapis.com/language/translate/v2/languages'
-                );
-
-                $timeout  = isset( $options['timeout'] ) ? max( 5, (int) $options['timeout'] ) : 20;
-                $response = wp_remote_get(
-                        $endpoint,
-                        array(
-                                'timeout' => $timeout,
-                        )
-                );
-
-                if ( is_wp_error( $response ) ) {
-                        $errorMessage = $response->get_error_message();
-                        $this->logger->warning( 'Google credential test failed with WP_Error', array( 'error' => $errorMessage ) );
-
-                        return $this->provider_test_response(
-                                false,
-                                sprintf(
-                                        /* translators: %s error message */
-                                        __( 'Errore di connessione a Google: %s', 'fp-multilanguage' ),
-                                        $errorMessage
-                                )
-                        );
-                }
-
-                $status = wp_remote_retrieve_response_code( $response );
-                $body   = wp_remote_retrieve_body( $response );
-
-                if ( 200 !== $status ) {
-                        $message = $this->extract_google_error_message( $body );
-                        $this->logger->warning( 'Google credential test returned non-200 status', array( 'status' => $status, 'body' => $body ) );
-
-                        return $this->provider_test_response(
-                                false,
-                                sprintf(
-                                        /* translators: %s error message */
-                                        __( 'Verifica Google non riuscita: %s', 'fp-multilanguage' ),
-                                        $message
-                                )
-                        );
-                }
-
-                $decoded = json_decode( $body, true );
-                $languagesCount = 0;
-                if ( is_array( $decoded ) && isset( $decoded['data']['languages'] ) && is_array( $decoded['data']['languages'] ) ) {
-                        $languagesCount = count( $decoded['data']['languages'] );
-                }
-
-                return $this->provider_test_response(
-                        true,
-                        __( 'Connessione a Google riuscita.', 'fp-multilanguage' ),
-                        array(
-                                'languages' => $languagesCount,
-                        )
-                );
-        }
-
-
-        /**
-         * @param array<string, mixed> $options
-         * @return array{success:bool,message:string,details:array<string,mixed>}
-         */
-        private function test_deepl_credentials( array $options ): array {
-                $apiKey = (string) ( $options['api_key'] ?? '' );
-
-                if ( '' === $apiKey ) {
-                        return $this->provider_test_response( false, __( 'Inserisci una chiave API DeepL prima di avviare la verifica.', 'fp-multilanguage' ) );
-                }
-
-                if ( ! function_exists( 'wp_remote_get' ) ) {
-                        return $this->provider_test_response( false, __( 'La funzione di rete di WordPress non è disponibile.', 'fp-multilanguage' ) );
-                }
-
-                $endpoint = (string) ( $options['endpoint'] ?? self::$defaults['providers']['deepl']['endpoint'] );
-                if ( '' === $endpoint ) {
-                        $endpoint = self::$defaults['providers']['deepl']['endpoint'];
-                }
-
-                $baseEndpoint = rtrim( $endpoint, '/' );
-                if ( '' === $baseEndpoint ) {
-                        $baseEndpoint = 'https://api.deepl.com/v2/translate';
-                }
-
-                $usageEndpoint = preg_replace( '/\/translate$/', '/usage', $baseEndpoint );
-                if ( ! is_string( $usageEndpoint ) || '' === $usageEndpoint ) {
-                        $usageEndpoint = $baseEndpoint;
-                        if ( substr( $usageEndpoint, -6 ) !== '/usage' ) {
-                                $usageEndpoint .= '/usage';
-                        }
-                }
-
-                $usageEndpoint = rtrim( $usageEndpoint, '/' );
-                if ( '' === $usageEndpoint ) {
-                        $usageEndpoint = 'https://api.deepl.com/v2/usage';
-                }
-
-                $timeout = isset( $options['timeout'] ) ? max( 5, (int) $options['timeout'] ) : 20;
-
-                $response = wp_remote_get(
-                        $usageEndpoint,
-                        array(
-                                'timeout' => $timeout,
-                                'headers' => array(
-                                        'Authorization' => 'DeepL-Auth-Key ' . $apiKey,
-                                ),
-                        )
-                );
-
-                if ( is_wp_error( $response ) ) {
-                        $errorMessage = $response->get_error_message();
-                        $this->logger->warning( 'DeepL credential test failed with WP_Error', array( 'error' => $errorMessage ) );
-
-                        return $this->provider_test_response(
-                                false,
-                                sprintf(
-                                        /* translators: %s error message */
-                                        __( 'Errore di connessione a DeepL: %s', 'fp-multilanguage' ),
-                                        $errorMessage
-                                )
-                        );
-                }
-
-                $status = wp_remote_retrieve_response_code( $response );
-                $body   = wp_remote_retrieve_body( $response );
-
-                if ( 200 !== $status ) {
-                        $message = $this->extract_deepl_error_message( $body );
-                        $this->logger->warning( 'DeepL credential test returned non-200 status', array( 'status' => $status, 'body' => $body ) );
-
-                        return $this->provider_test_response(
-                                false,
-                                sprintf(
-                                        /* translators: %s error message */
-                                        __( 'Verifica DeepL non riuscita: %s', 'fp-multilanguage' ),
-                                        $message
-                                )
-                        );
-                }
-
-                $decoded = json_decode( $body, true );
-                $charactersUsed = (int) ( $decoded['character_count'] ?? 0 );
-                $characterLimit = isset( $decoded['character_limit'] ) ? (int) $decoded['character_limit'] : 0;
-                $remaining      = $characterLimit > 0 ? max( 0, $characterLimit - $charactersUsed ) : null;
-
-                $message = __( 'Connessione a DeepL riuscita.', 'fp-multilanguage' );
-                if ( null !== $remaining ) {
-                        $formatted = function_exists( 'number_format_i18n' ) ? number_format_i18n( $remaining ) : (string) $remaining;
-                        $message   = sprintf(
-                                /* translators: %s remaining characters */
-                                __( 'Connessione a DeepL riuscita. Caratteri residui: %s', 'fp-multilanguage' ),
-                                $formatted
-                        );
-                }
-
-                return $this->provider_test_response(
-                        true,
-                        $message,
-                        array(
-                                'character_count' => $charactersUsed,
-                                'character_limit' => $characterLimit,
-                        )
-                );
-        }
-
-
-        private function extract_google_error_message( $body ): string {
-                if ( is_string( $body ) ) {
-                        $decoded = json_decode( $body, true );
-                        if ( is_array( $decoded ) && isset( $decoded['error']['message'] ) ) {
-                                return (string) $decoded['error']['message'];
-                        }
-                }
-
-                return __( 'Risposta non valida da Google.', 'fp-multilanguage' );
-        }
-
-
-        private function extract_deepl_error_message( $body ): string {
-                if ( is_string( $body ) ) {
-                        $decoded = json_decode( $body, true );
-                        if ( is_array( $decoded ) && isset( $decoded['message'] ) ) {
-                                return (string) $decoded['message'];
-                        }
-                }
-
-                return __( 'Risposta non valida da DeepL.', 'fp-multilanguage' );
-        }
-
-
-        /**
-         * @param array<string, mixed> $details
-         * @return array{success:bool,message:string,details:array<string,mixed>}
-         */
-        private function provider_test_response( bool $success, string $message, array $details = array() ): array {
-                return array(
-                        'success' => $success,
-                        'message' => $message,
-                        'details' => $details,
-                );
-        }
-
-
-        private function sanitize_language( string $value ): string {
-                $value = sanitize_text_field( strtolower( $value ) );
-                $value = str_replace( array( ' ', '_' ), '-', $value );
-
-                        $value = preg_replace( '/[^a-z0-9-]/', '', $value );
-                if ( null === $value ) {
-                                return '';
-                }
-
-                        return trim( $value, '-' );
-        }
-
-        private function sanitize_custom_field_key( $value ): string {
-                if ( ! is_string( $value ) ) {
-                        return '';
-                }
-
-                $value = sanitize_text_field( $value );
-                $value = preg_replace( '/[^A-Za-z0-9:_-]/', '', $value );
-                if ( null === $value ) {
-                        return '';
-                }
-
-                return trim( $value );
-        }
-
-	public static function get_options(): array {
-		if ( null === self::$cachedOptions ) {
-			if ( ! function_exists( 'get_option' ) ) {
-				self::$cachedOptions = self::$defaults;
-			} else {
-					$optionsRaw          = get_option( self::OPTION_NAME, array() );
-					self::$cachedOptions = wp_parse_args( is_array( $optionsRaw ) ? $optionsRaw : array(), self::$defaults );
-			}
-		}
-
-			$options                   = self::$cachedOptions;
-			$options['quote_tracking'] = self::get_quote_tracking();
-
-			return $options;
-	}
 
         public static function get_manual_strings(): array {
-                $stored = get_option( self::MANUAL_STRINGS_OPTION, array() );
-
-                return is_array( $stored ) ? $stored : array();
+                return self::repository()->get_manual_strings();
         }
 
-        /**
-         * @return array<string, array{key:string,original:string,context:string,translations:array<string, string>}>|
-         *         array<string, array>
-         */
         public static function get_manual_strings_catalog(): array {
-                $catalog      = array();
-                $translations = self::get_manual_strings();
-                $metadata     = self::get_manual_string_metadata();
-
-                foreach ( $metadata as $key => $meta ) {
-                        if ( ! is_string( $key ) || '' === $key ) {
-                                continue;
-                        }
-
-                        $catalog[ $key ] = array(
-                                'key'          => $key,
-                                'original'     => isset( $meta['original'] ) ? (string) $meta['original'] : '',
-                                'context'      => isset( $meta['context'] ) ? (string) $meta['context'] : '',
-                                'translations' => isset( $translations[ $key ] ) && is_array( $translations[ $key ] ) ? $translations[ $key ] : array(),
-                        );
-                }
-
-                foreach ( $translations as $key => $values ) {
-                        if ( ! is_string( $key ) || '' === $key ) {
-                                continue;
-                        }
-
-                        $catalog[ $key ] = array(
-                                'key'          => $key,
-                                'original'     => $catalog[ $key ]['original'] ?? '',
-                                'context'      => $catalog[ $key ]['context'] ?? '',
-                                'translations' => is_array( $values ) ? $values : array(),
-                        );
-                }
-
-                ksort( $catalog );
-
-                return $catalog;
+                return self::repository()->get_manual_strings_catalog();
         }
 
-        /**
-         * @return array<string, array{context:string,original:string,updated:string}>
-         */
-        private static function get_manual_string_metadata(): array {
-                $metadata = array();
-
-                global $wpdb;
-
-                if ( isset( $wpdb ) && is_object( $wpdb ) && method_exists( $wpdb, 'get_results' ) && ! empty( $wpdb->prefix ) && class_exists( '\wpdb' ) ) {
-                        $table = $wpdb->prefix . 'fp_multilanguage_strings';
-
-                        if ( self::manual_strings_table_exists( $table ) ) {
-                                $tableName = esc_sql( $table );
-                                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-                                $rows = $wpdb->get_results( "SELECT string_key, context, original, updated_at FROM {$tableName}", ARRAY_A );
-
-                                if ( is_array( $rows ) ) {
-                                        foreach ( $rows as $row ) {
-                                                if ( ! is_array( $row ) ) {
-                                                        continue;
-                                                }
-
-                                                $key = isset( $row['string_key'] ) ? (string) $row['string_key'] : '';
-                                                if ( '' === $key ) {
-                                                        continue;
-                                                }
-
-                                                $metadata[ $key ] = array(
-                                                        'context'  => isset( $row['context'] ) ? (string) $row['context'] : '',
-                                                        'original' => isset( $row['original'] ) ? (string) $row['original'] : '',
-                                                        'updated'  => isset( $row['updated_at'] ) ? (string) $row['updated_at'] : '',
-                                                );
-                                        }
-                                }
-                        }
-                }
-
-                $fallback = get_option( 'fp_multilanguage_strings', array() );
-                if ( is_array( $fallback ) ) {
-                        foreach ( $fallback as $key => $data ) {
-                                $key = is_string( $key ) ? $key : (string) $key;
-                                if ( '' === $key ) {
-                                        continue;
-                                }
-
-                                if ( ! isset( $metadata[ $key ] ) ) {
-                                        $metadata[ $key ] = array(
-                                                'context'  => isset( $data['context'] ) ? (string) $data['context'] : '',
-                                                'original' => isset( $data['original'] ) ? (string) $data['original'] : '',
-                                                'updated'  => isset( $data['updated_at'] ) ? (string) $data['updated_at'] : '',
-                                        );
-                                } else {
-                                        if ( '' === $metadata[ $key ]['context'] && isset( $data['context'] ) ) {
-                                                $metadata[ $key ]['context'] = (string) $data['context'];
-                                        }
-
-                                        if ( '' === $metadata[ $key ]['original'] && isset( $data['original'] ) ) {
-                                                $metadata[ $key ]['original'] = (string) $data['original'];
-                                        }
-                                }
-                        }
-                }
-
-                return $metadata;
+        public static function get_quote_tracking(): array {
+                return self::repository()->get_quote_tracking();
         }
 
-	public static function get_quote_tracking(): array {
-		return TranslationService::get_usage_stats();
-	}
+        public static function update_manual_string( string $key, string $language, string $value ): void {
+                self::repository()->update_manual_string( $key, $language, $value );
+        }
 
-	public static function update_manual_string( string $key, string $language, string $value ): void {
-			$key = self::normalize_manual_string_key( $key );
-		if ( '' === $key ) {
-				return;
-		}
+        public static function get_enabled_providers(): array {
+                return self::repository()->get_enabled_providers();
+        }
 
-			$language = self::normalize_manual_string_language( $language );
-		if ( '' === $language ) {
-				return;
-		}
+        public static function get_provider_settings( string $provider ): array {
+                return self::repository()->get_provider_settings( $provider );
+        }
 
-			$value = self::sanitize_manual_string_value( $value );
+        public static function get_source_language(): string {
+                return self::repository()->get_source_language();
+        }
 
-			$strings      = self::get_manual_strings();
-			$translations = isset( $strings[ $key ] ) && is_array( $strings[ $key ] ) ? $strings[ $key ] : array();
-			$current      = $translations[ $language ] ?? null;
-
-		if ( '' === $value ) {
-			if ( ! isset( $translations[ $language ] ) ) {
-					return;
-			}
-
-				unset( $translations[ $language ] );
-			if ( empty( $translations ) ) {
-					unset( $strings[ $key ] );
-			} else {
-					$strings[ $key ] = $translations;
-			}
-		} else {
-			if ( $current === $value ) {
-					return;
-			}
-
-				$translations[ $language ] = $value;
-				$strings[ $key ]           = $translations;
-		}
-
-			update_option( self::MANUAL_STRINGS_OPTION, $strings );
-
-			self::sync_manual_string_storage( $key, $strings[ $key ] ?? array() );
-
-			TranslationService::flush_cache();
-
-		if ( function_exists( 'do_action' ) ) {
-				do_action(
-					'fp_multilanguage_manual_string_updated',
-					$key,
-					$language,
-					$value,
-					$strings[ $key ] ?? array()
-				);
-		}
-	}
-
-	public static function get_enabled_providers(): array {
-		$options = self::get_options();
-		$enabled = array();
-		foreach ( $options['providers'] as $name => $provider ) {
-			if ( ! empty( $provider['enabled'] ) ) {
-				$enabled[] = $name;
-			}
-		}
-
-		return $enabled;
-	}
-
-	public static function get_provider_settings( string $provider ): array {
-		$options = self::get_options();
-
-		return $options['providers'][ $provider ] ?? array();
-	}
-
-	public static function get_source_language(): string {
-		return self::get_options()['source_language'];
-	}
-
-	public static function get_fallback_language(): string {
-		return self::get_options()['fallback_language'];
-	}
+        public static function get_fallback_language(): string {
+                return self::repository()->get_fallback_language();
+        }
 
         public static function get_target_languages(): array {
-                return self::get_options()['target_languages'];
+                return self::repository()->get_target_languages();
         }
 
         public static function get_translatable_post_types(): array {
-                $postTypes = self::get_options()['post_types'] ?? array();
-
-                return array_values( array_unique( array_map( 'strval', (array) $postTypes ) ) );
+                return self::repository()->get_translatable_post_types();
         }
 
         public static function get_translatable_taxonomies(): array {
-                $taxonomies = self::get_options()['taxonomies'] ?? array();
-
-                return array_values( array_unique( array_map( 'strval', (array) $taxonomies ) ) );
+                return self::repository()->get_translatable_taxonomies();
         }
 
         public static function get_translatable_meta_keys(): array {
-                $customFields = self::get_options()['custom_fields'] ?? array();
-
-                return array_values( array_unique( array_map( 'strval', (array) $customFields ) ) );
+                return self::repository()->get_translatable_meta_keys();
         }
 
         public static function is_auto_translate_enabled(): bool {
-                        return (bool) self::get_options()['auto_translate'];
+                return self::repository()->is_auto_translate_enabled();
         }
 
-	public static function clear_cache(): void {
-			self::$cachedOptions = null;
-	}
+        public static function clear_cache(): void {
+                self::repository()->clear_cache();
+        }
 
-	private static function set_cached_options( array $options ): void {
-					self::$cachedOptions = $options;
-	}
+        private static function repository(): SettingsRepository {
+                if ( null === self::$repositoryInstance ) {
+                        self::$repositoryInstance = new SettingsRepository( new AdminNotices( new Logger() ) );
+                }
 
-	private static function normalize_manual_string_key( string $key ): string {
-					$normalized = sanitize_key( $key );
-
-			return $normalized;
-	}
-
-	private static function normalize_manual_string_language( string $language ): string {
-					return sanitize_key( $language );
-	}
-
-	private static function sanitize_manual_string_value( string $value ): string {
-		if ( function_exists( 'wp_kses_post' ) ) {
-				$value = wp_kses_post( $value );
-		} elseif ( function_exists( 'sanitize_text_field' ) ) {
-				$value = sanitize_text_field( $value );
-		}
-
-			$value = preg_replace( '#<script\b[^>]*>(.*?)</script>#is', '', (string) $value );
-		if ( null === $value ) {
-				$value = '';
-		}
-
-					$value = trim( (string) $value );
-
-			return $value;
-	}
-
-	private static function sync_manual_string_storage( string $key, array $translations ): void {
-			self::sync_manual_string_table( $key, $translations );
-			self::sync_manual_string_fallback( $key, $translations );
-	}
-
-	private static function sync_manual_string_table( string $key, array $translations ): void {
-		global $wpdb;
-
-		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
-			return;
-		}
-
-		if ( empty( $wpdb->prefix ) ) {
-			return;
-		}
-
-		$table = $wpdb->prefix . 'fp_multilanguage_strings';
-
-		if ( ! self::manual_strings_table_exists( $table ) ) {
-			return;
-		}
-
-		if ( empty( $translations ) ) {
-			$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-				$table,
-				array( 'string_key' => $key ),
-				array( '%s' )
-			);
-
-			return;
-		}
-
-		$context  = '';
-		$original = '';
-
-		$table_name = esc_sql( $table );
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared -- table name sanitized above.
-		$existing = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->prepare(
-				"SELECT context, original FROM {$table_name} WHERE string_key = %s",
-				$key
-			),
-// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared
-			'ARRAY_A'
-		);
-
-		if ( is_array( $existing ) ) {
-			$context  = isset( $existing['context'] ) ? (string) $existing['context'] : '';
-			$original = isset( $existing['original'] ) ? (string) $existing['original'] : '';
-		} else {
-			$fallback = get_option( 'fp_multilanguage_strings', array() );
-			if ( isset( $fallback[ $key ] ) && is_array( $fallback[ $key ] ) ) {
-				$context  = isset( $fallback[ $key ]['context'] ) ? (string) $fallback[ $key ]['context'] : '';
-				$original = isset( $fallback[ $key ]['original'] ) ? (string) $fallback[ $key ]['original'] : '';
-			}
-		}
-
-		if ( function_exists( 'wp_json_encode' ) ) {
-			$translationsJson = wp_json_encode( $translations );
-			if ( false === $translationsJson ) {
-				$translationsJson = wp_json_encode( array() );
-			}
-		} else {
-			$translationsJson = json_encode( $translations );
-			if ( false === $translationsJson ) {
-				$translationsJson = json_encode( array() );
-			}
-		}
-
-		if ( false === $translationsJson || null === $translationsJson ) {
-			$translationsJson = '[]';
-		}
-
-		$wpdb->replace( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$table,
-			array(
-				'string_key'   => $key,
-				'context'      => $context,
-				'original'     => $original,
-				'translations' => $translationsJson,
-				'updated_at'   => current_time( 'mysql', true ),
-			),
-			array( '%s', '%s', '%s', '%s', '%s' )
-		);
-	}
-	private static function manual_strings_table_exists( string $table ): bool {
-		global $wpdb;
-
-		if ( ! isset( $wpdb ) || ! $wpdb instanceof \wpdb ) {
-				return false;
-		}
-
-		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-
-		return null !== $exists;
-	}
-
-	private static function sync_manual_string_fallback( string $key, array $translations ): void {
-			$option = get_option( 'fp_multilanguage_strings', array() );
-		if ( ! is_array( $option ) ) {
-				$option = array();
-		}
-
-			$entry = $option[ $key ] ?? array();
-		if ( ! is_array( $entry ) ) {
-				$entry = array();
-		}
-
-		if ( empty( $translations ) ) {
-				unset( $entry['translations'] );
-
-				$entryWithoutMeta = $entry;
-				unset( $entryWithoutMeta['updated_at'] );
-
-			if ( empty( $entryWithoutMeta ) ) {
-					unset( $option[ $key ] );
-			} else {
-					$entry['updated_at'] = time();
-					$option[ $key ]      = $entry;
-			}
-		} else {
-				$entry['translations'] = $translations;
-				$entry['updated_at']   = time();
-				$option[ $key ]        = $entry;
-		}
-
-			update_option( 'fp_multilanguage_strings', $option );
-	}
+                return self::$repositoryInstance;
+        }
 }
