@@ -16,10 +16,11 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 - **Provider dedicati** (`GoogleProvider`, `DeepLProvider`) basati su `TranslationProviderInterface` e estensibilità tramite filtro `fp_multilanguage_provider_sequence`.
 - **Glossari personalizzati** configurabili da backend per Google Cloud e DeepL (ID risorsa, ignore-case, livello di formalità).
 - **Risoluzione lingua corrente** tramite query var, cookie, preferenze utente, URL rewriting e filtri.
-- **Gestione contenuti** con traduzione automatica su `save_post` e `wp_insert_comment`, esposizione REST/CLI, filtri front-end (`the_content`, `the_title`, `get_the_excerpt`, `wp_get_attachment_image_attributes`, `comment_text`) e metadati persistiti.
-- **Stringhe dinamiche** con storage in tabella custom (`wp_fp_multilanguage_strings`), API REST, AJAX editor inline e fallback JS.
+- **Gestione contenuti** con traduzione automatica su `save_post`, termini tassonomici e `wp_insert_comment`, esposizione REST/CLI, filtri front-end (`the_content`, `the_title`, `get_the_excerpt`, `wp_get_attachment_image_attributes`, `comment_text`) e metadati persistiti.
+- **Stringhe dinamiche** con storage in tabella custom (`wp_fp_multilanguage_strings`), pannello di gestione centralizzato, API REST, AJAX editor inline e fallback JS.
+- **Onboarding guidato** con procedura in tre step per lingue, provider e riepilogo con test credenziali integrato.
 - **SEO avanzato**: meta box per title/description/slug per lingua, tag `hreflang`, `canonical`, `og:*`, sitemap alternate, integrazione `robots.txt`.
-- **Widget e shortcode** per lo switcher linguistico con localStorage/cookie per ricordare la scelta.
+- **Widget, shortcode e blocco Gutenberg** per lo switcher linguistico con localStorage/cookie per ricordare la scelta.
 - **CLI** (`wp fp-multilanguage translate <post_id> [--language=xx]`) per rigenerare traduzioni.
 - **Asset pipeline** basata su Vite (`npm run build`), con script frontend/admin dedicati.
 - **Tooling**: PHPUnit, PHPStan, PHPCS (WordPress-Core), Mockery, Brain Monkey e composer scripts (`test`, `lint`, `stan`, `qa`).
@@ -45,7 +46,8 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 
 ## Configurazione
 
-- Vai in **Impostazioni → FP Multilanguage** per definire lingua sorgente/fallback, lingue di destinazione, provider (Google/DeepL), SEO e monitor quote.
+- Avvia la **Configurazione guidata** da **Impostazioni → FP Multilanguage → Configurazione guidata** per completare i passaggi essenziali (lingue, provider, riepilogo) testando le chiavi prima del salvataggio.
+- Vai in **Impostazioni → FP Multilanguage** per definire lingua sorgente/fallback, lingue di destinazione, provider (Google/DeepL), SEO, tassonomie/post type da tradurre e monitor quote.
 - I codici lingua sono normalizzati automaticamente e supportano formati regionali (`pt-BR`, `es-ES`, `zh-Hant`).
 - Il bottone “Sincronizza via REST” usa `admin.js` per inviare le opzioni all’endpoint `fp-multilanguage/v1/settings` (nonce `fp_multilanguage_settings`).
 - Le traduzioni manuali delle stringhe sono gestite tramite AJAX (`wp_ajax_fp_multilanguage_save_string`) e REST (`fp-multilanguage/v1/strings`).
@@ -54,7 +56,7 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 
 ### Traduzione post e pagine
 
-- Ogni salvataggio di post/pagine genera traduzioni (`_fp_multilanguage_translations`) per campi core e metadati custom definiti da `fp_multilanguage_custom_fields`.
+- Ogni salvataggio di post/pagine genera traduzioni (`_fp_multilanguage_translations`) per campi core e metadati custom definiti da `fp_multilanguage_custom_fields`, mentre i termini tassonomici selezionati da UI vengono sincronizzati automaticamente (meta `_fp_multilanguage_term_translations`).
 - Front-end: la lingua corrente è selezionata con query var `fp_lang`, cookie `fp_multilanguage_lang`, preferenze utente o filtri. I contenuti localizzati sono restituiti dai filtri registrati.
 - REST: i dati sono esposti nel campo `fp_multilanguage` per post, pagine e media.
 - CLI: `wp fp-multilanguage translate 42 --language=it` forza la rigenerazione della lingua indicata.
@@ -63,7 +65,7 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 
 - Filtri registrati: `gettext`, `gettext_with_context`, `ngettext`, `widget_title`, `widget_text_content`, `nav_menu_item_title`, `theme_mod_custom_logo`.
 - `dynamic-translations.js` abilita la modifica inline (dblclick) per utenti con `manage_options` e salva via AJAX.
-- Le stringhe sono persistite nella tabella `wp_fp_multilanguage_strings` (fallback su opzione) con meta dati JSON.
+- Le stringhe sono persistite nella tabella `wp_fp_multilanguage_strings` (fallback su opzione) con meta dati JSON e sono modificabili anche da una schermata amministrativa con ricerca e textarea per lingua.
 
 ### SEO
 
@@ -71,9 +73,9 @@ FP Multilanguage è un plugin WordPress enterprise-ready per orchestrare contenu
 - Output `hreflang`, `canonical`, `og:*`, `meta description` e sitemap alternate (anche con Yoast/Rank Math grazie ai filtri `wpseo_*`).
 - `robots.txt` dinamico aggiunge link alla sitemap localizzata.
 
-### Widget/Shortcode
+### Widget, shortcode e blocco
 
-- Widget **FP Multilanguage Switcher** e shortcode `[fp_language_switcher layout="inline"]`.
+- Widget **FP Multilanguage Switcher**, blocco `fp-multilanguage/language-switcher` per l'editor a blocchi e shortcode `[fp_language_switcher layout="inline"]`.
 - `frontend.js` sincronizza cookie e localStorage per ricordare la lingua.
 
 ## Comandi utili

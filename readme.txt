@@ -19,18 +19,20 @@ Francesco Passeri – [francescopasseri.com](https://francescopasseri.com) – i
 FP Multilanguage offre:
 
 * pagina impostazioni con sezione provider, SEO, quote e sincronizzazione REST.
-* traduzione automatica dei post/pagine con meta dedicati e filtri front-end.
-* storage delle stringhe dinamiche con editor inline e API REST.
+* traduzione automatica di post/pagine, tassonomie e commenti con meta dedicati e filtri front-end.
+* storage delle stringhe dinamiche con editor inline, pannello dedicato nel back-office e API REST.
+* configurazione guidata in tre step con verifica credenziali dei provider prima del salvataggio.
 * meta SEO multilingua (hreflang, canonical, og:locale) e sitemap alternate.
-* widget e shortcode per il language switcher.
+* widget, shortcode e blocco Gutenberg per il language switcher.
 * CLI `wp fp-multilanguage translate`.
 
 == Installation ==
 
 1. Carica la cartella `fp-multilanguage` in `wp-content/plugins/`.
 2. Attiva il plugin dalla schermata "Plugin" in WordPress.
-3. Configura le lingue e le chiavi API in Impostazioni → FP Multilanguage.
-4. Inserisci i codici lingua nel formato desiderato (ad es. `pt-BR`, `zh-Hant`): il plugin li normalizza automaticamente.
+3. Avvia la procedura in Impostazioni → FP Multilanguage → Configurazione guidata per completare i passaggi essenziali.
+4. Configura le lingue, le tassonomie/post type da tradurre e le chiavi API in Impostazioni → FP Multilanguage.
+5. Inserisci i codici lingua nel formato desiderato (ad es. `pt-BR`, `zh-Hant`): il plugin li normalizza automaticamente.
 
 == Frequently Asked Questions ==
 
