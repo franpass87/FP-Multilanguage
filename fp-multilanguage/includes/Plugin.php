@@ -3,9 +3,11 @@ namespace FPMultilanguage;
 
 use FPMultilanguage\Admin\AdminNotices;
 use FPMultilanguage\Admin\Settings;
+use FPMultilanguage\Blocks\LanguageSwitcherBlock;
 use FPMultilanguage\CLI\Commands;
 use FPMultilanguage\Content\CommentTranslationManager;
 use FPMultilanguage\Content\PostTranslationManager;
+use FPMultilanguage\Content\TermTranslationManager;
 use FPMultilanguage\Dynamic\DynamicStrings;
 use FPMultilanguage\Install\Migrator;
 use FPMultilanguage\SEO\SEO;
@@ -83,10 +85,20 @@ class Plugin {
                         $commentTranslationManager->register();
                 }
 
-		$dynamicStrings = $this->container->get( 'dynamic_strings' );
-		if ( $dynamicStrings instanceof DynamicStrings ) {
-			$dynamicStrings->register();
-		}
+                $termTranslationManager = $this->container->get( 'term_translation_manager' );
+                if ( $termTranslationManager instanceof TermTranslationManager ) {
+                        $termTranslationManager->register();
+                }
+
+                $dynamicStrings = $this->container->get( 'dynamic_strings' );
+                if ( $dynamicStrings instanceof DynamicStrings ) {
+                        $dynamicStrings->register();
+                }
+
+                $languageSwitcherBlock = $this->container->get( 'language_switcher_block' );
+                if ( $languageSwitcherBlock instanceof LanguageSwitcherBlock ) {
+                        $languageSwitcherBlock->register();
+                }
 
 		$seo = $this->container->get( 'seo' );
 		if ( $seo instanceof SEO ) {
@@ -191,12 +203,13 @@ class Plugin {
 		}
 
 		delete_option( Settings::OPTION_NAME );
-		delete_option( Settings::MANUAL_STRINGS_OPTION );
-		delete_option( 'fp_multilanguage_quota' );
-		delete_option( self::VERSION_OPTION );
-		delete_option( SEO::SLUG_INDEX_OPTION );
+                delete_option( Settings::MANUAL_STRINGS_OPTION );
+                delete_option( 'fp_multilanguage_quota' );
+                delete_option( self::VERSION_OPTION );
+                delete_option( SEO::SLUG_INDEX_OPTION );
+                delete_option( Logger::LOG_STORE_OPTION );
 
-		$migrator = $container->get( 'migrator' );
+                $migrator = $container->get( 'migrator' );
 		if ( $migrator instanceof Migrator ) {
 			$migrator->drop_tables();
 		}
@@ -266,6 +279,18 @@ class Plugin {
                         }
                 );
 
+                $container->set(
+                        'term_translation_manager',
+                        static function ( Container $c ): TermTranslationManager {
+                                return new TermTranslationManager(
+                                        $c->get( 'translation_service' ),
+                                        $c->get( 'settings' ),
+                                        $c->get( 'notices' ),
+                                        $c->get( 'logger' )
+                                );
+                        }
+                );
+
 		$container->set(
 			'dynamic_strings',
 			static function ( Container $c ): DynamicStrings {
@@ -300,12 +325,21 @@ class Plugin {
 			}
 		);
 
-		$container->set(
-			'language_switcher',
-			static function ( Container $c ): LanguageSwitcher {
-				return new LanguageSwitcher();
-			}
-		);
+                $container->set(
+                        'language_switcher',
+                        static function ( Container $c ): LanguageSwitcher {
+                                unset( $c );
+
+                                return new LanguageSwitcher();
+                        }
+                );
+
+                $container->set(
+                        'language_switcher_block',
+                        static function ( Container $c ): LanguageSwitcherBlock {
+                                return new LanguageSwitcherBlock( $c->get( 'language_switcher' ) );
+                        }
+                );
 
                 $container->set(
                         'cli_commands',
