@@ -9,6 +9,7 @@ use FPMultilanguage\Services\TranslationService;
 use ArrayAccess;
 use WP_Error;
 use WP_Post;
+use WP_REST_Request;
 
 class PostTranslationManager {
 
@@ -437,8 +438,13 @@ class PostTranslationManager {
                 $routeArgs = array(
                         'methods'             => array( 'POST' ),
                         'callback'            => array( $this, 'rest_translate_post' ),
-                        'permission_callback' => static function () {
-                                return current_user_can( 'edit_posts' );
+                        'permission_callback' => static function ( WP_REST_Request $request ): bool {
+                                $postId = (int) $request->get_param( 'id' );
+                                if ( $postId <= 0 ) {
+                                        return false;
+                                }
+
+                                return current_user_can( 'edit_post', $postId );
                         },
                 );
 
@@ -500,6 +506,14 @@ class PostTranslationManager {
                                 'rest_post_invalid_id',
                                 __( 'Contenuto non trovato.', 'fp-multilanguage' ),
                                 array( 'status' => 404 )
+                        );
+                }
+
+                if ( ! current_user_can( 'edit_post', $postId ) ) {
+                        return new WP_Error(
+                                'rest_forbidden',
+                                __( 'Non hai il permesso di tradurre questo contenuto.', 'fp-multilanguage' ),
+                                array( 'status' => 403 )
                         );
                 }
 
