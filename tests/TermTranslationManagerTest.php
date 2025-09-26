@@ -26,6 +26,7 @@ use FPMultilanguage\Content\TermTranslationManager;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\Providers\GoogleProvider;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class TermTranslationManagerTest extends TestCase
@@ -83,10 +84,11 @@ class TermTranslationManagerTest extends TestCase
         $options['taxonomies'] = ['category', 'product_cat'];
         update_option(Settings::OPTION_NAME, $options);
         Settings::clear_cache();
+        $this->assertContains('google', Settings::get_enabled_providers(), 'Il provider Google deve essere abilitato per i test.');
 
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
-        $this->settings = new Settings($this->logger, $this->notices);
+        $this->settings = SettingsFactory::create($this->logger, $this->notices);
         $this->service = new TranslationService($this->logger, $this->notices, $this->settings, [new GoogleProvider($this->logger)]);
     }
 
@@ -167,13 +169,14 @@ class TermTranslationManagerTest extends TestCase
         });
 
         $manager = new TermTranslationManager($this->service, $this->settings, $this->notices, $this->logger);
-        $response = (object) ['data' => []];
-        $result = $manager->expose_translations($response, $term, null);
+        $response = new \WP_REST_Response([]);
+        $result = $manager->expose_translations($response, $term, new \WP_REST_Request());
 
-        $this->assertIsArray($result->data['fp_multilanguage']);
-        $this->assertSame('it', $result->data['fp_multilanguage']['language']);
-        $this->assertArrayHasKey('it', $result->data['fp_multilanguage']['translations']);
-        $this->assertSame('Categoria tradotta', $result->data['fp_multilanguage']['translations']['it']['name']);
+        $data = $result->get_data();
+        $this->assertIsArray($data['fp_multilanguage']);
+        $this->assertSame('it', $data['fp_multilanguage']['language']);
+        $this->assertArrayHasKey('it', $data['fp_multilanguage']['translations']);
+        $this->assertSame('Categoria tradotta', $data['fp_multilanguage']['translations']['it']['name']);
     }
 }
 }

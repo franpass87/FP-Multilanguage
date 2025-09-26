@@ -6,34 +6,41 @@ use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Support\RestNonceValidator;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
 
 class DynamicStrings {
 
-        private TranslationService $translationService;
+	private TranslationService $translationService;
 
-        private Settings $settings;
+	private Settings $settings;
 
-        private AdminNotices $notices;
+	private AdminNotices $notices;
 
-        private Logger $logger;
+	private Logger $logger;
 
-        /**
-         * @var array<string, string>
-         */
-        private static array $memoryStringCache = array();
+	private RestNonceValidator $restNonceValidator;
 
-        /**
-         * @var array<string, array{context: string, original: string}|null>
-         */
-        private static array $persistedStringCache = array();
+		/**
+		 * @var array<string, string>
+		 */
+	private static array $memoryStringCache = array();
 
-        private static ?array $optionStringCache = null;
+		/**
+		 * @var array<string, array{context: string, original: string}|null>
+		 */
+	private static array $persistedStringCache = array();
 
-	public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger ) {
+	private static ?array $optionStringCache = null;
+
+	public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger, ?RestNonceValidator $restNonceValidator = null ) {
 		$this->translationService = $translationService;
 		$this->settings           = $settings;
 		$this->notices            = $notices;
 		$this->logger             = $logger;
+		$this->restNonceValidator = $restNonceValidator ?? new RestNonceValidator();
 	}
 
 	public function register(): void {
@@ -140,8 +147,8 @@ class DynamicStrings {
 			array(
 				array(
 					'methods'             => 'GET',
-					'callback'            => function () {
-						return rest_ensure_response( Settings::get_manual_strings() );
+					'callback'            => function ( WP_REST_Request $request ) {
+						return $this->rest_get_strings( $request );
 					},
 					'permission_callback' => array( $this, 'rest_permissions' ),
 				),
@@ -154,27 +161,69 @@ class DynamicStrings {
 		);
 	}
 
-	public function rest_permissions(): bool {
-		return current_user_can( 'manage_options' );
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 *
+	 * @return bool|WP_Error
+	 */
+	public function rest_permissions( WP_REST_Request $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		if ( 'GET' === $request->get_method() && ! $this->restNonceValidator->validate( $request, array( 'fp_multilanguage_manual_string', 'wp_rest' ) ) ) {
+			return new WP_Error( 'invalid_nonce', __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' ), array( 'status' => 403 ) );
+		}
+
+		return true;
 	}
 
-	public function rest_update_strings( $request ) {
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 *
+	 * @return WP_Error|WP_REST_Response
+	 */
+	public function rest_update_strings( WP_REST_Request $request ) {
+		if ( ! $this->restNonceValidator->validate( $request, array( 'fp_multilanguage_manual_string', 'wp_rest' ) ) ) {
+			return new WP_Error( 'invalid_nonce', __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' ), array( 'status' => 403 ) );
+		}
+
 		$body = $request->get_json_params();
 		if ( ! is_array( $body ) ) {
-			return new \WP_Error( 'invalid_body', __( 'Formato non valido.', 'fp-multilanguage' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_body', __( 'Formato non valido.', 'fp-multilanguage' ), array( 'status' => 400 ) );
 		}
 
 		foreach ( $body as $key => $translations ) {
-			if ( ! is_array( $translations ) ) {
+			$normalizedKey = sanitize_key( (string) $key );
+			if ( '' === $normalizedKey || ! is_array( $translations ) ) {
 				continue;
 			}
 
 			foreach ( $translations as $language => $value ) {
-				Settings::update_manual_string( sanitize_text_field( $key ), sanitize_key( $language ), (string) $value );
+				$normalizedLanguage = sanitize_key( (string) $language );
+				if ( '' === $normalizedLanguage ) {
+					continue;
+				}
+
+				$stringValue = is_scalar( $value ) ? (string) $value : '';
+
+				Settings::update_manual_string( $normalizedKey, $normalizedLanguage, $stringValue );
 			}
 		}
 
 		TranslationService::flush_cache();
+
+		return rest_ensure_response( Settings::get_manual_strings() );
+	}
+
+	/**
+	 * @param WP_REST_Request<array<string, mixed>> $request
+	 * @return WP_Error|WP_REST_Response
+	 */
+	private function rest_get_strings( WP_REST_Request $request ) {
+		if ( ! $this->restNonceValidator->validate( $request, array( 'fp_multilanguage_manual_string', 'wp_rest' ) ) ) {
+			return new WP_Error( 'invalid_nonce', __( 'Nonce di sicurezza non valido.', 'fp-multilanguage' ), array( 'status' => 403 ) );
+		}
 
 		return rest_ensure_response( Settings::get_manual_strings() );
 	}
@@ -327,198 +376,210 @@ class DynamicStrings {
 		return '';
 	}
 
-        private function store_string( string $key, string $original, string $context ): void {
-                $signature = $this->build_signature( $context, $original );
+	private function store_string( string $key, string $original, string $context ): void {
+			$signature = $this->build_signature( $context, $original );
 
-                if ( $this->should_skip_persistence( $key, $context, $original, $signature ) ) {
-                        return;
-                }
+		if ( $this->should_skip_persistence( $key, $context, $original, $signature ) ) {
+				return;
+		}
 
-                global $wpdb;
-                if ( isset( $wpdb ) && isset( $wpdb->prefix ) ) {
-                        $table = $wpdb->prefix . 'fp_multilanguage_strings';
-                        $data  = array(
-                                'string_key'   => $key,
+			global $wpdb;
+
+		if ( ! $wpdb instanceof \wpdb ) {
+				return;
+		}
+
+			$table = $wpdb->prefix . 'fp_multilanguage_strings';
+			$data  = array(
+				'string_key'   => $key,
 				'context'      => $context,
 				'original'     => $original,
 				'translations' => wp_json_encode( Settings::get_manual_strings()[ $key ] ?? array() ),
 				'updated_at'   => current_time( 'mysql', true ),
 			);
 
-                        if ( $this->table_exists( $table ) ) {
-                                $wpdb->replace( $table, $data, array( '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( $this->table_exists( $table ) ) {
+							$wpdb->replace( $table, $data, array( '%s', '%s', '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 
-                                self::$persistedStringCache[ $key ] = array(
-                                        'context'  => $context,
-                                        'original' => $original,
-                                );
-                                self::$memoryStringCache[ $key ]    = $signature;
+							self::$persistedStringCache[ $key ] = array(
+								'context'  => $context,
+								'original' => $original,
+							);
+							self::$memoryStringCache[ $key ]    = $signature;
 
-                                $this->logger->debug(
-                                        'Persisted dynamic string in database.',
-                                        array(
-                                                'key'     => $key,
-                                                'context' => $context,
-                                        )
-                                );
+							$this->logger->debug(
+								'Persisted dynamic string in database.',
+								array(
+									'key'     => $key,
+									'context' => $context,
+								)
+							);
 
-                                return;
-                        }
-                }
+							Settings::clear_manual_strings_metadata_cache();
 
-                // Fallback: keep a simple cache in options for tests environments.
-                $option = $this->get_option_strings();
+							return;
+			}
 
-                $option[ $key ] = array(
-                        'context'    => $context,
-                        'original'   => $original,
-                        'updated_at' => time(),
-                );
+			// Fallback: keep a simple cache in options for tests environments.
+			$option = $this->get_option_strings();
 
-                $this->update_option_cache( $option );
+			$option[ $key ] = array(
+				'context'    => $context,
+				'original'   => $original,
+				'updated_at' => time(),
+			);
 
-                update_option( 'fp_multilanguage_strings', $option );
+			$this->update_option_cache( $option );
 
-                self::$persistedStringCache[ $key ] = array(
-                        'context'  => $context,
-                        'original' => $original,
-                );
-                self::$memoryStringCache[ $key ]    = $signature;
+			update_option( 'fp_multilanguage_strings', $option );
 
-                $this->logger->debug(
-                        'Persisted dynamic string in option storage.',
-                        array(
-                                'key'     => $key,
-                                'context' => $context,
-                        )
-                );
-        }
+						self::$persistedStringCache[ $key ] = array(
+							'context'  => $context,
+							'original' => $original,
+						);
+						self::$memoryStringCache[ $key ]    = $signature;
 
-        private function table_exists( string $table ): bool {
-                global $wpdb;
-                if ( ! isset( $wpdb ) ) {
+						$this->logger->debug(
+							'Persisted dynamic string in option storage.',
+							array(
+								'key'     => $key,
+								'context' => $context,
+							)
+						);
+
+						Settings::clear_manual_strings_metadata_cache();
+	}
+
+	private function table_exists( string $table ): bool {
+			global $wpdb;
+		if ( ! isset( $wpdb ) ) {
 			return false;
 		}
 
-		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
-                return $exists !== null;
-        }
+			return $exists !== null;
+	}
 
-        private function should_skip_persistence( string $key, string $context, string $original, string $signature ): bool {
-                if ( isset( self::$memoryStringCache[ $key ] ) && self::$memoryStringCache[ $key ] === $signature ) {
-                        $this->logger->debug(
-                                'Skipped dynamic string persistence (memory cache).',
-                                array(
-                                        'key'     => $key,
-                                        'context' => $context,
-                                )
-                        );
+	private function should_skip_persistence( string $key, string $context, string $original, string $signature ): bool {
+		if ( isset( self::$memoryStringCache[ $key ] ) && self::$memoryStringCache[ $key ] === $signature ) {
+				$this->logger->debug(
+					'Skipped dynamic string persistence (memory cache).',
+					array(
+						'key'     => $key,
+						'context' => $context,
+					)
+				);
 
-                        return true;
-                }
+				return true;
+		}
 
-                $persisted = $this->get_persisted_string( $key );
-                if ( $persisted !== null && $persisted['context'] === $context && $persisted['original'] === $original ) {
-                        self::$memoryStringCache[ $key ] = $signature;
+			$persisted = $this->get_persisted_string( $key );
+		if ( $persisted !== null && $persisted['context'] === $context && $persisted['original'] === $original ) {
+				self::$memoryStringCache[ $key ] = $signature;
 
-                        $this->logger->debug(
-                                'Skipped dynamic string persistence (unchanged record).',
-                                array(
-                                        'key'     => $key,
-                                        'context' => $context,
-                                )
-                        );
+				$this->logger->debug(
+					'Skipped dynamic string persistence (unchanged record).',
+					array(
+						'key'     => $key,
+						'context' => $context,
+					)
+				);
 
-                        return true;
-                }
+				return true;
+		}
 
-                self::$memoryStringCache[ $key ] = $signature;
+			self::$memoryStringCache[ $key ] = $signature;
 
-                return false;
-        }
+			return false;
+	}
 
-        private function get_persisted_string( string $key ): ?array {
-                if ( array_key_exists( $key, self::$persistedStringCache ) ) {
-                        return self::$persistedStringCache[ $key ];
-                }
+	private function get_persisted_string( string $key ): ?array {
+		if ( array_key_exists( $key, self::$persistedStringCache ) ) {
+				return self::$persistedStringCache[ $key ];
+		}
 
-                global $wpdb;
-                if ( isset( $wpdb ) && isset( $wpdb->prefix ) ) {
-                        $table = $wpdb->prefix . 'fp_multilanguage_strings';
-                        if ( $this->table_exists( $table ) ) {
-                                $row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-                                        $wpdb->prepare( "SELECT context, original FROM {$table} WHERE string_key = %s LIMIT 1", $key ),
-                                        ARRAY_A
-                                );
+			global $wpdb;
 
-                                if ( is_array( $row ) ) {
-                                        $persisted = array(
-                                                'context'  => (string) ( $row['context'] ?? '' ),
-                                                'original' => (string) ( $row['original'] ?? '' ),
-                                        );
+		if ( $wpdb instanceof \wpdb ) {
+				$table = $wpdb->prefix . 'fp_multilanguage_strings';
+			if ( $this->table_exists( $table ) ) {
+					$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->prepare(
+							'SELECT context, original FROM %i WHERE string_key = %s LIMIT 1',
+							$table,
+							$key
+						),
+						ARRAY_A
+					);
 
-                                        self::$persistedStringCache[ $key ] = $persisted;
+				if ( is_array( $row ) ) {
+					$persisted = array(
+						'context'  => (string) ( $row['context'] ?? '' ),
+						'original' => (string) ( $row['original'] ?? '' ),
+					);
 
-                                        return $persisted;
-                                }
-                        }
-                }
+					self::$persistedStringCache[ $key ] = $persisted;
 
-                $option = $this->get_option_strings();
-                if ( isset( $option[ $key ] ) && is_array( $option[ $key ] ) ) {
-                        $persisted = array(
-                                'context'  => (string) ( $option[ $key ]['context'] ?? '' ),
-                                'original' => (string) ( $option[ $key ]['original'] ?? '' ),
-                        );
+					return $persisted;
+				}
+			}
+		}
 
-                        self::$persistedStringCache[ $key ] = $persisted;
+			$option = $this->get_option_strings();
+		if ( isset( $option[ $key ] ) && is_array( $option[ $key ] ) ) {
+				$persisted = array(
+					'context'  => (string) ( $option[ $key ]['context'] ?? '' ),
+					'original' => (string) ( $option[ $key ]['original'] ?? '' ),
+				);
 
-                        return $persisted;
-                }
+				self::$persistedStringCache[ $key ] = $persisted;
 
-                self::$persistedStringCache[ $key ] = null;
+				return $persisted;
+		}
 
-                return null;
-        }
+			self::$persistedStringCache[ $key ] = null;
 
-        private function get_option_strings(): array {
-                if ( self::$optionStringCache !== null ) {
-                        return self::$optionStringCache;
-                }
+			return null;
+	}
 
-                if ( ! function_exists( 'get_option' ) ) {
-                        self::$optionStringCache = array();
+	private function get_option_strings(): array {
+		if ( self::$optionStringCache !== null ) {
+				return self::$optionStringCache;
+		}
 
-                        return self::$optionStringCache;
-                }
+		if ( ! function_exists( 'get_option' ) ) {
+				self::$optionStringCache = array();
 
-                $option = get_option( 'fp_multilanguage_strings', array() );
-                if ( ! is_array( $option ) ) {
-                        $option = array();
-                }
+				return self::$optionStringCache;
+		}
 
-                self::$optionStringCache = $option;
+			$option = get_option( 'fp_multilanguage_strings', array() );
+		if ( ! is_array( $option ) ) {
+				$option = array();
+		}
 
-                return self::$optionStringCache;
-        }
+			self::$optionStringCache = $option;
 
-        private function update_option_cache( array $option ): void {
-                self::$optionStringCache = $option;
-        }
+			return self::$optionStringCache;
+	}
 
-        private function build_signature( string $context, string $original ): string {
-                $payload = array(
-                        'context'  => $context,
-                        'original' => $original,
-                );
+	private function update_option_cache( array $option ): void {
+			self::$optionStringCache = $option;
+	}
 
-                $signature = wp_json_encode( $payload );
+	private function build_signature( string $context, string $original ): string {
+			$payload = array(
+				'context'  => $context,
+				'original' => $original,
+			);
 
-                if ( $signature === false ) {
-                        $signature = serialize( $payload );
-                }
+			$signature = wp_json_encode( $payload );
 
-                return $signature;
-        }
+			if ( $signature === false ) {
+					$signature = serialize( $payload );
+			}
+
+			return $signature;
+	}
 }

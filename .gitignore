@@ -1,5 +1,22 @@
-/vendor/
-/.phpunit.result.cache
-/.phpunit.cache/
-/node_modules/
-/build/
+# === Build artifacts ===
+dist/
+*.zip
+
+# Composer / Node
+vendor/
+node_modules/
+
+# Local build output
+build/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Tests / Coverage / CI temp
+coverage/
+.phpunit.result.cache
+.phpunit.cache/
+

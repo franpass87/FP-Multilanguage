@@ -6,6 +6,7 @@ use FPMultilanguage\Admin\Settings;
 use FPMultilanguage\Dynamic\DynamicStrings;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class DynamicStringsTest extends TestCase
@@ -35,7 +36,7 @@ class DynamicStringsTest extends TestCase
         \FPMultilanguage\CurrentLanguage::clear_cache();
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
-        $this->settings = new Settings($this->logger, $this->notices);
+        $this->settings = SettingsFactory::create($this->logger, $this->notices);
     }
 
     private function createDynamicStrings(TranslationService $service): DynamicStrings

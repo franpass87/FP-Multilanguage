@@ -1,0 +1,17 @@
+PHASE 2: LINTERS (2025-09-26)
+
+Commands executed:
+- composer lint
+- composer lint:fix
+- composer stan
+
+Summary:
+- Normalized tab-based indentation across PHP sources per WordPress Coding Standards.
+- Added translator comments and sanitized parameter names flagged by PHPCS.
+- Updated dynamic string persistence queries to use $wpdb->prepare with identifier placeholders.
+- Refined REST controller docblocks, nonce handling, and dependent type hints to satisfy PHPStan level 6.
+- Adjusted helper classes (Settings, ManualStringsUI, TermTranslationManager, etc.) to remove redundant checks, cast IDs, and provide explicit typing.
+
+Outstanding considerations:
+- PHPStan configuration narrowed to plugin sources (tests excluded) and now enforces array typing for REST requests.
+- Future phases should revisit newly surfaced design issues (e.g., broader logger usage, cache warmers) after lint compliance.

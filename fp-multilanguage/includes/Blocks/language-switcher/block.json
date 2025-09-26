@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "fp-multilanguage/language-switcher",
+  "title": "Selettore lingua",
+  "category": "widgets",
+  "description": "Aggiunge lo switcher di lingua del plugin direttamente all'editor a blocchi.",
+  "textdomain": "fp-multilanguage",
+  "editorScript": "fp-multilanguage-language-switcher-block",
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+    "layout": {
+      "type": "string",
+      "default": "list"
+    }
+  },
+  "keywords": [
+    "lingua",
+    "traduzione",
+    "switcher"
+  ]
+}

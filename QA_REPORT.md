@@ -1,4 +1,4 @@
-# QA Report – FP Multilanguage (v1.1.0)
+# QA Report – FP Multilanguage (v1.2.0)
 
 Maintainer: Francesco Passeri – [francescopasseri.com](https://francescopasseri.com) – [info@francescopasseri.com](mailto:info@francescopasseri.com)
 
@@ -31,5 +31,6 @@ Eventuali regressioni devono essere accompagnate da test unitari. Per nuove feat
 
 ## Cronologia release monitorate
 
+- **1.2.0 (ottobre 2024)** – Audit finale con hardening sicurezza REST/AJAX, caching impostazioni/stringhe, bootstrap modulare, logger runtime e routine upgrade con flush cache.
 - **1.1.0 (settembre 2024)** – Revisione documentazione, aggiornamento metadati autore e verifica regressioni generali (nessun nuovo bug rilevato).
 - **1.0.0 (giugno 2024)** – Validazione iniziale delle funzionalità core (traduzioni automatiche/manuali, SEO, CLI, dynamic strings).

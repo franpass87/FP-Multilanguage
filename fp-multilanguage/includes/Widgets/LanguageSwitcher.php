@@ -9,6 +9,7 @@ use WP_Widget;
 /**
  * @method string get_field_id( string $field_name )
  * @method string get_field_name( string $field_name )
+ * @extends WP_Widget<array<string, mixed>>
  */
 class LanguageSwitcher extends WP_Widget {
 
@@ -20,14 +21,14 @@ class LanguageSwitcher extends WP_Widget {
 		);
 	}
 
-    /**
-     * @param array<string, mixed> $args
-     * @param array<string, mixed> $instance
-     *
-     * @return void
-     */
-    #[\ReturnTypeWillChange]
-    public function widget( $args, $instance ) {
+	/**
+	 * @param array<string, mixed> $args
+	 * @param array<string, mixed> $instance
+	 *
+	 * @return void
+	 */
+	#[\ReturnTypeWillChange]
+	public function widget( $args, $instance ) {
 			echo $args['before_widget'] ?? '';
 
 			$title = isset( $instance['title'] ) ? apply_filters( 'widget_title', $instance['title'] ) : __( 'Lingue', 'fp-multilanguage' );
@@ -42,13 +43,13 @@ class LanguageSwitcher extends WP_Widget {
 		echo $args['after_widget'] ?? '';
 	}
 
-    /**
-     * @param array<string, mixed> $instance
-     *
-     * @return void
-     */
-    #[\ReturnTypeWillChange]
-    public function form( $instance ) {
+	/**
+	 * @param array<string, mixed> $instance
+	 *
+	 * @return void
+	 */
+	#[\ReturnTypeWillChange]
+	public function form( $instance ) {
 			$title      = isset( $instance['title'] ) ? (string) $instance['title'] : '';
 			$field_id   = $this->get_field_id( 'title' );
 			$field_name = $this->get_field_name( 'title' );
@@ -60,14 +61,14 @@ class LanguageSwitcher extends WP_Widget {
 				<?php
 	}
 
-    /**
-     * @param array<string, mixed> $newInstance
-     * @param array<string, mixed> $oldInstance
-     *
-     * @return array<string, mixed>
-     */
-    #[\ReturnTypeWillChange]
-    public function update( $newInstance, $oldInstance ) {
+	/**
+	 * @param array<string, mixed> $newInstance
+	 * @param array<string, mixed> $oldInstance
+	 *
+	 * @return array<string, mixed>
+	 */
+	#[\ReturnTypeWillChange]
+	public function update( $newInstance, $oldInstance ) {
 			$instance          = $oldInstance;
 			$instance['title'] = sanitize_text_field( $newInstance['title'] ?? '' );
 

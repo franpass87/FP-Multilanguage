@@ -10,203 +10,204 @@ use WP_Comment;
 
 class CommentTranslationManager {
 
-        public const META_KEY = '_fp_multilanguage_comment_translations';
+	public const META_KEY = '_fp_multilanguage_comment_translations';
 
-        private TranslationService $translationService;
+	private TranslationService $translationService;
 
-        private Logger $logger;
+	private Logger $logger;
 
-        public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger ) {
-                unset( $settings, $notices );
+	public function __construct( TranslationService $translationService, Settings $settings, AdminNotices $notices, Logger $logger ) {
+			unset( $settings, $notices );
 
-                $this->translationService = $translationService;
-                $this->logger             = $logger;
-        }
+			$this->translationService = $translationService;
+			$this->logger             = $logger;
+	}
 
-        public function register(): void {
-                add_action( 'wp_insert_comment', array( $this, 'handle_comment_insert' ), 10, 2 );
-                add_action( 'edit_comment', array( $this, 'handle_comment_update' ), 10, 2 );
-                add_action( 'deleted_comment', array( $this, 'handle_comment_delete' ) );
+	public function register(): void {
+			add_action( 'wp_insert_comment', array( $this, 'handle_comment_insert' ), 10, 2 );
+			add_action( 'edit_comment', array( $this, 'handle_comment_update' ), 10, 2 );
+			add_action( 'deleted_comment', array( $this, 'handle_comment_delete' ) );
 
-                add_filter( 'get_comment_text', array( $this, 'filter_comment_text' ), 10, 3 );
-                add_filter( 'comment_text', array( $this, 'filter_comment_text_legacy' ), 10, 2 );
-                add_filter( 'rest_prepare_comment', array( $this, 'expose_translations' ), 10, 3 );
-        }
+			add_filter( 'get_comment_text', array( $this, 'filter_comment_text' ), 10, 3 );
+			add_filter( 'comment_text', array( $this, 'filter_comment_text_legacy' ), 10, 2 );
+			add_filter( 'rest_prepare_comment', array( $this, 'expose_translations' ), 10, 3 );
+	}
 
-        public function handle_comment_insert( int $comment_id, WP_Comment $comment ): void {
-                if ( ! Settings::is_auto_translate_enabled() ) {
-                        return;
-                }
+	public function handle_comment_insert( int $comment_id, WP_Comment $comment ): void {
+		if ( ! Settings::is_auto_translate_enabled() ) {
+				return;
+		}
 
-                $this->translate_comment( $comment_id, null, true, $comment );
-        }
+			$this->translate_comment( $comment_id, null, true, $comment );
+	}
 
-        public function handle_comment_update( int $comment_id, ?WP_Comment $comment = null ): void {
-                unset( $comment );
+	public function handle_comment_update( int $comment_id, ?WP_Comment $comment = null ): void {
+			unset( $comment );
 
-                if ( ! Settings::is_auto_translate_enabled() ) {
-                        return;
-                }
+		if ( ! Settings::is_auto_translate_enabled() ) {
+				return;
+		}
 
-                $this->translate_comment( $comment_id, null, true );
-        }
+			$this->translate_comment( $comment_id, null, true );
+	}
 
-        public function handle_comment_delete( int $comment_id ): void {
-                delete_comment_meta( $comment_id, self::META_KEY );
-        }
+	public function handle_comment_delete( int $comment_id ): void {
+			delete_comment_meta( $comment_id, self::META_KEY );
+	}
 
-        public function translate_comment( int $comment_id, ?string $language = null, bool $force = false, ?WP_Comment $comment = null ): array {
-                if ( null === $comment ) {
-                        $comment = get_comment( $comment_id );
-                }
+	public function translate_comment( int $comment_id, ?string $language = null, bool $force = false, ?WP_Comment $comment = null ): array {
+		if ( null === $comment ) {
+				$comment = get_comment( $comment_id );
+		}
 
-                if ( ! $comment instanceof WP_Comment ) {
-                        return array();
-                }
+		if ( ! $comment instanceof WP_Comment ) {
+				return array();
+		}
 
-                $source_language  = Settings::get_source_language();
-                $target_languages = Settings::get_target_languages();
+			$source_language  = Settings::get_source_language();
+			$target_languages = Settings::get_target_languages();
 
-                if ( null !== $language ) {
-                        $target_languages = array_intersect( $target_languages, array( $language ) );
-                }
+		if ( null !== $language ) {
+				$target_languages = array_intersect( $target_languages, array( $language ) );
+		}
 
-                $translations = $this->get_comment_translations( $comment_id );
-                $has_changes  = false;
+			$translations = $this->get_comment_translations( $comment_id );
+			$has_changes  = false;
 
-                foreach ( $target_languages as $target ) {
-                        if ( $target === $source_language ) {
-                                continue;
-                        }
+		foreach ( $target_languages as $target ) {
+			if ( $target === $source_language ) {
+					continue;
+			}
 
-                        $existing            = $translations[ $target ] ?? array();
-                        $existing_text       = isset( $existing['content'] ) ? (string) $existing['content'] : '';
-                        $translated_content  = $this->translationService->translate_text( $comment->comment_content, $source_language, $target, array( 'format' => 'html' ) );
-                        $language_has_change = $force;
+				$existing            = $translations[ $target ] ?? array();
+				$existing_text       = isset( $existing['content'] ) ? (string) $existing['content'] : '';
+				$translated_content  = $this->translationService->translate_text( $comment->comment_content, $source_language, $target, array( 'format' => 'html' ) );
+				$language_has_change = $force;
 
-                        if ( '' === $translated_content ) {
-                                continue;
-                        }
+			if ( '' === $translated_content ) {
+					continue;
+			}
 
-                        if ( $force || $existing_text !== $translated_content ) {
-                                $translations[ $target ] = array(
-                                        'content'    => $translated_content,
-                                        'updated_at' => time(),
-                                        'status'     => 'synced',
-                                );
-                                $language_has_change     = true;
-                        }
+			if ( $force || $existing_text !== $translated_content ) {
+					$translations[ $target ] = array(
+						'content'    => $translated_content,
+						'updated_at' => time(),
+						'status'     => 'synced',
+					);
+					$language_has_change     = true;
+			}
 
-                        if ( $language_has_change ) {
-                                $has_changes = true;
-                        }
-                }
+			if ( $language_has_change ) {
+					$has_changes = true;
+			}
+		}
 
-                if ( $has_changes ) {
-                        $this->persist_translations( $comment_id, $translations );
+		if ( $has_changes ) {
+				$this->persist_translations( $comment_id, $translations );
 
-                        $this->logger->debug(
-                                'Comment translations updated.',
-                                array(
-                                        'comment_id' => $comment_id,
-                                        'languages'  => array_keys( $translations ),
-                                )
-                        );
-                }
+				$this->logger->debug(
+					'Comment translations updated.',
+					array(
+						'comment_id' => $comment_id,
+						'languages'  => array_keys( $translations ),
+					)
+				);
+		}
 
-                return $translations;
-        }
+			return $translations;
+	}
 
-        /**
-         * @param WP_Comment|int|null $comment Comment instance or identifier.
-         */
-        public function filter_comment_text( string $text, WP_Comment|int|null $comment = null, array $args = array() ): string {
-                unset( $args );
+		/**
+		 * @param WP_Comment|int|null $comment Comment instance or identifier.
+		 */
+	public function filter_comment_text( string $text, WP_Comment|int|null $comment = null, array $args = array() ): string {
+			unset( $args );
 
-                $comment_object = $this->resolve_comment( $comment );
-                if ( ! $comment_object instanceof WP_Comment ) {
-                        return $text;
-                }
+			$comment_object = $this->resolve_comment( $comment );
+		if ( ! $comment_object instanceof WP_Comment ) {
+				return $text;
+		}
 
-                $language = CurrentLanguage::resolve();
-                $source   = Settings::get_source_language();
+			$language = CurrentLanguage::resolve();
+			$source   = Settings::get_source_language();
 
-                if ( '' === $language || $language === $source ) {
-                        return $text;
-                }
+		if ( '' === $language || $language === $source ) {
+				return $text;
+		}
 
-                $translations = $this->get_comment_translations( $comment_object->comment_ID );
-                if ( isset( $translations[ $language ]['content'] ) && '' !== $translations[ $language ]['content'] ) {
-                        return (string) $translations[ $language ]['content'];
-                }
+		$commentId    = (int) $comment_object->comment_ID;
+		$translations = $this->get_comment_translations( $commentId );
+		if ( isset( $translations[ $language ]['content'] ) && '' !== $translations[ $language ]['content'] ) {
+				return (string) $translations[ $language ]['content'];
+		}
 
-                $translated = $this->translationService->translate_text( $comment_object->comment_content, $source, $language, array( 'format' => 'html' ) );
-                if ( '' === $translated ) {
-                        return $text;
-                }
+			$translated = $this->translationService->translate_text( $comment_object->comment_content, $source, $language, array( 'format' => 'html' ) );
+		if ( '' === $translated ) {
+				return $text;
+		}
 
-                $translations[ $language ] = array(
-                        'content'    => $translated,
-                        'updated_at' => time(),
-                        'status'     => 'generated',
-                );
+			$translations[ $language ] = array(
+				'content'    => $translated,
+				'updated_at' => time(),
+				'status'     => 'generated',
+			);
 
-                $this->persist_translations( $comment_object->comment_ID, $translations );
+			$this->persist_translations( $commentId, $translations );
 
-                return $translated;
-        }
+			return $translated;
+	}
 
-        public function filter_comment_text_legacy( string $text, WP_Comment|int|null $comment = null ): string {
-                return $this->filter_comment_text( $text, $comment );
-        }
+	public function filter_comment_text_legacy( string $text, WP_Comment|int|null $comment = null ): string {
+			return $this->filter_comment_text( $text, $comment );
+	}
 
-        /**
-         * @param mixed                 $response Response object provided by WordPress REST infrastructure.
-         * @param WP_Comment|int|null   $comment  Comment instance or identifier.
-         * @param mixed                 $request  Original REST request.
-         *
-         * @return mixed
-         */
-        public function expose_translations( $response, WP_Comment|int|null $comment, $request ): mixed {
-                unset( $request );
+		/**
+		 * @param mixed                 $response Response object provided by WordPress REST infrastructure.
+		 * @param WP_Comment|int|null   $comment  Comment instance or identifier.
+		 * @param mixed                 $request  Original REST request.
+		 *
+		 * @return mixed
+		 */
+	public function expose_translations( $response, WP_Comment|int|null $comment, $request ): mixed {
+			unset( $request );
 
-                $comment_object = $this->resolve_comment( $comment );
-                if ( ! $comment_object instanceof WP_Comment ) {
-                        return $response;
-                }
+			$comment_object = $this->resolve_comment( $comment );
+		if ( ! $comment_object instanceof WP_Comment ) {
+				return $response;
+		}
 
-                if ( isset( $response->data ) && is_array( $response->data ) ) {
-                        $response->data['fp_multilanguage'] = array(
-                                'language'     => CurrentLanguage::resolve(),
-                                'translations' => $this->get_comment_translations( $comment_object->comment_ID ),
-                        );
-                }
+		if ( isset( $response->data ) && is_array( $response->data ) ) {
+			$response->data['fp_multilanguage'] = array(
+				'language'     => CurrentLanguage::resolve(),
+				'translations' => $this->get_comment_translations( (int) $comment_object->comment_ID ),
+			);
+		}
 
-                return $response;
-        }
+			return $response;
+	}
 
-        public function get_comment_translations( int $comment_id ): array {
-                $stored = get_comment_meta( $comment_id, self::META_KEY, true );
-                if ( ! is_array( $stored ) ) {
-                        return array();
-                }
+	public function get_comment_translations( int $comment_id ): array {
+			$stored = get_comment_meta( $comment_id, self::META_KEY, true );
+		if ( ! is_array( $stored ) ) {
+				return array();
+		}
 
-                return $stored;
-        }
+			return $stored;
+	}
 
-        private function resolve_comment( WP_Comment|int|null $comment ): ?WP_Comment {
-                if ( $comment instanceof WP_Comment ) {
-                        return $comment;
-                }
+	private function resolve_comment( WP_Comment|int|null $comment ): ?WP_Comment {
+		if ( $comment instanceof WP_Comment ) {
+				return $comment;
+		}
 
-                if ( is_numeric( $comment ) ) {
-                        $comment = get_comment( (int) $comment );
-                }
+		if ( is_numeric( $comment ) ) {
+				$comment = get_comment( (int) $comment );
+		}
 
-                return $comment instanceof WP_Comment ? $comment : null;
-        }
+			return $comment instanceof WP_Comment ? $comment : null;
+	}
 
-        private function persist_translations( int $comment_id, array $translations ): void {
-                update_comment_meta( $comment_id, self::META_KEY, $translations );
-        }
+	private function persist_translations( int $comment_id, array $translations ): void {
+			update_comment_meta( $comment_id, self::META_KEY, $translations );
+	}
 }

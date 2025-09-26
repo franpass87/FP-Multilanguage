@@ -26,6 +26,7 @@ use FPMultilanguage\CurrentLanguage;
 use FPMultilanguage\Services\Logger;
 use FPMultilanguage\Services\Providers\GoogleProvider;
 use FPMultilanguage\Services\TranslationService;
+use FPMultilanguage\Tests\Helpers\SettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 class CommentTranslationManagerTest extends TestCase
@@ -84,10 +85,12 @@ class CommentTranslationManagerTest extends TestCase
             'seo' => [],
             'quote_tracking' => [],
         ]);
+        Settings::clear_cache();
+        $this->assertContains('google', Settings::get_enabled_providers(), 'Il provider Google deve essere abilitato per i test.');
 
         $this->logger = new Logger();
         $this->notices = new AdminNotices($this->logger);
-        $this->settings = new Settings($this->logger, $this->notices);
+        $this->settings = SettingsFactory::create($this->logger, $this->notices);
         $this->service = new TranslationService($this->logger, $this->notices, $this->settings, [
             new GoogleProvider($this->logger),
         ]);

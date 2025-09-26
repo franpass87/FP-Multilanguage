@@ -3,7 +3,7 @@
  * Plugin Name: FP Multilanguage
  * Plugin URI: https://francescopasseri.com/progetti/fp-multilanguage
  * Description: Gestione avanzata delle traduzioni multilingua per contenuti, stringhe dinamiche e SEO in WordPress.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * License: GPL2
@@ -15,23 +15,23 @@
 use FPMultilanguage\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
-        exit;
+		exit;
 }
 
 if ( ! defined( 'FP_MULTILANGUAGE_FILE' ) ) {
-        define( 'FP_MULTILANGUAGE_FILE', __FILE__ );
+		define( 'FP_MULTILANGUAGE_FILE', __FILE__ );
 }
 
 if ( ! defined( 'FP_MULTILANGUAGE_PATH' ) ) {
-        define( 'FP_MULTILANGUAGE_PATH', plugin_dir_path( FP_MULTILANGUAGE_FILE ) );
+		define( 'FP_MULTILANGUAGE_PATH', plugin_dir_path( FP_MULTILANGUAGE_FILE ) );
 }
 
 if ( ! defined( 'FP_MULTILANGUAGE_URL' ) ) {
-        define( 'FP_MULTILANGUAGE_URL', plugin_dir_url( FP_MULTILANGUAGE_FILE ) );
+		define( 'FP_MULTILANGUAGE_URL', plugin_dir_url( FP_MULTILANGUAGE_FILE ) );
 }
 
 if ( ! defined( 'FP_MULTILANGUAGE_VERSION' ) ) {
-        define( 'FP_MULTILANGUAGE_VERSION', '1.1.0' );
+				define( 'FP_MULTILANGUAGE_VERSION', '1.2.0' );
 }
 
 $autoload_paths = array(
@@ -58,9 +58,9 @@ if ( ! $is_autoloaded ) {
 }
 
 if ( ! function_exists( 'fp_multilanguage' ) ) {
-        function fp_multilanguage(): Plugin {
-                return Plugin::instance();
-        }
+	function fp_multilanguage(): Plugin {
+			return Plugin::instance();
+	}
 }
 
 register_activation_hook( FP_MULTILANGUAGE_FILE, array( Plugin::class, 'activate' ) );

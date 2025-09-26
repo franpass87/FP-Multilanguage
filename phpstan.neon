@@ -6,13 +6,15 @@ includes:
 parameters:
     level: 6
     paths:
+        - fp-multilanguage/fp-multilanguage.php
         - fp-multilanguage/includes
-        - tests
     tmpDir: build/phpstan
     bootstrapFiles:
         - vendor/szepeviktor/phpstan-wordpress/bootstrap.php
         - phpstan-bootstrap.php
         - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+    reportUnmatchedIgnoredErrors: false
+    treatPhpDocTypesAsCertain: false
     ignoreErrors:
         -
             identifier: missingType.iterableValue

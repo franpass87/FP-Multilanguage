@@ -11,6 +11,11 @@ if (! isset($wp_test_cache)) {
     $wp_test_cache = [];
 }
 
+global $wp_cache_flush_calls;
+if (! isset($wp_cache_flush_calls)) {
+    $wp_cache_flush_calls = 0;
+}
+
 global $wp_test_transients;
 if (! isset($wp_test_transients)) {
     $wp_test_transients = [];
@@ -437,6 +442,33 @@ if (! function_exists('wp_cache_set')) {
         $wp_test_cache[$group][$key] = $value;
 
         return true;
+    }
+}
+
+if (! function_exists('wp_cache_flush')) {
+    function wp_cache_flush()
+    {
+        global $wp_test_cache, $wp_cache_flush_calls;
+
+        $wp_test_cache = [];
+        $wp_cache_flush_calls++;
+
+        return true;
+    }
+}
+
+if (! function_exists('wp_cache_delete')) {
+    function wp_cache_delete($key, $group = '')
+    {
+        global $wp_test_cache;
+
+        if (isset($wp_test_cache[$group][$key])) {
+            unset($wp_test_cache[$group][$key]);
+
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -1167,10 +1199,60 @@ if (! function_exists('rest_url')) {
     }
 }
 
+if (! class_exists('WP_REST_Response')) {
+    class WP_REST_Response
+    {
+        /** @var mixed */
+        public $data;
+
+        /** @var int */
+        protected $status = 200;
+
+        /**
+         * @param mixed $data
+         */
+        public function __construct($data = null, int $status = 200)
+        {
+            $this->data = $data;
+            $this->status = $status;
+        }
+
+        /**
+         * @param mixed $data
+         */
+        public function set_data($data): void
+        {
+            $this->data = $data;
+        }
+
+        /**
+         * @return mixed
+         */
+        public function get_data()
+        {
+            return $this->data;
+        }
+
+        public function set_status(int $status): void
+        {
+            $this->status = $status;
+        }
+
+        public function get_status(): int
+        {
+            return $this->status;
+        }
+    }
+}
+
 if (! function_exists('rest_ensure_response')) {
     function rest_ensure_response($response)
     {
-        return $response;
+        if ($response instanceof WP_REST_Response) {
+            return $response;
+        }
+
+        return new WP_REST_Response($response);
     }
 }
 

@@ -1,6 +1,6 @@
-# FP Multilanguage – Roadmap (aggiornata per v1.1.0)
+# FP Multilanguage – Roadmap (aggiornata per v1.2.0)
 
-Ultimo aggiornamento: settembre 2024 – Maintainer: Francesco Passeri ([info@francescopasseri.com](mailto:info@francescopasseri.com)).
+Ultimo aggiornamento: ottobre 2024 – Maintainer: Francesco Passeri ([info@francescopasseri.com](mailto:info@francescopasseri.com)).
 
 ## In lavorazione
 
