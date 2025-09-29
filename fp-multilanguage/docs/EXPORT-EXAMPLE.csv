@@ -1,0 +1,2 @@
+object_type,object_subtype,source_id,translation_id,field,status,source_url,translation_url,status_date,title
+post,page,42,84,post_content,reviewed,https://example.com/pagina-di-test,https://example.com/en/test-page,2024-07-09 10:15:00,Test Page EN

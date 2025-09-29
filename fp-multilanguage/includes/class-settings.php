@@ -1,0 +1,203 @@
+<?php
+/**
+ * Settings handler.
+ *
+ * @package FP_Multilanguage
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+exit;
+}
+
+/**
+ * Manage plugin settings.
+ *
+ * @since 0.2.0
+ */
+class FPML_Settings {
+/**
+ * Option key.
+ */
+const OPTION_KEY = 'fpml_settings';
+
+/**
+ * Singleton instance.
+ *
+ * @var FPML_Settings|null
+ */
+protected static $instance = null;
+
+/**
+ * Cached settings.
+ *
+ * @var array
+ */
+protected $settings = array();
+
+/**
+ * Retrieve singleton.
+ *
+ * @since 0.2.0
+ *
+ * @return FPML_Settings
+ */
+public static function instance() {
+if ( null === self::$instance ) {
+self::$instance = new self();
+}
+
+return self::$instance;
+}
+
+/**
+ * Constructor.
+ */
+protected function __construct() {
+$this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this->get_defaults() );
+add_action( 'admin_init', array( $this, 'register_settings' ) );
+}
+
+/**
+ * Get default values.
+ *
+ * @since 0.2.0
+ *
+ * @return array
+ */
+public function get_defaults() {
+return array(
+'provider'                => '',
+'openai_api_key'          => '',
+'openai_model'            => 'gpt-4o-mini',
+'deepl_api_key'           => '',
+'deepl_use_free'          => false,
+'google_api_key'          => '',
+'google_project_id'       => '',
+'libretranslate_api_url'  => '',
+'libretranslate_api_key'  => '',
+'batch_size'              => 5,
+'max_chars'               => 4500,
+'cron_frequency'          => '15min',
+'routing_mode'            => 'segment',
+'browser_redirect'        => false,
+'browser_redirect_requires_consent' => false,
+'browser_redirect_consent_cookie'   => '',
+'marketing_tone'          => false,
+'preserve_html'           => true,
+'translate_slugs'         => false,
+'slug_redirect'           => false,
+'noindex_en'              => false,
+'sitemap_en'              => true,
+'sandbox_mode'            => false,
+'anonymize_logs'          => false,
+'glossary_case_sensitive' => false,
+'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc',
+'exclude_regex'           => '',
+'excluded_shortcodes'     => '',
+'rate_openai'             => '',
+'rate_deepl'              => '',
+'rate_google'             => '',
+'rate_libretranslate'     => '',
+'remove_data'             => false,
+);
+}
+
+/**
+ * Retrieve a setting value.
+ *
+ * @since 0.2.0
+ *
+ * @param string $key     Setting key.
+ * @param mixed  $default Default value.
+ *
+ * @return mixed
+ */
+public function get( $key, $default = null ) {
+if ( isset( $this->settings[ $key ] ) ) {
+return $this->settings[ $key ];
+}
+
+return $default;
+}
+
+/**
+ * Get all settings.
+ *
+ * @since 0.2.0
+ *
+ * @return array
+ */
+public function all() {
+return $this->settings;
+}
+
+/**
+ * Register settings via Settings API.
+ *
+ * @since 0.2.0
+ *
+ * @return void
+ */
+public function register_settings() {
+register_setting( 'fpml_settings_group', self::OPTION_KEY, array( $this, 'sanitize' ) );
+}
+
+/**
+ * Sanitize user input.
+ *
+ * @since 0.2.0
+ *
+ * @param array $input Raw input.
+ *
+ * @return array
+ */
+public function sanitize( $input ) {
+$defaults = $this->get_defaults();
+$data     = wp_parse_args( is_array( $input ) ? $input : array(), $defaults );
+
+$data['provider']               = sanitize_text_field( $data['provider'] );
+$data['openai_api_key']         = sanitize_text_field( $data['openai_api_key'] );
+$data['openai_model']           = sanitize_text_field( $data['openai_model'] );
+$data['deepl_api_key']          = sanitize_text_field( $data['deepl_api_key'] );
+$data['deepl_use_free']         = ! empty( $data['deepl_use_free'] );
+$data['google_api_key']         = sanitize_text_field( $data['google_api_key'] );
+$data['google_project_id']      = sanitize_text_field( $data['google_project_id'] );
+$data['libretranslate_api_url'] = esc_url_raw( $data['libretranslate_api_url'] );
+$data['libretranslate_api_key'] = sanitize_text_field( $data['libretranslate_api_key'] );
+$data['batch_size']             = max( 1, absint( $data['batch_size'] ) );
+$data['max_chars']              = max( 500, absint( $data['max_chars'] ) );
+
+$frequencies = array( '5min', '15min', 'hourly' );
+if ( ! in_array( $data['cron_frequency'], $frequencies, true ) ) {
+$data['cron_frequency'] = $defaults['cron_frequency'];
+}
+
+$data['routing_mode']            = in_array( $data['routing_mode'], array( 'segment', 'query' ), true ) ? $data['routing_mode'] : $defaults['routing_mode'];
+$data['browser_redirect']        = ! empty( $data['browser_redirect'] );
+$data['browser_redirect_requires_consent'] = ! empty( $data['browser_redirect_requires_consent'] );
+$data['browser_redirect_consent_cookie']   = sanitize_text_field( $data['browser_redirect_consent_cookie'] );
+$data['marketing_tone']          = ! empty( $data['marketing_tone'] );
+$data['preserve_html']           = ! empty( $data['preserve_html'] );
+$data['translate_slugs']         = ! empty( $data['translate_slugs'] );
+$data['slug_redirect']           = ! empty( $data['slug_redirect'] );
+$data['noindex_en']              = ! empty( $data['noindex_en'] );
+$data['sitemap_en']              = ! empty( $data['sitemap_en'] );
+$data['sandbox_mode']            = ! empty( $data['sandbox_mode'] );
+$data['anonymize_logs']          = ! empty( $data['anonymize_logs'] );
+$data['glossary_case_sensitive'] = ! empty( $data['glossary_case_sensitive'] );
+$data['meta_whitelist']          = sanitize_textarea_field( $data['meta_whitelist'] );
+$data['exclude_regex']           = sanitize_textarea_field( $data['exclude_regex'] );
+$data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shortcodes'] );
+$data['rate_openai']             = sanitize_text_field( $data['rate_openai'] );
+$data['rate_deepl']              = sanitize_text_field( $data['rate_deepl'] );
+$data['rate_google']             = sanitize_text_field( $data['rate_google'] );
+$data['rate_libretranslate']     = sanitize_text_field( $data['rate_libretranslate'] );
+$data['remove_data']             = ! empty( $data['remove_data'] );
+
+update_option( 'fpml_remove_data', $data['remove_data'] );
+
+$this->settings = $data;
+
+return $data;
+}
+}
