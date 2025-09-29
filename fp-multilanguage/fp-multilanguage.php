@@ -1,0 +1,74 @@
+<?php
+/**
+ * Plugin Name: FP Multilanguage
+ * Description: Traduzione automatica IT → EN (contenuti, tassonomie, menu, SEO meta/OG/Twitter, slug) con routing /en/ o ?lang=en, coda con diff incrementale, ACF/Gutenberg, sitemap EN e redirect lingua browser. Provider reali (OpenAI, DeepL, Google, LibreTranslate). Nessun file binario.
+ * Version: 0.2.1
+ * Author: Francesco Passeri
+ * Author URI: https://francescopasseri.com
+ * Text Domain: fp-multilanguage
+ * Domain Path: /languages
+ *
+ * @package FP_Multilanguage
+ */
+
+define( 'FPML_PLUGIN_VERSION', '0.2.1' );
+define( 'FPML_PLUGIN_FILE', __FILE__ );
+define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
+autoload_fpml_files();
+
+require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
+
+if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
+        require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
+}
+
+if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
+        require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
+}
+
+/**
+ * Require plugin includes.
+ *
+ * @since 0.2.0
+ * @return void
+ */
+function autoload_fpml_files() {
+$includes_dir = FPML_PLUGIN_DIR . 'includes/';
+if ( ! is_dir( $includes_dir ) ) {
+return;
+}
+
+$iterator = new RecursiveIteratorIterator(
+new RecursiveDirectoryIterator( $includes_dir, FilesystemIterator::SKIP_DOTS ),
+RecursiveIteratorIterator::SELF_FIRST
+);
+
+foreach ( $iterator as $file ) {
+if ( 'php' !== strtolower( $file->getExtension() ) ) {
+continue;
+}
+
+require_once $file->getPathname();
+}
+}
+
+/**
+ * Initialize the plugin.
+ *
+ * @since 0.2.0
+ * @return void
+ */
+function fpml_run_plugin() {
+if ( ! class_exists( 'FPML_Plugin' ) ) {
+return;
+}
+
+FPML_Plugin::instance();
+}
+
+add_action( 'plugins_loaded', 'fpml_run_plugin' );
+
+register_activation_hook( __FILE__, array( 'FPML_Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'FPML_Plugin', 'deactivate' ) );
