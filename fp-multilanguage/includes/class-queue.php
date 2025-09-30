@@ -548,6 +548,49 @@ class FPML_Queue {
         }
 
         /**
+         * Count completed jobs for a specific object type and optional field.
+         *
+         * @since 0.3.0
+         *
+         * @param string      $object_type Object type slug.
+         * @param string|null $field       Optional field identifier.
+         *
+         * @return int
+         */
+        public function count_completed_jobs( $object_type, $field = null ) {
+                global $wpdb;
+
+                $object_type = sanitize_key( $object_type );
+
+                if ( '' === $object_type ) {
+                        return 0;
+                }
+
+                $table = $this->get_table();
+
+                if ( null === $field || '' === $field ) {
+                        $sql = $wpdb->prepare(
+                                "SELECT COUNT(*) FROM {$table} WHERE state = %s AND object_type = %s",
+                                'done',
+                                $object_type
+                        );
+                } else {
+                        $field = sanitize_text_field( $field );
+
+                        $sql = $wpdb->prepare(
+                                "SELECT COUNT(*) FROM {$table} WHERE state = %s AND object_type = %s AND field = %s",
+                                'done',
+                                $object_type,
+                                $field
+                        );
+                }
+
+                $count = $wpdb->get_var( $sql );
+
+                return $count ? (int) $count : 0;
+        }
+
+        /**
          * Reset specific states back to pending.
          *
          * @since 0.2.0

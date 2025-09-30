@@ -90,6 +90,7 @@ class FPML_Language {
         add_action( 'template_redirect', array( $this, 'maybe_redirect_browser_language' ), 0 );
         add_action( 'template_redirect', array( $this, 'persist_language_cookie' ), 1 );
         add_shortcode( 'fp_lang_switcher', array( $this, 'render_switcher' ) );
+        add_filter( 'locale', array( $this, 'filter_locale' ) );
     }
 
     /**
@@ -207,6 +208,57 @@ class FPML_Language {
 
         wp_safe_redirect( $target_url, 302 );
         exit;
+    }
+
+    /**
+     * Force English locale on frontend when needed.
+     *
+     * @since 0.3.0
+     *
+     * @param string $locale Current locale.
+     *
+     * @return string
+     */
+    public function filter_locale( $locale ) {
+        if ( is_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+            return $locale;
+        }
+
+        if ( wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+            return $locale;
+        }
+
+        $language = $this->current;
+
+        if ( self::TARGET !== $language ) {
+            $requested = '';
+
+            if ( isset( $_GET['fpml_lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested_raw = wp_unslash( $_GET['fpml_lang'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested     = strtolower( sanitize_text_field( $requested_raw ) );
+            } elseif ( isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested_raw = wp_unslash( $_GET['lang'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested     = strtolower( sanitize_text_field( $requested_raw ) );
+            }
+
+            if ( self::TARGET !== $requested ) {
+                $path = $this->get_current_path();
+
+                if ( 0 === strpos( $path, '/en/' ) || '/en/' === $path ) {
+                    $requested = self::TARGET;
+                }
+            }
+
+            if ( self::TARGET === $requested ) {
+                $language = self::TARGET;
+            }
+        }
+
+        if ( self::TARGET !== $language ) {
+            return $locale;
+        }
+
+        return 'en_US';
     }
 
     /**

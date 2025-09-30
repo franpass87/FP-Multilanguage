@@ -226,6 +226,7 @@ class FPML_Plugin {
                         FPML_Content_Diff::instance();
                         FPML_Processor::instance();
                         FPML_Menu_Sync::instance();
+                        FPML_Media_Front::instance();
                         FPML_SEO::instance();
                 }
 
@@ -884,6 +885,8 @@ $this->queue->enqueue_term( $term, 'description' );
                 $logger     = FPML_Logger::instance();
                 $settings   = $this->settings;
                 $counts     = $queue->get_state_counts();
+                $terms_done = $queue->count_completed_jobs( 'term' );
+                $menu_done  = $queue->count_completed_jobs( 'menu', 'title' );
                 $events     = array(
                         'fpml_run_queue'       => wp_next_scheduled( 'fpml_run_queue' ),
                         'fpml_retry_failed'    => wp_next_scheduled( 'fpml_retry_failed' ),
@@ -940,6 +943,10 @@ $this->queue->enqueue_term( $term, 'description' );
 
                 return array(
                         'queue_counts'      => $counts,
+                        'kpi'               => array(
+                                'terms_translated'       => $terms_done,
+                                'menu_labels_translated' => $menu_done,
+                        ),
                         'events'            => $events,
                         'lock_active'       => $processor->is_locked(),
                         'cron_disabled'     => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,

@@ -34,6 +34,7 @@ if ( $assisted_mode ) {
 }
 
 $queue_counts    = isset( $snapshot['queue_counts'] ) && is_array( $snapshot['queue_counts'] ) ? $snapshot['queue_counts'] : array();
+$kpi             = isset( $snapshot['kpi'] ) && is_array( $snapshot['kpi'] ) ? $snapshot['kpi'] : array();
 $estimate        = isset( $snapshot['estimate'] ) && is_array( $snapshot['estimate'] ) ? $snapshot['estimate'] : array();
 $estimate_error  = isset( $snapshot['estimate_error'] ) ? $snapshot['estimate_error'] : '';
 $translator_data = isset( $snapshot['translator_status'] ) ? $snapshot['translator_status'] : array();
@@ -54,6 +55,8 @@ foreach ( $pending_states as $pending_state ) {
 $done_jobs    = isset( $queue_counts['done'] ) ? (int) $queue_counts['done'] : 0;
 $skipped_jobs = isset( $queue_counts['skipped'] ) ? (int) $queue_counts['skipped'] : 0;
 $error_jobs   = isset( $queue_counts['error'] ) ? (int) $queue_counts['error'] : 0;
+$terms_translated = isset( $kpi['terms_translated'] ) ? (int) $kpi['terms_translated'] : 0;
+$menu_labels_translated = isset( $kpi['menu_labels_translated'] ) ? (int) $kpi['menu_labels_translated'] : 0;
 
 $characters   = isset( $estimate['characters'] ) ? (int) $estimate['characters'] : 0;
 $words        = isset( $estimate['word_count'] ) ? (int) $estimate['word_count'] : 0;
@@ -114,6 +117,14 @@ $reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
                                 <tr>
                                         <th scope="row"><?php esc_html_e( 'Tradotti', 'fp-multilanguage' ); ?></th>
                                         <td><?php echo esc_html( number_format_i18n( $done_jobs ) ); ?></td>
+                                </tr>
+                                <tr>
+                                        <th scope="row"><?php esc_html_e( 'Termini tradotti', 'fp-multilanguage' ); ?></th>
+                                        <td><?php echo esc_html( number_format_i18n( $terms_translated ) ); ?></td>
+                                </tr>
+                                <tr>
+                                        <th scope="row"><?php esc_html_e( 'Label menu tradotte', 'fp-multilanguage' ); ?></th>
+                                        <td><?php echo esc_html( number_format_i18n( $menu_labels_translated ) ); ?></td>
                                 </tr>
                                 <tr>
                                         <th scope="row"><?php esc_html_e( 'Saltati', 'fp-multilanguage' ); ?></th>

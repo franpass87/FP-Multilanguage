@@ -4,14 +4,14 @@ Tags: translation, multilanguage, openai, deepl, google translate, seo
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 0.2.1
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Plugin WordPress per tradurre automaticamente contenuti e SEO dall'italiano all'inglese con provider reali (OpenAI, DeepL, Google, LibreTranslate), gestione coda e routing /en/.
 
 == Descrizione ==
-FP Multilanguage duplica contenuti inglesi sincronizzati con l'originale italiano, include routing dedicato /en/ o query string, sitemap EN, gestione slug, hreflang/canonical e supporto per Gutenberg, ACF e campi personalizzati.
+FP Multilanguage duplica contenuti inglesi sincronizzati con l'originale italiano, include routing dedicato /en/ o query string, sitemap EN, gestione slug, hreflang/canonical e supporto per Gutenberg, ACF e campi personalizzati. Traduce automaticamente tassonomie (categorie, tag, attributi WooCommerce), label menu, ALT/caption/title dei media e mantiene sincronizzati gli ID attachment nel frontend EN, forzando il locale `en_US` per caricare stringhe tema/plugin.
 
 == Installazione ==
 1. Carica la cartella `fp-multilanguage` in `/wp-content/plugins/`.
@@ -22,6 +22,8 @@ FP Multilanguage duplica contenuti inglesi sincronizzati con l'originale italian
 * Creare Pagina IT → verifica duplicato EN su /en/... con hreflang/canonical.
 * Modificare titolo IT → EN marcata outdated → ritradotta solo parte modificata.
 * Creare Categoria + assegnazione post → EN crea termine e associazione.
+* Aggiungere attributo WooCommerce (globale o personalizzato) → traduzione EN aggiornata su prodotto/vetrina.
+* Inserire immagine con ALT + pagina WPBakery → in EN sono sostituiti ID attachment e testi mantenendo il layout.
 * Attivare provider con chiave → Test provider OK in Diagnostics.
 * Verificare sitemap EN e meta OG/Twitter.
 * Verificare redirect browser language e switcher.
@@ -45,8 +47,17 @@ In alternativa, puoi eseguire direttamente `wp-cron.php`:
 
 == Compatibilità ==
 * Se WPML o Polylang sono attivi, FP Multilanguage entra in modalità *assistita*: lascia disponibili provider, glossario, override stringhe ed export/import ma disattiva duplicazione automatica, routing /en/, sitemap EN e coda interna. La UI mostra un avviso e blocca comandi REST/WP-CLI sulla coda per evitare conflitti.
+* WooCommerce: traduce categorie, tag prodotto, attributi globali `pa_*` e attributi personalizzati, sincronizza ALT/caption/title media collegati e mantiene il locale EN lato frontend.
+* Page builder: sostituzione sicura di shortcode WPBakery (`vc_row`, `vc_column`, `vc_section`, `vc_tabs`, ecc.) e supporto per `[vc_single_image]` con ID inglesi.
 
 == Changelog ==
+= 0.3.0 =
+- New: Traduzione automatica per tassonomie, attributi WooCommerce globali/personalizzati e label menu sincronizzate.
+- New: Media EN con ALT/caption/title tradotti e sostituzione ID attachment nel frontend (incluso shortcode gallery / WPBakery).
+- New: Locale frontend forzato a `en_US` per caricare stringhe tema/plugin e colonna/filtro lingua nell'admin con badge/notice configurabili.
+- New: Limite `max_chars_per_batch` per controllare il carico sui provider e KPI diagnostici dedicati (termini/menu tradotti).
+- Tweak: Shortcode WPBakery esclusi precompilati e parsing `[vc_single_image]` per mantenere layout identici in EN.
+
 = 0.2.1 =
 - Fix: preservazione strutture ACF/repeater con traduzione ricorsiva delle sole stringhe.
 - Fix: rispetto effettivo di “Shortcode esclusi” con masking/restore sicuro in diff e processor.

@@ -1,5 +1,5 @@
 # FP Multilanguage — Build State
-- Fase attuale: 2 (Traduzione etichette menu) completata
-- Ultimo aggiornamento: Sincronizzazione completa delle voci dei menu EN con traduzione automatica delle label personalizzate, riutilizzo dei titoli tradotti per risorse collegate e gestione degli stati dei job di coda.
-- File toccati (Fase 2): includes/class-queue.php, includes/class-menu-sync.php, includes/class-processor.php, docs/BUILD-STATE.md
-- Cronologia: Fase 1 (Traduzione termini) completata con gestione job tassonomie e mappatura IT↔EN degli attributi WooCommerce globali.
+- Fase attuale: 9 (Documentazione & Release) completata
+- Ultimo aggiornamento: Readme aggiornato con compatibilità WooCommerce/WPBakery, esempi di test, changelog 0.3.0 e bump versione plugin.
+- File toccati (Fase 9): readme.txt, fp-multilanguage.php, docs/BUILD-STATE.md
+- Cronologia: Fase 1 (Traduzione termini) completata con gestione job tassonomie e mappatura IT↔EN degli attributi WooCommerce globali; Fase 2 (Traduzione etichette menu) completata con sincronizzazione label custom e riutilizzo titoli tradotti per le risorse collegate; Fase 3 (Media: ALT/CAPTION/TITLE + sostituzione ID frontend) completata con whitelist ALT e rimpiazzo ID attachment nel contenuto; Fase 4 (WooCommerce: attributi personali e globali) completata con traduzione ricorsiva degli attributi personalizzati e salvaguardia dei termini globali; Fase 5 (Locale frontend EN) completata con forzatura `en_US` lato pubblico; Fase 6 (WPBakery hardening) completata con esclusione shortcode e sostituzione ID per `[vc_single_image]`; Fase 7 (Admin UX) completata con colonna/filtro lingua, badge opzionale e notice editor; Fase 8 (Performance & KPI) completata con limite caratteri per batch e KPI diagnostici dedicati.
