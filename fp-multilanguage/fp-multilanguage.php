@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FP Multilanguage
  * Description: Traduzione automatica IT → EN (contenuti, tassonomie, menu, SEO meta/OG/Twitter, slug) con routing /en/ o ?lang=en, coda con diff incrementale, ACF/Gutenberg, sitemap EN e redirect lingua browser. Provider reali (OpenAI, DeepL, Google, LibreTranslate). Nessun file binario.
- * Version: 0.2.1
+ * Version: 0.3.0
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * Text Domain: fp-multilanguage
@@ -11,7 +11,7 @@
  * @package FP_Multilanguage
  */
 
-define( 'FPML_PLUGIN_VERSION', '0.2.1' );
+define( 'FPML_PLUGIN_VERSION', '0.3.0' );
 define( 'FPML_PLUGIN_FILE', __FILE__ );
 define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

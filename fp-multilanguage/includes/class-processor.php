@@ -81,6 +81,20 @@ class FPML_Processor {
         protected $excluded_shortcodes = null;
 
         /**
+         * Characters processed in the current batch.
+         *
+         * @var int
+         */
+        protected $current_batch_characters = 0;
+
+        /**
+         * Characters processed while handling the current job.
+         *
+         * @var int
+         */
+        protected $current_job_characters = 0;
+
+        /**
          * Retrieve singleton instance.
          *
          * @since 0.2.0
@@ -306,19 +320,32 @@ class FPML_Processor {
                         'errors'    => 0,
                 );
 
-                $start_time = microtime( true );
-                $batch_size = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
+                $start_time          = microtime( true );
+                $batch_size          = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
+                $max_chars_per_batch = $this->settings ? (int) $this->settings->get( 'max_chars_per_batch', 20000 ) : 20000;
+                $max_chars_per_batch = max( 0, $max_chars_per_batch );
 
                 try {
                         $jobs = $this->queue->claim_batch( $batch_size );
 
                         $summary['claimed'] = is_array( $jobs ) ? count( $jobs ) : 0;
+                        $this->current_batch_characters = 0;
 
                         if ( empty( $jobs ) ) {
                                 return $summary;
                         }
 
-                        foreach ( $jobs as $job ) {
+                        $total_jobs = count( $jobs );
+
+                        for ( $index = 0; $index < $total_jobs; $index++ ) {
+                                $job = $jobs[ $index ];
+
+                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+                                        $this->queue->update_state( $job->id, 'pending' );
+                                        continue;
+                                }
+
+                                $this->current_job_characters = 0;
                                 $result = $this->process_job( $job );
 
                                 if ( is_wp_error( $result ) ) {
@@ -339,11 +366,31 @@ class FPML_Processor {
                                 if ( 'skipped' === $result ) {
                                         $this->queue->update_state( $job->id, 'skipped' );
                                         $summary['skipped']++;
+                                        $this->current_batch_characters += $this->current_job_characters;
+
+                                        if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+                                                for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+                                                        $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+                                                }
+
+                                                break;
+                                        }
+
                                         continue;
                                 }
 
                                 $this->queue->update_state( $job->id, 'done' );
                                 $summary['processed']++;
+
+                                $this->current_batch_characters += $this->current_job_characters;
+
+                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+                                        for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+                                                $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+                                        }
+
+                                        break;
+                                }
                         }
                 } finally {
                         $duration = microtime( true ) - $start_time;
@@ -432,12 +479,18 @@ class FPML_Processor {
                         return new WP_Error( 'fpml_job_invalid', __( 'Job non valido.', 'fp-multilanguage' ) );
                 }
 
+                $this->current_job_characters = 0;
+
                 switch ( $job->object_type ) {
                         case 'post':
                                 return $this->process_post_job( $job );
 
                         case 'term':
+                                return $this->process_term_job( $job );
+
                         case 'menu':
+                                return $this->process_menu_job( $job );
+
                         case 'string':
                                 /**
                                  * Stub per fasi successive.
@@ -508,34 +561,283 @@ class FPML_Processor {
          *
          * @return array
          */
-        protected function get_excluded_shortcodes() {
-                if ( null !== $this->excluded_shortcodes ) {
-                        return $this->excluded_shortcodes;
-                }
+protected function get_excluded_shortcodes() {
+if ( null !== $this->excluded_shortcodes ) {
+return $this->excluded_shortcodes;
+}
 
-                $raw = $this->settings ? $this->settings->get( 'excluded_shortcodes', '' ) : '';
+$raw = $this->settings ? $this->settings->get( 'excluded_shortcodes', '' ) : '';
+$defaults = array( 'vc_row', 'vc_column', 'vc_section', 'vc_tabs', 'vc_accordion', 'vc_tta_accordion', 'vc_tta_tabs' );
 
-                if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
-                        $this->excluded_shortcodes = array();
+if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
+$this->excluded_shortcodes = $defaults;
 
-                        return $this->excluded_shortcodes;
-                }
+return $this->excluded_shortcodes;
+}
 
-                $parts = preg_split( '/[\s,]+/', $raw );
-                $clean = array();
+$parts = preg_split( '/[\s,]+/', $raw );
+$clean = array();
 
-                foreach ( (array) $parts as $part ) {
-                        $part = strtolower( trim( preg_replace( '/[^a-z0-9_-]/i', '', (string) $part ) ) );
+foreach ( (array) $parts as $part ) {
+$part = strtolower( trim( preg_replace( '/[^a-z0-9_-]/i', '', (string) $part ) ) );
 
-                        if ( '' !== $part ) {
-                                $clean[] = $part;
-                        }
-                }
+if ( '' !== $part ) {
+$clean[] = $part;
+}
+}
 
-                $this->excluded_shortcodes = array_values( array_unique( $clean ) );
+if ( empty( $clean ) ) {
+$clean = $defaults;
+}
+
+$this->excluded_shortcodes = array_values( array_unique( $clean ) );
 
                 return $this->excluded_shortcodes;
         }
+
+        /**
+         * Process menu item translation jobs.
+         *
+         * @since 0.3.0
+         *
+         * @param object $job Job entry.
+         *
+         * @return true|WP_Error|string
+         */
+        protected function process_menu_job( $job ) {
+                $source_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
+
+                if ( ! $source_id ) {
+                        return new WP_Error( 'fpml_job_menu_missing', __( 'ID voce di menu mancante.', 'fp-multilanguage' ) );
+                }
+
+                $source_item = get_post( $source_id );
+
+                if ( ! ( $source_item instanceof WP_Post ) || 'nav_menu_item' !== $source_item->post_type ) {
+                        return new WP_Error( 'fpml_job_menu_invalid', __( 'La voce di menu sorgente non è disponibile.', 'fp-multilanguage' ) );
+                }
+
+                if ( get_post_meta( $source_item->ID, '_fpml_is_translation', true ) ) {
+                        return new WP_Error( 'fpml_job_menu_loop', __( 'Il job punta a una voce di menu già tradotta.', 'fp-multilanguage' ) );
+                }
+
+                $field = isset( $job->field ) ? sanitize_key( $job->field ) : 'title';
+
+                if ( 'title' !== $field ) {
+                        return new WP_Error( 'fpml_job_menu_field_unsupported', __( 'Campo voce di menu non gestito.', 'fp-multilanguage' ) );
+                }
+
+                $target_id = (int) get_post_meta( $source_item->ID, '_fpml_pair_id', true );
+
+                if ( ! $target_id ) {
+                        return new WP_Error( 'fpml_job_menu_target_missing', __( 'Nessuna voce di menu tradotta collegata.', 'fp-multilanguage' ) );
+                }
+
+                $target_item = get_post( $target_id );
+
+                if ( ! ( $target_item instanceof WP_Post ) || 'nav_menu_item' !== $target_item->post_type ) {
+                        return new WP_Error( 'fpml_job_menu_target_invalid', __( 'La voce di menu di destinazione non esiste.', 'fp-multilanguage' ) );
+                }
+
+                $manual_label = (string) get_post_meta( $source_item->ID, '_menu_item_title', true );
+                $source_label = '' !== $manual_label ? $manual_label : (string) $source_item->post_title;
+
+                if ( 'custom' !== $source_item->type && '' === trim( $manual_label ) ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $target_manual = (string) get_post_meta( $target_item->ID, '_menu_item_title', true );
+                $target_label  = '' !== $target_manual ? $target_manual : (string) $target_item->post_title;
+
+                if ( '' === trim( $source_label ) ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $context = array(
+                        'field'               => 'menu:title',
+                        'domain'              => 'menu',
+                        'target_value'        => $target_label,
+                        'excluded_shortcodes' => $this->get_excluded_shortcodes(),
+                );
+
+                $translated = $this->translate_value_recursive( $source_label, $context );
+
+                if ( is_wp_error( $translated ) ) {
+                        return $translated;
+                }
+
+                $translated = sanitize_text_field( $translated );
+
+                if ( $translated === $target_label ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $result = wp_update_post(
+                        array(
+                                'ID'         => $target_item->ID,
+                                'post_title' => $translated,
+                        ),
+                        true
+                );
+
+                if ( is_wp_error( $result ) ) {
+                        return $result;
+                }
+
+                update_post_meta( $target_item->ID, '_menu_item_title', $translated );
+
+                $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                /**
+                 * Allow third parties to react to menu label translations.
+                 *
+                 * @since 0.3.0
+                 *
+                 * @param WP_Post $target_item Target menu item.
+                 * @param string  $field       Field identifier.
+                 * @param string  $value       New translated value.
+                 * @param object  $job         Job entry.
+                 */
+                do_action( 'fpml_menu_item_translated', $target_item, 'title', $translated, $job );
+
+                return true;
+        }
+
+        /**
+         * Process term-specific jobs.
+         *
+         * @since 0.3.0
+	 *
+	 * @param object $job Job entry.
+	 *
+	 * @return true|WP_Error|string
+	 */
+	protected function process_term_job( $job ) {
+		$term_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
+
+		if ( ! $term_id ) {
+			return new WP_Error( 'fpml_job_term_missing', __( 'ID termine mancante.', 'fp-multilanguage' ) );
+		}
+
+		$field_raw = isset( $job->field ) ? (string) $job->field : 'name';
+		$taxonomy  = '';
+		$field     = $field_raw;
+
+		if ( false !== strpos( $field_raw, ':' ) ) {
+			list( $taxonomy, $field ) = array_pad( explode( ':', $field_raw, 2 ), 2, '' );
+		}
+
+		$taxonomy = sanitize_key( $taxonomy );
+		$field    = sanitize_key( $field );
+
+		if ( '' === $field ) {
+			return new WP_Error( 'fpml_job_term_field_invalid', __( 'Campo termine non valido.', 'fp-multilanguage' ) );
+		}
+
+		$term = $taxonomy ? get_term( $term_id, $taxonomy ) : get_term( $term_id );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'fpml_job_term_invalid', __( 'Il termine sorgente non è disponibile.', 'fp-multilanguage' ) );
+		}
+
+		if ( get_term_meta( $term->term_id, '_fpml_is_translation', true ) ) {
+			return new WP_Error( 'fpml_job_term_loop', __( 'Il job punta a un termine già tradotto.', 'fp-multilanguage' ) );
+		}
+
+		$taxonomy = sanitize_key( $term->taxonomy );
+
+		$target_id = (int) get_term_meta( $term->term_id, '_fpml_pair_id', true );
+
+		if ( ! $target_id ) {
+			return new WP_Error( 'fpml_job_term_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
+		}
+
+		$target_term = $taxonomy ? get_term( $target_id, $taxonomy ) : get_term( $target_id );
+
+		if ( ! $target_term || is_wp_error( $target_term ) ) {
+			return new WP_Error( 'fpml_job_term_target_invalid', __( 'Il termine di destinazione non esiste.', 'fp-multilanguage' ) );
+		}
+
+		switch ( $field ) {
+			case 'name':
+				$source_value = (string) $term->name;
+				$target_value = (string) $target_term->name;
+				$sanitize     = 'sanitize_text_field';
+				break;
+			case 'description':
+				$source_value = (string) $term->description;
+				$target_value = (string) $target_term->description;
+				$sanitize     = 'wp_kses_post';
+				break;
+			default:
+				return new WP_Error( 'fpml_job_term_field_unsupported', __( 'Campo termine non gestito.', 'fp-multilanguage' ) );
+		}
+
+		if ( '' === $source_value && '' === $target_value ) {
+			$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+			FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+			return 'skipped';
+		}
+
+		$context = array(
+			'field'               => 'term:' . $field,
+			'target_value'        => $target_value,
+			'excluded_shortcodes' => $this->get_excluded_shortcodes(),
+		);
+
+		$translated = $this->translate_value_recursive( $source_value, $context );
+
+		if ( is_wp_error( $translated ) ) {
+			return $translated;
+		}
+
+		$translated = call_user_func( $sanitize, $translated );
+
+		if ( $translated === $target_value ) {
+			$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+			FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+			return 'skipped';
+		}
+
+		$args = array();
+
+		if ( 'name' === $field ) {
+			$args['name'] = $translated;
+		} else {
+			$args['description'] = $translated;
+		}
+
+		$result = wp_update_term( $target_term->term_id, $taxonomy, $args );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+		FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+		/**
+		 * Allow third parties to react to term translations.
+		 *
+		 * @since 0.3.0
+		 *
+		 * @param WP_Term $target_term Translated term.
+		 * @param string  $field       Field identifier.
+		 * @param string  $value       New value.
+		 * @param object  $job         Job entry.
+		 */
+		do_action( 'fpml_term_translated', $target_term, $field, $translated, $job );
+
+		return true;
+	}
 
         /**
          * Process post-related job.
@@ -593,10 +895,22 @@ class FPML_Processor {
                                 'excluded_shortcodes' => $this->get_excluded_shortcodes(),
                         );
 
-                        $translated_value = $this->translate_value_recursive( $source_meta, $context );
+                        if ( '_product_attributes' === $meta_key ) {
+                                $translated_value = $this->translate_product_attributes_meta( $source_meta, $target_meta );
+                        } else {
+                                $translated_value = $this->translate_value_recursive( $source_meta, $context );
+                        }
 
                         if ( is_wp_error( $translated_value ) ) {
                                 return $translated_value;
+                        }
+
+                        if ( '_wp_attachment_image_alt' === $meta_key && ! is_string( $translated_value ) ) {
+                                if ( is_scalar( $translated_value ) || null === $translated_value ) {
+                                        $translated_value = (string) $translated_value;
+                                } else {
+                                        $translated_value = $this->stringify_value_for_preview( $translated_value );
+                                }
                         }
 
                         if ( $this->settings && $this->settings->get( 'sandbox_mode', false ) ) {
@@ -846,6 +1160,40 @@ class FPML_Processor {
         }
 
         /**
+         * Update translation status flag for a menu item.
+         *
+         * @since 0.3.0
+         *
+         * @param int    $item_id Menu item ID.
+         * @param string $field   Field identifier.
+         * @param string $status  Status slug.
+         *
+         * @return void
+         */
+        protected function update_menu_item_status_flag( $item_id, $field, $status ) {
+                $meta_key = '_fpml_status_' . sanitize_key( str_replace( ':', '_', $field ) );
+
+                update_post_meta( $item_id, $meta_key, sanitize_key( $status ) );
+        }
+
+        /**
+         * Update translation status flag for a term.
+         *
+         * @since 0.3.0
+         *
+         * @param int    $term_id Term ID.
+         * @param string $field   Field identifier.
+         * @param string $status  Status slug.
+         *
+         * @return void
+         */
+        protected function update_term_status_flag( $term_id, $field, $status ) {
+                $meta_key = '_fpml_status_' . sanitize_key( $field );
+
+                update_term_meta( $term_id, $meta_key, sanitize_key( $status ) );
+        }
+
+        /**
          * Translate text segments batching them according to provider limits.
          *
          * @since 0.2.0
@@ -883,6 +1231,7 @@ class FPML_Processor {
                                 $chunks[] = array(
                                         'text'    => $buffer,
                                         'indices' => $buffer_indexes,
+                                        'length'  => function_exists( 'mb_strlen' ) ? mb_strlen( $buffer, 'UTF-8' ) : strlen( $buffer ),
                                 );
 
                                 $buffer         = $segment;
@@ -898,6 +1247,7 @@ class FPML_Processor {
                         $chunks[] = array(
                                 'text'    => $buffer,
                                 'indices' => $buffer_indexes,
+                                'length'  => function_exists( 'mb_strlen' ) ? mb_strlen( $buffer, 'UTF-8' ) : strlen( $buffer ),
                         );
                 }
 
@@ -936,6 +1286,20 @@ class FPML_Processor {
                         }
                 }
 
+                if ( ! empty( $chunks ) ) {
+                        $total_characters = 0;
+
+                        foreach ( $chunks as $chunk_data ) {
+                                if ( isset( $chunk_data['length'] ) ) {
+                                        $total_characters += (int) $chunk_data['length'];
+                                }
+                        }
+
+                        if ( $total_characters > 0 ) {
+                                $this->current_job_characters += $total_characters;
+                        }
+                }
+
                 return $translations;
         }
 
@@ -963,16 +1327,126 @@ class FPML_Processor {
         }
 
         /**
-         * Translate a structured value recursively while preserving its shape.
+         * Translate WooCommerce product attribute meta.
          *
-         * @since 0.2.1
+         * @since 0.3.0
          *
-         * @param mixed $value   Value to translate.
-         * @param array $context Translation context (meta key, target value, field, etc.).
+         * @param mixed $attributes        Source attributes.
+         * @param mixed $target_attributes Target attributes.
          *
          * @return mixed|WP_Error
          */
-        private function translate_value_recursive( $value, array $context ) {
+        protected function translate_product_attributes_meta( $attributes, $target_attributes ) {
+                if ( ! is_array( $attributes ) ) {
+                        return $this->translate_value_recursive(
+                                $attributes,
+                                array(
+                                        'field'               => 'meta:_product_attributes',
+                                        'target_value'        => $target_attributes,
+                                        'excluded_shortcodes' => $this->get_excluded_shortcodes(),
+                                )
+                        );
+                }
+
+                $result       = array();
+                $target_array = is_array( $target_attributes ) ? $target_attributes : array();
+                $shortcodes   = $this->get_excluded_shortcodes();
+
+                foreach ( $attributes as $key => $attribute ) {
+                        $current_target = is_array( $target_array ) && array_key_exists( $key, $target_array ) ? $target_array[ $key ] : array();
+
+                        if ( ! is_array( $attribute ) ) {
+                                $translated_item = $this->translate_value_recursive(
+                                        $attribute,
+                                        array(
+                                                'field'               => 'meta:_product_attributes',
+                                                'target_value'        => $current_target,
+                                                'excluded_shortcodes' => $shortcodes,
+                                        )
+                                );
+
+                                if ( is_wp_error( $translated_item ) ) {
+                                        return $translated_item;
+                                }
+
+                                $result[ $key ] = $translated_item;
+                                continue;
+                        }
+
+                        $translated_attribute = $attribute;
+                        $is_taxonomy          = false;
+
+                        if ( array_key_exists( 'is_taxonomy', $attribute ) ) {
+                                $raw_taxonomy = $attribute['is_taxonomy'];
+
+                                if ( is_bool( $raw_taxonomy ) ) {
+                                        $is_taxonomy = $raw_taxonomy;
+                                } else {
+                                        $is_taxonomy = in_array( strtolower( (string) $raw_taxonomy ), array( '1', 'yes', 'true' ), true );
+                                }
+                        }
+
+                        if ( ! $is_taxonomy ) {
+                                if ( array_key_exists( 'name', $attribute ) ) {
+                                        $name_context = array(
+                                                'field'               => 'meta:_product_attributes.name',
+                                                'target_value'        => is_array( $current_target ) && array_key_exists( 'name', $current_target ) ? $current_target['name'] : '',
+                                                'excluded_shortcodes' => $shortcodes,
+                                        );
+
+                                        $translated_name = $this->translate_value_recursive( $attribute['name'], $name_context );
+
+                                        if ( is_wp_error( $translated_name ) ) {
+                                                return $translated_name;
+                                        }
+
+                                        $translated_attribute['name'] = $translated_name;
+                                }
+
+                                if ( array_key_exists( 'value', $attribute ) ) {
+                                        $value_context = array(
+                                                'field'               => 'meta:_product_attributes.value',
+                                                'target_value'        => is_array( $current_target ) && array_key_exists( 'value', $current_target ) ? $current_target['value'] : '',
+                                                'excluded_shortcodes' => $shortcodes,
+                                        );
+
+                                        $translated_value = $this->translate_value_recursive( $attribute['value'], $value_context );
+
+                                        if ( is_wp_error( $translated_value ) ) {
+                                                return $translated_value;
+                                        }
+
+                                        $translated_attribute['value'] = $translated_value;
+                                }
+                        } else {
+                                if ( is_array( $current_target ) ) {
+                                        if ( array_key_exists( 'name', $current_target ) ) {
+                                                $translated_attribute['name'] = $current_target['name'];
+                                        }
+
+                                        if ( array_key_exists( 'value', $current_target ) ) {
+                                                $translated_attribute['value'] = $current_target['value'];
+                                        }
+                                }
+                        }
+
+                        $result[ $key ] = $translated_attribute;
+                }
+
+                return $result;
+        }
+
+/**
+ * Translate a structured value recursively while preserving its shape.
+ *
+ * @since 0.2.1
+ *
+ * @param mixed $value   Value to translate.
+ * @param array $context Translation context (meta key, target value, field, etc.).
+ *
+ * @return mixed|WP_Error
+ */
+private function translate_value_recursive( $value, array $context ) {
                 if ( ! isset( $context['excluded_shortcodes'] ) ) {
                         $context['excluded_shortcodes'] = $this->get_excluded_shortcodes();
                 }

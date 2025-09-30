@@ -205,6 +205,80 @@ class FPML_Queue {
         }
 
         /**
+         * Enqueue a term translation job.
+         *
+         * @since 0.3.0
+         *
+         * @param WP_Term $term  Source term.
+         * @param string  $field Field identifier (name|description).
+         *
+         * @return int Job ID.
+         */
+        public function enqueue_term( $term, $field ) {
+                if ( ! ( $term instanceof WP_Term ) ) {
+                        return 0;
+                }
+
+                $taxonomy = sanitize_key( $term->taxonomy );
+                $field    = sanitize_key( $field );
+
+                if ( '' === $taxonomy || '' === $field ) {
+                        return 0;
+                }
+
+                switch ( $field ) {
+                        case 'name':
+                                $value = $term->name;
+                                break;
+                        case 'description':
+                                $value = $term->description;
+                                break;
+                        default:
+                                $value = '';
+                }
+
+                if ( is_array( $value ) || is_object( $value ) ) {
+                        $value = wp_json_encode( $value );
+                }
+
+                $value = (string) $value;
+                $hash  = md5( $value );
+
+                $field_identifier = $taxonomy . ':' . $field;
+
+                return $this->enqueue( 'term', $term->term_id, $field_identifier, $hash );
+        }
+
+        /**
+         * Enqueue a menu item label translation job.
+         *
+         * @since 0.3.0
+         *
+         * @param WP_Post $item Menu item post.
+         *
+         * @return int Job ID.
+         */
+        public function enqueue_menu_item_label( $item ) {
+                if ( ! ( $item instanceof WP_Post ) ) {
+                        return 0;
+                }
+
+                $label = get_post_meta( $item->ID, '_menu_item_title', true );
+
+                if ( '' === $label ) {
+                        $label = (string) $item->post_title;
+                }
+
+                $label = (string) $label;
+
+                if ( '' === trim( $label ) ) {
+                        return 0;
+                }
+
+                return $this->enqueue( 'menu', $item->ID, 'title', md5( $label ) );
+        }
+
+        /**
          * Claim a batch of jobs for processing.
          *
          * @since 0.2.0
@@ -471,6 +545,49 @@ class FPML_Queue {
                 }
 
                 return $counts;
+        }
+
+        /**
+         * Count completed jobs for a specific object type and optional field.
+         *
+         * @since 0.3.0
+         *
+         * @param string      $object_type Object type slug.
+         * @param string|null $field       Optional field identifier.
+         *
+         * @return int
+         */
+        public function count_completed_jobs( $object_type, $field = null ) {
+                global $wpdb;
+
+                $object_type = sanitize_key( $object_type );
+
+                if ( '' === $object_type ) {
+                        return 0;
+                }
+
+                $table = $this->get_table();
+
+                if ( null === $field || '' === $field ) {
+                        $sql = $wpdb->prepare(
+                                "SELECT COUNT(*) FROM {$table} WHERE state = %s AND object_type = %s",
+                                'done',
+                                $object_type
+                        );
+                } else {
+                        $field = sanitize_text_field( $field );
+
+                        $sql = $wpdb->prepare(
+                                "SELECT COUNT(*) FROM {$table} WHERE state = %s AND object_type = %s AND field = %s",
+                                'done',
+                                $object_type,
+                                $field
+                        );
+                }
+
+                $count = $wpdb->get_var( $sql );
+
+                return $count ? (int) $count : 0;
         }
 
         /**

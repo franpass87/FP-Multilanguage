@@ -116,6 +116,24 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Badge traduzioni', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[show_translation_badge]" value="1" <?php checked( $options['show_translation_badge'], true ); ?> />
+<?php esc_html_e( 'Mostra il suffisso "(EN)" sui titoli tradotti nelle liste e negli strumenti admin.', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Avviso editor', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[show_editor_notice]" value="1" <?php checked( $options['show_editor_notice'], true ); ?> />
+<?php esc_html_e( 'Mostra un promemoria che le modifiche in italiano vengono replicate automaticamente in inglese.', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Elimina dati alla disinstallazione', 'fp-multilanguage' ); ?></th>
 <td>
 <label>

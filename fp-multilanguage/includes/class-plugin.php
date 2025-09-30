@@ -226,6 +226,7 @@ class FPML_Plugin {
                         FPML_Content_Diff::instance();
                         FPML_Processor::instance();
                         FPML_Menu_Sync::instance();
+                        FPML_Media_Front::instance();
                         FPML_SEO::instance();
                 }
 
@@ -553,6 +554,21 @@ class FPML_Plugin {
                  */
                 $sanitized = apply_filters( 'fpml_meta_whitelist', array_unique( $sanitized ), $this );
 
+                $required_keys = array(
+                        '_wp_attachment_image_alt',
+                        '_product_attributes',
+                );
+
+                foreach ( $required_keys as $required_key ) {
+                        if ( '' === $required_key ) {
+                                continue;
+                        }
+
+                        if ( ! in_array( $required_key, $sanitized, true ) ) {
+                                $sanitized[] = $required_key;
+                        }
+                }
+
                 return array_values( array_unique( array_filter( $sanitized ) ) );
         }
 
@@ -653,14 +669,14 @@ class FPML_Plugin {
                         return;
                 }
 
-                update_term_meta( $target_term->term_id, '_fpml_pair_source_id', $term->term_id );
-                update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
+		update_term_meta( $target_term->term_id, '_fpml_pair_source_id', $term->term_id );
+		update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
 
-                $this->queue->enqueue( 'term', $term->term_id, 'name', $this->hash_value( $term->name ) );
-                $this->queue->enqueue( 'term', $term->term_id, 'description', $this->hash_value( $term->description ) );
+		$this->queue->enqueue_term( $term, 'name' );
+		$this->queue->enqueue_term( $term, 'description' );
 
-                update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
-                update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
+		update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
+		update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
         }
 
         /**
@@ -884,6 +900,8 @@ class FPML_Plugin {
                 $logger     = FPML_Logger::instance();
                 $settings   = $this->settings;
                 $counts     = $queue->get_state_counts();
+                $terms_done = $queue->count_completed_jobs( 'term' );
+                $menu_done  = $queue->count_completed_jobs( 'menu', 'title' );
                 $events     = array(
                         'fpml_run_queue'       => wp_next_scheduled( 'fpml_run_queue' ),
                         'fpml_retry_failed'    => wp_next_scheduled( 'fpml_retry_failed' ),
@@ -940,6 +958,10 @@ class FPML_Plugin {
 
                 return array(
                         'queue_counts'      => $counts,
+                        'kpi'               => array(
+                                'terms_translated'       => $terms_done,
+                                'menu_labels_translated' => $menu_done,
+                        ),
                         'events'            => $events,
                         'lock_active'       => $processor->is_locked(),
                         'cron_disabled'     => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,

@@ -55,6 +55,7 @@ return self::$instance;
 protected function __construct() {
 $this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this->get_defaults() );
 add_action( 'admin_init', array( $this, 'register_settings' ) );
+add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
 /**
@@ -77,6 +78,7 @@ return array(
 'libretranslate_api_key'  => '',
 'batch_size'              => 5,
 'max_chars'               => 4500,
+'max_chars_per_batch'     => 20000,
 'cron_frequency'          => '15min',
 'routing_mode'            => 'segment',
 'browser_redirect'        => false,
@@ -88,12 +90,14 @@ return array(
 'slug_redirect'           => false,
 'noindex_en'              => false,
 'sitemap_en'              => true,
-'sandbox_mode'            => false,
-'anonymize_logs'          => false,
-'glossary_case_sensitive' => false,
-'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc',
-'exclude_regex'           => '',
-'excluded_shortcodes'     => '',
+            'sandbox_mode'            => false,
+            'anonymize_logs'          => false,
+            'glossary_case_sensitive' => false,
+            'show_translation_badge'  => true,
+            'show_editor_notice'      => true,
+            'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc,_wp_attachment_image_alt,_product_attributes',
+            'exclude_regex'           => '',
+            'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
 'rate_openai'             => '',
 'rate_deepl'              => '',
 'rate_google'             => '',
@@ -143,6 +147,33 @@ register_setting( 'fpml_settings_group', self::OPTION_KEY, array( $this, 'saniti
 }
 
 /**
+ * Ensure WooCommerce attribute taxonomies are translatable.
+ *
+ * @since 0.3.0
+ *
+ * @param array $taxonomies Current taxonomies.
+ *
+ * @return array
+ */
+public function maybe_include_woocommerce_taxonomies( $taxonomies ) {
+$taxonomies = is_array( $taxonomies ) ? $taxonomies : array();
+
+if ( ! class_exists( 'WooCommerce' ) && ! defined( 'WC_VERSION' ) && ! class_exists( 'WC_Product' ) ) {
+return array_values( array_unique( $taxonomies ) );
+}
+
+$all = get_taxonomies( array(), 'names' );
+
+foreach ( $all as $taxonomy ) {
+if ( 0 === strpos( $taxonomy, 'pa_' ) ) {
+$taxonomies[] = $taxonomy;
+}
+}
+
+return array_values( array_unique( $taxonomies ) );
+}
+
+/**
  * Sanitize user input.
  *
  * @since 0.2.0
@@ -166,6 +197,7 @@ $data['libretranslate_api_url'] = esc_url_raw( $data['libretranslate_api_url'] )
 $data['libretranslate_api_key'] = sanitize_text_field( $data['libretranslate_api_key'] );
 $data['batch_size']             = max( 1, absint( $data['batch_size'] ) );
 $data['max_chars']              = max( 500, absint( $data['max_chars'] ) );
+$data['max_chars_per_batch']    = max( 0, absint( $data['max_chars_per_batch'] ) );
 
 $frequencies = array( '5min', '15min', 'hourly' );
 if ( ! in_array( $data['cron_frequency'], $frequencies, true ) ) {
@@ -184,8 +216,10 @@ $data['noindex_en']              = ! empty( $data['noindex_en'] );
 $data['sitemap_en']              = ! empty( $data['sitemap_en'] );
 $data['sandbox_mode']            = ! empty( $data['sandbox_mode'] );
 $data['anonymize_logs']          = ! empty( $data['anonymize_logs'] );
-$data['glossary_case_sensitive'] = ! empty( $data['glossary_case_sensitive'] );
-$data['meta_whitelist']          = sanitize_textarea_field( $data['meta_whitelist'] );
+        $data['glossary_case_sensitive'] = ! empty( $data['glossary_case_sensitive'] );
+        $data['show_translation_badge']  = ! empty( $data['show_translation_badge'] );
+        $data['show_editor_notice']      = ! empty( $data['show_editor_notice'] );
+        $data['meta_whitelist']          = sanitize_textarea_field( $data['meta_whitelist'] );
 $data['exclude_regex']           = sanitize_textarea_field( $data['exclude_regex'] );
 $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shortcodes'] );
 $data['rate_openai']             = sanitize_text_field( $data['rate_openai'] );

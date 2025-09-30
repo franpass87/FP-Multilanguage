@@ -30,6 +30,13 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Max caratteri per batch', 'fp-multilanguage' ); ?></th>
+<td>
+<input type="number" min="0" class="small-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[max_chars_per_batch]" value="<?php echo esc_attr( $options['max_chars_per_batch'] ); ?>" />
+<p class="fpml-field-description"><?php esc_html_e( 'Limite totale di caratteri elaborati in un singolo run della coda (0 per nessun limite).', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Frequenza cron', 'fp-multilanguage' ); ?></th>
 <td>
 <select name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[cron_frequency]">

@@ -57,6 +57,13 @@ class FPML_Admin {
      */
     protected $plugin;
 
+    /**
+     * Post types where the language column is enabled.
+     *
+     * @var array
+     */
+    protected $language_column_post_types = array();
+
 /**
  * Menu slug.
  */
@@ -76,6 +83,7 @@ const MENU_SLUG = 'fpml-settings';
                 add_action( 'admin_menu', array( $this, 'register_menu' ) );
                 add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
                 add_action( 'admin_notices', array( $this, 'maybe_render_cron_notice' ) );
+                add_action( 'admin_notices', array( $this, 'maybe_render_editor_notice' ) );
                 add_action( 'admin_post_fpml_scan_strings', array( $this, 'handle_scan_strings' ) );
         add_action( 'admin_post_fpml_save_overrides', array( $this, 'handle_save_overrides' ) );
         add_action( 'admin_post_fpml_import_overrides', array( $this, 'handle_import_overrides' ) );
@@ -88,6 +96,10 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'admin_post_fpml_export_logs', array( $this, 'handle_export_logs' ) );
         add_action( 'admin_post_fpml_import_logs', array( $this, 'handle_import_logs' ) );
         add_action( 'admin_post_fpml_clear_sandbox', array( $this, 'handle_clear_sandbox' ) );
+                add_action( 'current_screen', array( $this, 'setup_post_list_hooks' ) );
+                add_action( 'restrict_manage_posts', array( $this, 'render_language_filter' ), 20, 1 );
+                add_action( 'pre_get_posts', array( $this, 'handle_language_filter_query' ) );
+                add_filter( 'the_title', array( $this, 'maybe_add_translation_badge' ), 10, 2 );
     }
 
 /**
@@ -713,6 +725,272 @@ protected function get_tabs() {
         );
 
         $this->redirect_to_tab( 'export' );
+    }
+
+    /**
+     * Prepare admin post list enhancements.
+     *
+     * @since 0.3.0
+     *
+     * @param WP_Screen|null $screen Current screen instance.
+     *
+     * @return void
+     */
+    public function setup_post_list_hooks( $screen = null ) {
+        if ( ! $screen && function_exists( 'get_current_screen' ) ) {
+            $screen = get_current_screen();
+        }
+
+        if ( ! $screen || 'edit' !== $screen->base || empty( $screen->post_type ) ) {
+            return;
+        }
+
+        $post_type = $screen->post_type;
+
+        if ( isset( $this->language_column_post_types[ $post_type ] ) ) {
+            return;
+        }
+
+        $this->language_column_post_types[ $post_type ] = true;
+
+        add_filter( 'manage_edit-' . $post_type . '_columns', array( $this, 'register_language_column' ) );
+        add_action( 'manage_' . $post_type . '_posts_custom_column', array( $this, 'render_language_column' ), 10, 2 );
+    }
+
+    /**
+     * Register the language column in list tables.
+     *
+     * @since 0.3.0
+     *
+     * @param array $columns Existing columns.
+     *
+     * @return array
+     */
+    public function register_language_column( $columns ) {
+        if ( ! is_array( $columns ) ) {
+            $columns = array();
+        }
+
+        if ( isset( $columns['fpml_lang'] ) ) {
+            return $columns;
+        }
+
+        $injected = array();
+
+        foreach ( $columns as $key => $label ) {
+            $injected[ $key ] = $label;
+
+            if ( 'title' === $key ) {
+                $injected['fpml_lang'] = esc_html__( 'Lingua', 'fp-multilanguage' );
+            }
+        }
+
+        if ( ! isset( $injected['fpml_lang'] ) ) {
+            $injected['fpml_lang'] = esc_html__( 'Lingua', 'fp-multilanguage' );
+        }
+
+        return $injected;
+    }
+
+    /**
+     * Render the language column contents.
+     *
+     * @since 0.3.0
+     *
+     * @param string $column  Column name.
+     * @param int    $post_id Post ID.
+     *
+     * @return void
+     */
+    public function render_language_column( $column, $post_id ) {
+        if ( 'fpml_lang' !== $column ) {
+            return;
+        }
+
+        $is_translation = get_post_meta( $post_id, '_fpml_is_translation', true );
+
+        $label = $is_translation ? esc_html__( 'EN', 'fp-multilanguage' ) : esc_html__( 'IT', 'fp-multilanguage' );
+
+        echo $label;
+    }
+
+    /**
+     * Render the admin language filter control.
+     *
+     * @since 0.3.0
+     *
+     * @param string $post_type Current post type slug.
+     *
+     * @return void
+     */
+    public function render_language_filter( $post_type = '' ) {
+        if ( ! is_admin() ) {
+            return;
+        }
+
+        if ( '' === $post_type ) {
+            global $typenow;
+            $post_type = $typenow;
+        }
+
+        if ( empty( $post_type ) || empty( $this->language_column_post_types[ $post_type ] ) ) {
+            return;
+        }
+
+        $current = isset( $_GET['fpml_lang_filter'] ) ? sanitize_key( wp_unslash( $_GET['fpml_lang_filter'] ) ) : '';
+
+        echo '<label class="screen-reader-text" for="fpml-lang-filter">' . esc_html__( 'Filtra per lingua', 'fp-multilanguage' ) . '</label>';
+        echo '<select name="fpml_lang_filter" id="fpml-lang-filter">';
+        echo '<option value="">' . esc_html__( 'Tutte le lingue', 'fp-multilanguage' ) . '</option>';
+        echo '<option value="it"' . selected( $current, 'it', false ) . '>' . esc_html__( 'Italiano', 'fp-multilanguage' ) . '</option>';
+        echo '<option value="en"' . selected( $current, 'en', false ) . '>' . esc_html__( 'Inglese', 'fp-multilanguage' ) . '</option>';
+        echo '</select>';
+    }
+
+    /**
+     * Filter the admin list query by language when requested.
+     *
+     * @since 0.3.0
+     *
+     * @param WP_Query $query Current query instance.
+     *
+     * @return void
+     */
+    public function handle_language_filter_query( $query ) {
+        if ( ! is_admin() || ! $query instanceof WP_Query || ! $query->is_main_query() ) {
+            return;
+        }
+
+        global $pagenow;
+
+        if ( 'edit.php' !== $pagenow ) {
+            return;
+        }
+
+        $lang = isset( $_GET['fpml_lang_filter'] ) ? sanitize_key( wp_unslash( $_GET['fpml_lang_filter'] ) ) : '';
+
+        if ( ! in_array( $lang, array( 'it', 'en' ), true ) ) {
+            return;
+        }
+
+        $post_type = $query->get( 'post_type' );
+
+        if ( empty( $post_type ) ) {
+            $post_type = 'post';
+        }
+
+        if ( 'any' === $post_type ) {
+            $post_type = 'post';
+        }
+
+        if ( ! isset( $this->language_column_post_types[ $post_type ] ) ) {
+            return;
+        }
+
+        $meta_query = $query->get( 'meta_query' );
+
+        if ( ! is_array( $meta_query ) ) {
+            $meta_query = array();
+        }
+
+        if ( 'en' === $lang ) {
+            $meta_query[] = array(
+                'key'     => '_fpml_is_translation',
+                'value'   => '1',
+                'compare' => '=',
+            );
+        } else {
+            $meta_query[] = array(
+                'relation' => 'OR',
+                array(
+                    'key'     => '_fpml_is_translation',
+                    'compare' => 'NOT EXISTS',
+                ),
+                array(
+                    'key'     => '_fpml_is_translation',
+                    'value'   => '0',
+                    'compare' => '=',
+                ),
+                array(
+                    'key'     => '_fpml_is_translation',
+                    'value'   => '1',
+                    'compare' => '!=',
+                ),
+            );
+        }
+
+        $query->set( 'meta_query', $meta_query );
+    }
+
+    /**
+     * Append the translation badge to titles when enabled.
+     *
+     * @since 0.3.0
+     *
+     * @param string $title   Original title.
+     * @param int    $post_id Current post ID.
+     *
+     * @return string
+     */
+    public function maybe_add_translation_badge( $title, $post_id ) {
+        if ( ! is_admin() || ! $this->settings->get( 'show_translation_badge', true ) ) {
+            return $title;
+        }
+
+        $post_id = (int) $post_id;
+
+        if ( $post_id <= 0 ) {
+            return $title;
+        }
+
+        $post = get_post( $post_id );
+
+        if ( ! $post ) {
+            return $title;
+        }
+
+        if ( ! get_post_meta( $post->ID, '_fpml_is_translation', true ) ) {
+            return $title;
+        }
+
+        $badge = esc_html__( '(EN)', 'fp-multilanguage' );
+
+        if ( false !== strpos( $title, $badge ) ) {
+            return $title;
+        }
+
+        return $title . ' ' . $badge;
+    }
+
+    /**
+     * Display an informational notice in the post editor.
+     *
+     * @since 0.3.0
+     *
+     * @return void
+     */
+    public function maybe_render_editor_notice() {
+        if ( ! is_admin() || ! $this->settings->get( 'show_editor_notice', true ) ) {
+            return;
+        }
+
+        if ( ! function_exists( 'get_current_screen' ) ) {
+            return;
+        }
+
+        $screen = get_current_screen();
+
+        if ( ! $screen || 'post' !== $screen->base ) {
+            return;
+        }
+
+        $post_id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+
+        if ( $post_id && get_post_meta( $post_id, '_fpml_is_translation', true ) ) {
+            return;
+        }
+
+        echo '<div class="notice notice-info"><p>' . esc_html__( 'Le modifiche in IT si replicano automaticamente in EN.', 'fp-multilanguage' ) . '</p></div>';
     }
 
     /**

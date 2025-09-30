@@ -57,6 +57,15 @@ class FPML_Language {
     protected $settings;
 
     /**
+     * Cached term pairs map.
+     *
+     * @since 0.3.0
+     *
+     * @var array|null
+     */
+    protected $term_pairs = null;
+
+    /**
      * Retrieve singleton.
      *
      * @since 0.2.0
@@ -81,6 +90,7 @@ class FPML_Language {
         add_action( 'template_redirect', array( $this, 'maybe_redirect_browser_language' ), 0 );
         add_action( 'template_redirect', array( $this, 'persist_language_cookie' ), 1 );
         add_shortcode( 'fp_lang_switcher', array( $this, 'render_switcher' ) );
+        add_filter( 'locale', array( $this, 'filter_locale' ) );
     }
 
     /**
@@ -198,6 +208,57 @@ class FPML_Language {
 
         wp_safe_redirect( $target_url, 302 );
         exit;
+    }
+
+    /**
+     * Force English locale on frontend when needed.
+     *
+     * @since 0.3.0
+     *
+     * @param string $locale Current locale.
+     *
+     * @return string
+     */
+    public function filter_locale( $locale ) {
+        if ( is_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+            return $locale;
+        }
+
+        if ( wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+            return $locale;
+        }
+
+        $language = $this->current;
+
+        if ( self::TARGET !== $language ) {
+            $requested = '';
+
+            if ( isset( $_GET['fpml_lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested_raw = wp_unslash( $_GET['fpml_lang'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested     = strtolower( sanitize_text_field( $requested_raw ) );
+            } elseif ( isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested_raw = wp_unslash( $_GET['lang'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $requested     = strtolower( sanitize_text_field( $requested_raw ) );
+            }
+
+            if ( self::TARGET !== $requested ) {
+                $path = $this->get_current_path();
+
+                if ( 0 === strpos( $path, '/en/' ) || '/en/' === $path ) {
+                    $requested = self::TARGET;
+                }
+            }
+
+            if ( self::TARGET === $requested ) {
+                $language = self::TARGET;
+            }
+        }
+
+        if ( self::TARGET !== $language ) {
+            return $locale;
+        }
+
+        return 'en_US';
     }
 
     /**
@@ -604,6 +665,160 @@ class FPML_Language {
         return is_wp_error( $link ) ? '' : $link;
     }
 
+    /**
+     * Retrieve cached term pairs from storage.
+     *
+     * @since 0.3.0
+     *
+     * @return array
+     */
+    protected function get_term_pairs() {
+        if ( null !== $this->term_pairs ) {
+            return $this->term_pairs;
+        }
+
+        $stored = get_option( 'fpml_term_pairs', array() );
+        $pairs  = array(
+            'source_to_target' => array(),
+            'target_to_source' => array(),
+        );
+
+        if ( is_array( $stored ) ) {
+            if ( isset( $stored['source_to_target'] ) && is_array( $stored['source_to_target'] ) ) {
+                foreach ( $stored['source_to_target'] as $source_id => $target_id ) {
+                    $source = absint( $source_id );
+                    $target = absint( $target_id );
+
+                    if ( $source && $target ) {
+                        $pairs['source_to_target'][ $source ] = $target;
+                        $pairs['target_to_source'][ $target ] = $source;
+                    }
+                }
+            }
+
+            if ( isset( $stored['target_to_source'] ) && is_array( $stored['target_to_source'] ) ) {
+                foreach ( $stored['target_to_source'] as $target_id => $source_id ) {
+                    $target = absint( $target_id );
+                    $source = absint( $source_id );
+
+                    if ( $target && $source ) {
+                        $pairs['target_to_source'][ $target ] = $source;
+
+                        if ( ! isset( $pairs['source_to_target'][ $source ] ) ) {
+                            $pairs['source_to_target'][ $source ] = $target;
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->term_pairs = $pairs;
+
+        return $this->term_pairs;
+    }
+
+    /**
+     * Retrieve the translated term ID for a given source term.
+     *
+     * @since 0.3.0
+     *
+     * @param int $source_id Source term ID.
+     *
+     * @return int
+     */
+    public function get_term_translation_id( $source_id ) {
+        $source_id = absint( $source_id );
+
+        if ( ! $source_id ) {
+            return 0;
+        }
+
+        $pairs = $this->get_term_pairs();
+
+        return isset( $pairs['source_to_target'][ $source_id ] ) ? (int) $pairs['source_to_target'][ $source_id ] : 0;
+    }
+
+    /**
+     * Retrieve the source term ID for a translated term.
+     *
+     * @since 0.3.0
+     *
+     * @param int $target_id Target term ID.
+     *
+     * @return int
+     */
+    public function get_term_source_id( $target_id ) {
+        $target_id = absint( $target_id );
+
+        if ( ! $target_id ) {
+            return 0;
+        }
+
+        $pairs = $this->get_term_pairs();
+
+        return isset( $pairs['target_to_source'][ $target_id ] ) ? (int) $pairs['target_to_source'][ $target_id ] : 0;
+    }
+
+    /**
+     * Persist the mapping between source and translated terms.
+     *
+     * @since 0.3.0
+     *
+     * @param int $source_id Source term ID.
+     * @param int $target_id Target term ID.
+     *
+     * @return bool
+     */
+    public function set_term_pair( $source_id, $target_id ) {
+        $source_id = absint( $source_id );
+        $target_id = absint( $target_id );
+
+        if ( ! $source_id || ! $target_id ) {
+            return false;
+        }
+
+        $pairs       = $this->get_term_pairs();
+        $source_map  = $pairs['source_to_target'];
+        $target_map  = $pairs['target_to_source'];
+        $has_changed = false;
+
+        if ( isset( $source_map[ $source_id ] ) ) {
+            if ( (int) $source_map[ $source_id ] !== $target_id ) {
+                $previous_target = (int) $source_map[ $source_id ];
+                unset( $target_map[ $previous_target ] );
+                $source_map[ $source_id ] = $target_id;
+                $has_changed              = true;
+            }
+        } else {
+            $source_map[ $source_id ] = $target_id;
+            $has_changed              = true;
+        }
+
+        if ( isset( $target_map[ $target_id ] ) ) {
+            if ( (int) $target_map[ $target_id ] !== $source_id ) {
+                $previous_source = (int) $target_map[ $target_id ];
+                unset( $source_map[ $previous_source ] );
+                $target_map[ $target_id ] = $source_id;
+                $has_changed              = true;
+            }
+        } else {
+            $target_map[ $target_id ] = $source_id;
+            $has_changed              = true;
+        }
+
+        if ( ! $has_changed ) {
+            return true;
+        }
+
+        $this->term_pairs = array(
+            'source_to_target' => $source_map,
+            'target_to_source' => $target_map,
+        );
+
+        update_option( 'fpml_term_pairs', $this->term_pairs, false );
+
+        return true;
+    }
     /**
      * Return the language-specific home URL baseline.
      *
