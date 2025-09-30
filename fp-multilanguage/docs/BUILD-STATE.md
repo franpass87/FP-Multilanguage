@@ -1,7 +1,7 @@
 # FP Multilanguage — Build State
 
 - **Fase attuale:** 9 (Documentazione & Release) completata
-- **Ultimo aggiornamento:** verifica del 30 settembre 2025 sulle fasi 1-9, senza ulteriori modifiche funzionali richieste.
+- **Ultimo aggiornamento:** verifica supplementare del 30 settembre 2025 sulle fasi 1-9, confermate operative senza nuove modifiche funzionali.
 - **File toccati (fix):** docs/BUILD-STATE.md
 
 ## Ripresa 2024-04-07
@@ -117,4 +117,42 @@
 
 - **Fase 9 — Documentazione & release**
   - **Esito:** confermata la documentazione aggiornata con WooCommerce/WPBakery, media ALT/ID, locale EN e versione 0.3.0.
+  - **File coinvolti:** readme.txt, fp-multilanguage.php, docs/BUILD-STATE.md.
+
+## Ripresa 2025-09-30 (verifica supplementare)
+
+- **Fase 1 — Traduzione termini**
+  - **Esito:** riconfermata l'enqueue automatica dei job term:name/description su creazione e modifica, con aggiornamento delle coppie IT↔EN.
+  - **File coinvolti:** includes/class-plugin.php, includes/class-queue.php, includes/class-processor.php, includes/class-language.php, includes/class-settings.php.
+
+- **Fase 2 — Traduzione etichette menu**
+  - **Esito:** verificata la sincronizzazione strutturale dei menu e la traduzione dei label custom via coda, riutilizzando i titoli EN delle risorse collegate.
+  - **File coinvolti:** includes/class-menu-sync.php, includes/class-queue.php, includes/class-processor.php.
+
+- **Fase 3 — Media ALT/CAPTION/TITLE + sostituzione ID frontend**
+  - **Esito:** confermato il popolamento della whitelist con `_wp_attachment_image_alt`, la traduzione dei campi attachment e la sostituzione degli ID IT→EN nel contenuto, gallery e WPBakery.
+  - **File coinvolti:** includes/class-settings.php, includes/class-processor.php, includes/class-media-front.php, includes/class-plugin.php.
+
+- **Fase 4 — WooCommerce attributi**
+  - **Esito:** riconfermata la traduzione ricorsiva dei metadati `_product_attributes` e l'utilizzo dei termini globali pa_* tradotti.
+  - **File coinvolti:** includes/class-settings.php, includes/class-processor.php.
+
+- **Fase 5 — Locale frontend EN**
+  - **Esito:** verificata la forzatura del locale `en_US` sul frontend quando fpml_lang=en, con esclusione di admin/AJAX/REST.
+  - **File coinvolti:** includes/class-language.php.
+
+- **Fase 6 — WPBakery hardening**
+  - **Esito:** confermata la precompilazione automatica degli shortcode esclusi e la sostituzione degli ID negli shortcode `[vc_single_image]`.
+  - **File coinvolti:** includes/class-settings.php, includes/class-media-front.php.
+
+- **Fase 7 — Admin UX**
+  - **Esito:** validata la presenza della colonna lingua, del filtro e dei badge/notice configurabili nell'area editoriale.
+  - **File coinvolti:** admin/class-admin.php, admin/views/settings-general.php.
+
+- **Fase 8 — Performance & KPI**
+  - **Esito:** confermato il rispetto del cap `max_chars_per_batch`, il tracking dei caratteri per job e l'esposizione dei KPI su termini e menu.
+  - **File coinvolti:** includes/class-processor.php, includes/class-settings.php, admin/views/settings-diagnostics.php.
+
+- **Fase 9 — Documentazione & release**
+  - **Esito:** riconfermata la documentazione aggiornata con WooCommerce/WPBakery, media ALT/ID e locale EN, insieme al bump di versione 0.3.0.
   - **File coinvolti:** readme.txt, fp-multilanguage.php, docs/BUILD-STATE.md.
