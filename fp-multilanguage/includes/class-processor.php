@@ -437,7 +437,11 @@ class FPML_Processor {
                                 return $this->process_post_job( $job );
 
                         case 'term':
+                                return $this->process_term_job( $job );
+
                         case 'menu':
+                                return $this->process_menu_job( $job );
+
                         case 'string':
                                 /**
                                  * Stub per fasi successive.
@@ -536,6 +540,250 @@ class FPML_Processor {
 
                 return $this->excluded_shortcodes;
         }
+
+        /**
+         * Process menu item translation jobs.
+         *
+         * @since 0.3.0
+         *
+         * @param object $job Job entry.
+         *
+         * @return true|WP_Error|string
+         */
+        protected function process_menu_job( $job ) {
+                $source_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
+
+                if ( ! $source_id ) {
+                        return new WP_Error( 'fpml_job_menu_missing', __( 'ID voce di menu mancante.', 'fp-multilanguage' ) );
+                }
+
+                $source_item = get_post( $source_id );
+
+                if ( ! ( $source_item instanceof WP_Post ) || 'nav_menu_item' !== $source_item->post_type ) {
+                        return new WP_Error( 'fpml_job_menu_invalid', __( 'La voce di menu sorgente non è disponibile.', 'fp-multilanguage' ) );
+                }
+
+                if ( get_post_meta( $source_item->ID, '_fpml_is_translation', true ) ) {
+                        return new WP_Error( 'fpml_job_menu_loop', __( 'Il job punta a una voce di menu già tradotta.', 'fp-multilanguage' ) );
+                }
+
+                $field = isset( $job->field ) ? sanitize_key( $job->field ) : 'title';
+
+                if ( 'title' !== $field ) {
+                        return new WP_Error( 'fpml_job_menu_field_unsupported', __( 'Campo voce di menu non gestito.', 'fp-multilanguage' ) );
+                }
+
+                $target_id = (int) get_post_meta( $source_item->ID, '_fpml_pair_id', true );
+
+                if ( ! $target_id ) {
+                        return new WP_Error( 'fpml_job_menu_target_missing', __( 'Nessuna voce di menu tradotta collegata.', 'fp-multilanguage' ) );
+                }
+
+                $target_item = get_post( $target_id );
+
+                if ( ! ( $target_item instanceof WP_Post ) || 'nav_menu_item' !== $target_item->post_type ) {
+                        return new WP_Error( 'fpml_job_menu_target_invalid', __( 'La voce di menu di destinazione non esiste.', 'fp-multilanguage' ) );
+                }
+
+                $manual_label = (string) get_post_meta( $source_item->ID, '_menu_item_title', true );
+                $source_label = '' !== $manual_label ? $manual_label : (string) $source_item->post_title;
+
+                if ( 'custom' !== $source_item->type && '' === trim( $manual_label ) ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $target_manual = (string) get_post_meta( $target_item->ID, '_menu_item_title', true );
+                $target_label  = '' !== $target_manual ? $target_manual : (string) $target_item->post_title;
+
+                if ( '' === trim( $source_label ) ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $context = array(
+                        'field'               => 'menu:title',
+                        'domain'              => 'menu',
+                        'target_value'        => $target_label,
+                        'excluded_shortcodes' => $this->get_excluded_shortcodes(),
+                );
+
+                $translated = $this->translate_value_recursive( $source_label, $context );
+
+                if ( is_wp_error( $translated ) ) {
+                        return $translated;
+                }
+
+                $translated = sanitize_text_field( $translated );
+
+                if ( $translated === $target_label ) {
+                        $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                        return 'skipped';
+                }
+
+                $result = wp_update_post(
+                        array(
+                                'ID'         => $target_item->ID,
+                                'post_title' => $translated,
+                        ),
+                        true
+                );
+
+                if ( is_wp_error( $result ) ) {
+                        return $result;
+                }
+
+                update_post_meta( $target_item->ID, '_menu_item_title', $translated );
+
+                $this->update_menu_item_status_flag( $target_item->ID, 'title', 'synced' );
+
+                /**
+                 * Allow third parties to react to menu label translations.
+                 *
+                 * @since 0.3.0
+                 *
+                 * @param WP_Post $target_item Target menu item.
+                 * @param string  $field       Field identifier.
+                 * @param string  $value       New translated value.
+                 * @param object  $job         Job entry.
+                 */
+                do_action( 'fpml_menu_item_translated', $target_item, 'title', $translated, $job );
+
+                return true;
+        }
+
+        /**
+         * Process term-specific jobs.
+         *
+         * @since 0.3.0
+	 *
+	 * @param object $job Job entry.
+	 *
+	 * @return true|WP_Error|string
+	 */
+	protected function process_term_job( $job ) {
+		$term_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
+
+		if ( ! $term_id ) {
+			return new WP_Error( 'fpml_job_term_missing', __( 'ID termine mancante.', 'fp-multilanguage' ) );
+		}
+
+		$field_raw = isset( $job->field ) ? (string) $job->field : 'name';
+		$taxonomy  = '';
+		$field     = $field_raw;
+
+		if ( false !== strpos( $field_raw, ':' ) ) {
+			list( $taxonomy, $field ) = array_pad( explode( ':', $field_raw, 2 ), 2, '' );
+		}
+
+		$taxonomy = sanitize_key( $taxonomy );
+		$field    = sanitize_key( $field );
+
+		if ( '' === $field ) {
+			return new WP_Error( 'fpml_job_term_field_invalid', __( 'Campo termine non valido.', 'fp-multilanguage' ) );
+		}
+
+		$term = $taxonomy ? get_term( $term_id, $taxonomy ) : get_term( $term_id );
+
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'fpml_job_term_invalid', __( 'Il termine sorgente non è disponibile.', 'fp-multilanguage' ) );
+		}
+
+		if ( get_term_meta( $term->term_id, '_fpml_is_translation', true ) ) {
+			return new WP_Error( 'fpml_job_term_loop', __( 'Il job punta a un termine già tradotto.', 'fp-multilanguage' ) );
+		}
+
+		$taxonomy = sanitize_key( $term->taxonomy );
+
+		$target_id = (int) get_term_meta( $term->term_id, '_fpml_pair_id', true );
+
+		if ( ! $target_id ) {
+			return new WP_Error( 'fpml_job_term_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
+		}
+
+		$target_term = $taxonomy ? get_term( $target_id, $taxonomy ) : get_term( $target_id );
+
+		if ( ! $target_term || is_wp_error( $target_term ) ) {
+			return new WP_Error( 'fpml_job_term_target_invalid', __( 'Il termine di destinazione non esiste.', 'fp-multilanguage' ) );
+		}
+
+		switch ( $field ) {
+			case 'name':
+				$source_value = (string) $term->name;
+				$target_value = (string) $target_term->name;
+				$sanitize     = 'sanitize_text_field';
+				break;
+			case 'description':
+				$source_value = (string) $term->description;
+				$target_value = (string) $target_term->description;
+				$sanitize     = 'wp_kses_post';
+				break;
+			default:
+				return new WP_Error( 'fpml_job_term_field_unsupported', __( 'Campo termine non gestito.', 'fp-multilanguage' ) );
+		}
+
+		if ( '' === $source_value && '' === $target_value ) {
+			$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+			FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+			return 'skipped';
+		}
+
+		$context = array(
+			'field'               => 'term:' . $field,
+			'target_value'        => $target_value,
+			'excluded_shortcodes' => $this->get_excluded_shortcodes(),
+		);
+
+		$translated = $this->translate_value_recursive( $source_value, $context );
+
+		if ( is_wp_error( $translated ) ) {
+			return $translated;
+		}
+
+		$translated = call_user_func( $sanitize, $translated );
+
+		if ( $translated === $target_value ) {
+			$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+			FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+			return 'skipped';
+		}
+
+		$args = array();
+
+		if ( 'name' === $field ) {
+			$args['name'] = $translated;
+		} else {
+			$args['description'] = $translated;
+		}
+
+		$result = wp_update_term( $target_term->term_id, $taxonomy, $args );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$this->update_term_status_flag( $target_term->term_id, $field, 'synced' );
+		FPML_Language::instance()->set_term_pair( $term->term_id, $target_term->term_id );
+
+		/**
+		 * Allow third parties to react to term translations.
+		 *
+		 * @since 0.3.0
+		 *
+		 * @param WP_Term $target_term Translated term.
+		 * @param string  $field       Field identifier.
+		 * @param string  $value       New value.
+		 * @param object  $job         Job entry.
+		 */
+		do_action( 'fpml_term_translated', $target_term, $field, $translated, $job );
+
+		return true;
+	}
 
         /**
          * Process post-related job.
@@ -843,6 +1091,40 @@ class FPML_Processor {
                  * @since 0.2.0
                  */
                 do_action( 'fpml_save_post_field_value', $post, $field, $new_value );
+        }
+
+        /**
+         * Update translation status flag for a menu item.
+         *
+         * @since 0.3.0
+         *
+         * @param int    $item_id Menu item ID.
+         * @param string $field   Field identifier.
+         * @param string $status  Status slug.
+         *
+         * @return void
+         */
+        protected function update_menu_item_status_flag( $item_id, $field, $status ) {
+                $meta_key = '_fpml_status_' . sanitize_key( str_replace( ':', '_', $field ) );
+
+                update_post_meta( $item_id, $meta_key, sanitize_key( $status ) );
+        }
+
+        /**
+         * Update translation status flag for a term.
+         *
+         * @since 0.3.0
+         *
+         * @param int    $term_id Term ID.
+         * @param string $field   Field identifier.
+         * @param string $status  Status slug.
+         *
+         * @return void
+         */
+        protected function update_term_status_flag( $term_id, $field, $status ) {
+                $meta_key = '_fpml_status_' . sanitize_key( $field );
+
+                update_term_meta( $term_id, $meta_key, sanitize_key( $status ) );
         }
 
         /**

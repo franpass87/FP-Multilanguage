@@ -55,6 +55,7 @@ return self::$instance;
 protected function __construct() {
 $this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this->get_defaults() );
 add_action( 'admin_init', array( $this, 'register_settings' ) );
+add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
 /**
@@ -140,6 +141,33 @@ return $this->settings;
  */
 public function register_settings() {
 register_setting( 'fpml_settings_group', self::OPTION_KEY, array( $this, 'sanitize' ) );
+}
+
+/**
+ * Ensure WooCommerce attribute taxonomies are translatable.
+ *
+ * @since 0.3.0
+ *
+ * @param array $taxonomies Current taxonomies.
+ *
+ * @return array
+ */
+public function maybe_include_woocommerce_taxonomies( $taxonomies ) {
+$taxonomies = is_array( $taxonomies ) ? $taxonomies : array();
+
+if ( ! class_exists( 'WooCommerce' ) && ! defined( 'WC_VERSION' ) && ! class_exists( 'WC_Product' ) ) {
+return array_values( array_unique( $taxonomies ) );
+}
+
+$all = get_taxonomies( array(), 'names' );
+
+foreach ( $all as $taxonomy ) {
+if ( 0 === strpos( $taxonomy, 'pa_' ) ) {
+$taxonomies[] = $taxonomy;
+}
+}
+
+return array_values( array_unique( $taxonomies ) );
 }
 
 /**

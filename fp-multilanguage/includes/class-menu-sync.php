@@ -247,10 +247,24 @@ class FPML_Menu_Sync {
                         update_post_meta( $new_id, '_fpml_pair_source_id', $item->ID );
                         update_post_meta( $new_id, '_fpml_is_translation', 1 );
 
-                        $this->update_menu_status_flag( $new_id, 'title', 'needs_update' );
+                        if ( $this->has_custom_menu_label( $item ) ) {
+                                $this->update_menu_status_flag( $new_id, 'title', 'needs_update' );
 
-                        if ( ! empty( $item->title ) ) {
-                                $this->queue->enqueue( 'menu', $item->ID, 'title', md5( (string) $item->title ) );
+                                $this->queue->enqueue_menu_item_label( $item );
+                        } else {
+                                $resolved_title = $this->resolve_target_menu_title( $item );
+
+                                if ( '' !== $resolved_title ) {
+                                        wp_update_post(
+                                                array(
+                                                        'ID'         => $new_id,
+                                                        'post_title' => $resolved_title,
+                                                )
+                                        );
+                                        update_post_meta( $new_id, '_menu_item_title', $resolved_title );
+                                }
+
+                                $this->update_menu_status_flag( $new_id, 'title', 'synced' );
                         }
                 }
 
@@ -323,6 +337,78 @@ class FPML_Menu_Sync {
                 }
 
                 return $args;
+        }
+
+        /**
+         * Determine whether a menu item has a custom label requiring translation.
+         *
+         * @since 0.3.0
+         *
+         * @param WP_Post $item Menu item.
+         *
+         * @return bool
+         */
+        protected function has_custom_menu_label( $item ) {
+                if ( ! $item instanceof WP_Post ) {
+                        return false;
+                }
+
+                if ( 'custom' === $item->type ) {
+                        return true;
+                }
+
+                $manual = get_post_meta( $item->ID, '_menu_item_title', true );
+
+                return '' !== trim( (string) $manual );
+        }
+
+        /**
+         * Resolve the expected English label for a menu item tied to a resource.
+         *
+         * @since 0.3.0
+         *
+         * @param WP_Post $item Menu item post.
+         *
+         * @return string
+         */
+        protected function resolve_target_menu_title( $item ) {
+                if ( ! $item instanceof WP_Post ) {
+                        return '';
+                }
+
+                switch ( $item->type ) {
+                        case 'taxonomy':
+                                $target_term_id = (int) get_term_meta( $item->object_id, '_fpml_pair_id', true );
+
+                                if ( ! $target_term_id ) {
+                                        $target_term_id = FPML_Language::instance()->get_term_translation_id( $item->object_id );
+                                }
+
+                                if ( $target_term_id ) {
+                                        $term = get_term( $target_term_id, $item->object );
+
+                                        if ( $term && ! is_wp_error( $term ) ) {
+                                                return (string) $term->name;
+                                        }
+                                }
+
+                                return (string) $item->title;
+
+                        case 'post_type':
+                                $target_post_id = (int) get_post_meta( $item->object_id, '_fpml_pair_id', true );
+
+                                if ( $target_post_id ) {
+                                        $target_post = get_post( $target_post_id );
+
+                                        if ( $target_post instanceof WP_Post ) {
+                                                return (string) $target_post->post_title;
+                                        }
+                                }
+
+                                return (string) $item->title;
+                }
+
+                return (string) $item->title;
         }
 
         /**

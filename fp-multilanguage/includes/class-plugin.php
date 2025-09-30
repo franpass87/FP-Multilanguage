@@ -656,8 +656,8 @@ class FPML_Plugin {
                 update_term_meta( $target_term->term_id, '_fpml_pair_source_id', $term->term_id );
                 update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
 
-                $this->queue->enqueue( 'term', $term->term_id, 'name', $this->hash_value( $term->name ) );
-                $this->queue->enqueue( 'term', $term->term_id, 'description', $this->hash_value( $term->description ) );
+$this->queue->enqueue_term( $term, 'name' );
+$this->queue->enqueue_term( $term, 'description' );
 
                 update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
                 update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
