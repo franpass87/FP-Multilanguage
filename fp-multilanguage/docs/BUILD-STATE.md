@@ -4,6 +4,12 @@
 - **Ultimo aggiornamento:** riesecuzione completa del 30 settembre 2025 sulle fasi 1-9 (production-ready), confermate operative senza nuove modifiche funzionali.
 - **File toccati (fix):** docs/BUILD-STATE.md
 
+## Ripresa 2025-10-12
+
+- **Fase 1 — Traduzione termini**
+  - **Esito:** verificato l'aggancio dei job su created_term/edited_term, la traduzione name/description e la persistenza delle mappature IT↔EN senza richiedere modifiche al codice.
+  - **File coinvolti:** docs/BUILD-STATE.md.
+
 ## Ripresa 2024-04-07
 
 - **Fase 1 — Traduzione termini**
