@@ -1,7 +1,7 @@
 # FP Multilanguage — Build State
 
 - **Fase attuale:** 9 (Documentazione & Release) completata
-- **Ultimo aggiornamento:** riallineato l'enqueue dei job termine per mantenere la formattazione WordPress e aggiornato il registro di build.
+- **Ultimo aggiornamento:** forzato `_wp_attachment_image_alt` e `_product_attributes` nella whitelist meta per garantire la traduzione di ALT e attributi WooCommerce anche su installazioni preesistenti.
 - **File toccati (fix):** includes/class-plugin.php, docs/BUILD-STATE.md
 
 ## Cronologia per fase
@@ -18,7 +18,7 @@
 
 ### Fase 3 — Media ALT/CAPTION/TITLE + sostituzione ID frontend
 - Stato: completata
-- Riepilogo: whitelist ALT di default, traduzione campi attachment e sostituzione ID IT→EN nel contenuto e shortcode.
+- Riepilogo: whitelist ALT di default (con fallback forzato per ALT/attributi), traduzione campi attachment e sostituzione ID IT→EN nel contenuto e shortcode.
 - File principali: includes/class-settings.php, includes/class-processor.php, includes/class-media-front.php, includes/class-plugin.php.
 
 ### Fase 4 — WooCommerce attributi

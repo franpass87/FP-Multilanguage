@@ -554,6 +554,21 @@ class FPML_Plugin {
                  */
                 $sanitized = apply_filters( 'fpml_meta_whitelist', array_unique( $sanitized ), $this );
 
+                $required_keys = array(
+                        '_wp_attachment_image_alt',
+                        '_product_attributes',
+                );
+
+                foreach ( $required_keys as $required_key ) {
+                        if ( '' === $required_key ) {
+                                continue;
+                        }
+
+                        if ( ! in_array( $required_key, $sanitized, true ) ) {
+                                $sanitized[] = $required_key;
+                        }
+                }
+
                 return array_values( array_unique( array_filter( $sanitized ) ) );
         }
 
