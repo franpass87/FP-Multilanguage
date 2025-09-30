@@ -654,14 +654,14 @@ class FPML_Plugin {
                         return;
                 }
 
-                update_term_meta( $target_term->term_id, '_fpml_pair_source_id', $term->term_id );
-                update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
+		update_term_meta( $target_term->term_id, '_fpml_pair_source_id', $term->term_id );
+		update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
 
-$this->queue->enqueue_term( $term, 'name' );
-$this->queue->enqueue_term( $term, 'description' );
+		$this->queue->enqueue_term( $term, 'name' );
+		$this->queue->enqueue_term( $term, 'description' );
 
-                update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
-                update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
+		update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
+		update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
         }
 
         /**
