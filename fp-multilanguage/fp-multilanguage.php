@@ -35,23 +35,89 @@ if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-
  * @return void
  */
 function autoload_fpml_files() {
-$includes_dir = FPML_PLUGIN_DIR . 'includes/';
-if ( ! is_dir( $includes_dir ) ) {
-return;
+        $includes_dir = FPML_PLUGIN_DIR . 'includes/';
+
+        if ( ! is_dir( $includes_dir ) ) {
+                return;
+        }
+
+        $files = array();
+
+        if ( class_exists( 'RecursiveIteratorIterator' ) && class_exists( 'RecursiveDirectoryIterator' ) ) {
+                $flags = 0;
+
+                if ( class_exists( 'FilesystemIterator' ) && defined( 'FilesystemIterator::SKIP_DOTS' ) ) {
+                        $flags = FilesystemIterator::SKIP_DOTS;
+                }
+
+                try {
+                        $iterator = new RecursiveIteratorIterator(
+                                new RecursiveDirectoryIterator( $includes_dir, $flags ),
+                                RecursiveIteratorIterator::SELF_FIRST
+                        );
+
+                        foreach ( $iterator as $file ) {
+                                if ( ! is_object( $file ) || ! method_exists( $file, 'getExtension' ) ) {
+                                        continue;
+                                }
+
+                                if ( 'php' === strtolower( $file->getExtension() ) && method_exists( $file, 'getPathname' ) ) {
+                                        $files[] = $file->getPathname();
+                                }
+                        }
+                } catch ( Exception $exception ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.exception_instance
+                        $files = fpml_scan_php_files( $includes_dir );
+                }
+        } else {
+                $files = fpml_scan_php_files( $includes_dir );
+        }
+
+        if ( ! empty( $files ) ) {
+                $files = array_unique( $files );
+                sort( $files );
+        }
+
+        foreach ( $files as $path ) {
+                require_once $path;
+        }
 }
 
-$iterator = new RecursiveIteratorIterator(
-new RecursiveDirectoryIterator( $includes_dir, FilesystemIterator::SKIP_DOTS ),
-RecursiveIteratorIterator::SELF_FIRST
-);
+/**
+ * Recursively scan a directory for PHP files.
+ *
+ * @since 0.3.1
+ *
+ * @param string $directory Base directory.
+ *
+ * @return array
+ */
+function fpml_scan_php_files( $directory ) {
+        $php_files = array();
 
-foreach ( $iterator as $file ) {
-if ( 'php' !== strtolower( $file->getExtension() ) ) {
-continue;
-}
+        $items = scandir( $directory );
 
-require_once $file->getPathname();
-}
+        if ( false === $items ) {
+                return $php_files;
+        }
+
+        foreach ( $items as $item ) {
+                if ( '.' === $item || '..' === $item ) {
+                        continue;
+                }
+
+                $path = rtrim( $directory, '/\\' ) . '/' . $item;
+
+                if ( is_dir( $path ) ) {
+                        $php_files = array_merge( $php_files, fpml_scan_php_files( $path ) );
+                        continue;
+                }
+
+                if ( 'php' === strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) ) {
+                        $php_files[] = $path;
+                }
+        }
+
+        return $php_files;
 }
 
 /**
