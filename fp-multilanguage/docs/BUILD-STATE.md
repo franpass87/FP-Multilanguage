@@ -4,6 +4,36 @@
 - **Ultimo aggiornamento:** forzato `_wp_attachment_image_alt` e `_product_attributes` nella whitelist meta per garantire la traduzione di ALT e attributi WooCommerce anche su installazioni preesistenti.
 - **File toccati (fix):** includes/class-plugin.php, docs/BUILD-STATE.md
 
+## Ripresa 2024-04-07
+
+- **Fase 1 — Traduzione termini**
+  - **Esito:** verifica delle routine esistenti per accodare i job su creazione/modifica termini e per sincronizzare le coppie IT↔EN. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-plugin.php, includes/class-queue.php, includes/class-processor.php, includes/class-language.php, includes/class-settings.php.
+- **Fase 2 — Traduzione etichette menu**
+  - **Esito:** confermata la sincronizzazione automatica delle voci e l’invio dei label custom al processore. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-menu-sync.php, includes/class-queue.php, includes/class-processor.php.
+- **Fase 3 — Media ALT/CAPTION/TITLE + sostituzione ID frontend**
+  - **Esito:** controllata la traduzione di title/caption/alt e la sostituzione ID nel frontend (contenuto, gallery, WPBakery). Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-settings.php, includes/class-processor.php, includes/class-media-front.php, includes/class-plugin.php.
+- **Fase 4 — WooCommerce attributi**
+  - **Esito:** verificata la traduzione ricorsiva dei metadati `_product_attributes` e il supporto agli attributi globali. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-settings.php, includes/class-processor.php.
+- **Fase 5 — Locale frontend EN**
+  - **Esito:** confermato il forcing di `en_US` sul frontend quando fpml_lang=en. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-language.php.
+- **Fase 6 — WPBakery hardening**
+  - **Esito:** ricontrollata la precompilazione degli shortcode esclusi e la sostituzione ID in `[vc_single_image]`. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-settings.php, includes/class-media-front.php.
+- **Fase 7 — Admin UX**
+  - **Esito:** validata l’esperienza lato admin con colonna lingua, badge e notice configurabili. Nessuna modifica necessaria.
+  - **File coinvolti:** admin/class-admin.php, admin/views/settings-general.php.
+- **Fase 8 — Performance & KPI**
+  - **Esito:** confermati il limite `max_chars_per_batch` e le metriche aggiuntive in diagnostica. Nessuna modifica necessaria.
+  - **File coinvolti:** includes/class-processor.php, includes/class-settings.php, admin/views/settings-diagnostics.php.
+- **Fase 9 — Documentazione & release**
+  - **Esito:** verificata la documentazione aggiornata, inclusi changelog e versione plugin. Nessuna modifica necessaria.
+  - **File coinvolti:** readme.txt, fp-multilanguage.php, docs/BUILD-STATE.md.
+
 ## Cronologia per fase
 
 ### Fase 1 — Traduzione termini
