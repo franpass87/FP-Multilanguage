@@ -81,6 +81,16 @@ class FPML_REST_Admin {
                                 'permission_callback' => array( $this, 'check_permissions' ),
                         )
                 );
+
+                register_rest_route(
+                        'fpml/v1',
+                        '/queue/cleanup',
+                        array(
+                                'methods'             => \WP_REST_Server::CREATABLE,
+                                'callback'            => array( $this, 'handle_cleanup' ),
+                                'permission_callback' => array( $this, 'check_permissions' ),
+                        )
+                );
         }
 
         /**
@@ -232,6 +242,66 @@ class FPML_REST_Admin {
                         array(
                                 'success' => true,
                                 'summary' => $summary,
+                        )
+                );
+        }
+
+        /**
+         * Execute a manual cleanup using the configured retention settings.
+         *
+         * @since 0.3.1
+         *
+         * @param WP_REST_Request $request Request instance.
+         *
+         * @return WP_REST_Response|WP_Error
+         */
+        public function handle_cleanup( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                $plugin = FPML_Plugin::instance();
+
+                if ( $plugin->is_assisted_mode() ) {
+                        return new WP_Error(
+                                'fpml_assisted_mode',
+                                __( 'Modalità assistita attiva: la coda interna è disabilitata.', 'fp-multilanguage' ),
+                                array( 'status' => 409 )
+                        );
+                }
+
+                $settings = FPML_Settings::instance();
+                $days     = $settings ? (int) $settings->get( 'queue_retention_days', 0 ) : 0;
+
+                if ( $days <= 0 ) {
+                        return new WP_Error(
+                                'fpml_cleanup_disabled',
+                                __( 'Configura prima la retention della coda dalle impostazioni.', 'fp-multilanguage' ),
+                                array( 'status' => 400 )
+                        );
+                }
+
+                $states = $plugin->get_queue_cleanup_states();
+
+                if ( empty( $states ) ) {
+                        return new WP_Error(
+                                'fpml_cleanup_states_empty',
+                                __( 'Nessuno stato valido configurato per la pulizia della coda.', 'fp-multilanguage' ),
+                                array( 'status' => 400 )
+                        );
+                }
+
+                $queue   = FPML_Queue::instance();
+                $deleted = $queue->cleanup_old_jobs( $states, $days, 'updated_at' );
+
+                if ( is_wp_error( $deleted ) ) {
+                        $deleted->add_data( array( 'status' => 500 ), $deleted->get_error_code() );
+
+                        return $deleted;
+                }
+
+                return rest_ensure_response(
+                        array(
+                                'success' => true,
+                                'deleted' => (int) $deleted,
+                                'states'  => $states,
+                                'days'    => $days,
                         )
                 );
         }

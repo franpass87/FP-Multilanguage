@@ -79,6 +79,10 @@ class FPML_Plugin {
 
                 $this->settings = FPML_Settings::instance();
                 $this->queue    = FPML_Queue::instance();
+
+                if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
+                        $this->queue->maybe_upgrade();
+                }
                 $this->logger   = FPML_Logger::instance();
 
                 $this->define_hooks();
@@ -125,6 +129,7 @@ class FPML_Plugin {
 	 * @return void
 	 */
         public static function deactivate() {
+                wp_clear_scheduled_hook( 'fpml_cleanup_queue' );
                 flush_rewrite_rules();
         }
 
@@ -906,6 +911,7 @@ class FPML_Plugin {
                         'fpml_run_queue'       => wp_next_scheduled( 'fpml_run_queue' ),
                         'fpml_retry_failed'    => wp_next_scheduled( 'fpml_retry_failed' ),
                         'fpml_resync_outdated' => wp_next_scheduled( 'fpml_resync_outdated' ),
+                        'fpml_cleanup_queue'   => wp_next_scheduled( 'fpml_cleanup_queue' ),
                 );
                 $logs       = $logger->get_logs( 25 );
                 $log_stats  = $logger->get_stats();
@@ -956,6 +962,8 @@ class FPML_Plugin {
                 $average_duration = ! empty( $batch_durations ) ? array_sum( $batch_durations ) / count( $batch_durations ) : 0.0;
                 $average_jobs     = ! empty( $batch_jobs ) ? array_sum( $batch_jobs ) / count( $batch_jobs ) : 0.0;
 
+                $queue_age = $this->get_queue_age_summary();
+
                 return array(
                         'queue_counts'      => $counts,
                         'kpi'               => array(
@@ -975,6 +983,7 @@ class FPML_Plugin {
                                 'jobs'     => $average_jobs,
                         ),
                         'recent_errors'     => array_slice( $recent_errors, 0, 5 ),
+                        'queue_age'         => $queue_age,
                 );
         }
 
@@ -1084,38 +1093,157 @@ class FPML_Plugin {
                         return '';
                 }
 
-                if ( 'post' !== $job->object_type ) {
-                        return '';
-                }
-
-                $post = get_post( isset( $job->object_id ) ? (int) $job->object_id : 0 );
-
-                if ( ! $post instanceof WP_Post ) {
-                        return '';
-                }
-
                 $field = isset( $job->field ) ? (string) $job->field : '';
 
-                if ( 0 === strpos( $field, 'meta:' ) ) {
-                        $meta_key = substr( $field, 5 );
-                        $value    = get_post_meta( $post->ID, $meta_key, true );
+                switch ( $job->object_type ) {
+                        case 'post':
+                                $post = get_post( isset( $job->object_id ) ? (int) $job->object_id : 0 );
 
-                        if ( is_array( $value ) || is_object( $value ) ) {
-                                $value = wp_json_encode( $value );
-                        }
+                                if ( ! $post instanceof WP_Post ) {
+                                        return '';
+                                }
 
-                        return (string) $value;
-                }
+                                if ( 0 === strpos( $field, 'meta:' ) ) {
+                                        $meta_key = substr( $field, 5 );
+                                        $value    = get_post_meta( $post->ID, $meta_key, true );
 
-                switch ( $field ) {
-                        case 'post_title':
-                                return (string) $post->post_title;
-                        case 'post_excerpt':
-                                return (string) $post->post_excerpt;
-                        case 'post_content':
-                                return (string) $post->post_content;
+                                        if ( is_array( $value ) || is_object( $value ) ) {
+                                                $value = wp_json_encode( $value );
+                                        }
+
+                                        return (string) $value;
+                                }
+
+                                switch ( $field ) {
+                                        case 'post_title':
+                                                return (string) $post->post_title;
+                                        case 'post_excerpt':
+                                                return (string) $post->post_excerpt;
+                                        case 'post_content':
+                                                return (string) $post->post_content;
+                                }
+
+                                break;
+
+                        case 'term':
+                                $object_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
+                                list( $taxonomy, $term_field ) = array_pad( explode( ':', $field, 2 ), 2, '' );
+                                $taxonomy = sanitize_key( $taxonomy );
+
+                                if ( '' === $taxonomy ) {
+                                        break;
+                                }
+
+                                $term = get_term( $object_id, $taxonomy );
+
+                                if ( $term instanceof WP_Term ) {
+                                        switch ( $term_field ) {
+                                                case 'name':
+                                                        return (string) $term->name;
+                                                case 'description':
+                                                        return (string) $term->description;
+                                        }
+                                }
+
+                                break;
+
+                        case 'menu':
+                                $item = get_post( isset( $job->object_id ) ? (int) $job->object_id : 0 );
+
+                                if ( ! $item instanceof WP_Post ) {
+                                        return '';
+                                }
+
+                                $label = get_post_meta( $item->ID, '_menu_item_title', true );
+
+                                if ( '' === $label ) {
+                                        $label = (string) $item->post_title;
+                                }
+
+                                return (string) $label;
                 }
 
                 return '';
+        }
+
+        /**
+         * Retrieve the sanitized list of states targeted by queue cleanup.
+         *
+         * @since 0.3.1
+         *
+         * @return array
+         */
+        public function get_queue_cleanup_states() {
+                $states = apply_filters( 'fpml_queue_cleanup_states', array( 'done', 'skipped', 'error' ) );
+                $states = array_filter( array_map( 'sanitize_key', (array) $states ) );
+
+                return array_values( array_unique( $states ) );
+        }
+
+        /**
+         * Build queue age metrics useful for diagnostics.
+         *
+         * @since 0.3.1
+         *
+         * @return array
+         */
+        public function get_queue_age_summary() {
+                if ( $this->is_assisted_mode() ) {
+                        return array();
+                }
+
+                $queue = FPML_Queue::instance();
+
+                $now              = current_time( 'timestamp', true );
+                $date_format      = get_option( 'date_format', 'Y-m-d' ) . ' ' . get_option( 'time_format', 'H:i' );
+                $pending_states   = array( 'pending', 'outdated', 'translating' );
+                $cleanup_states   = $this->get_queue_cleanup_states();
+                $retention        = $this->settings ? (int) $this->settings->get( 'queue_retention_days', 0 ) : 0;
+                $oldest_pending   = $queue->get_oldest_job_for_states( $pending_states, 'created_at' );
+                $oldest_completed = $queue->get_oldest_job_for_states( $cleanup_states, 'updated_at' );
+
+                $summary = array(
+                        'retention_days'  => $retention,
+                        'cleanup_states'  => $cleanup_states,
+                        'pending'         => $this->format_queue_age_entry( $oldest_pending, 'created_at', $now, $date_format ),
+                        'completed'       => $this->format_queue_age_entry( $oldest_completed, 'updated_at', $now, $date_format ),
+                );
+
+                return $summary;
+        }
+
+        /**
+         * Format queue age details for a specific job.
+         *
+         * @since 0.3.1
+         *
+         * @param object|null $job        Queue job instance.
+         * @param string      $column     Date column to read.
+         * @param int         $now        Current timestamp.
+         * @param string      $date_format Date format for local output.
+         *
+         * @return array
+         */
+        protected function format_queue_age_entry( $job, $column, $now, $date_format ) {
+                if ( ! $job || empty( $job->{$column} ) ) {
+                        return array();
+                }
+
+                $timestamp = mysql2date( 'U', $job->{$column}, false );
+
+                if ( ! $timestamp ) {
+                        return array();
+                }
+
+                $local_datetime = function_exists( 'get_date_from_gmt' ) ? get_date_from_gmt( $job->{$column}, $date_format ) : $job->{$column};
+
+                return array(
+                        'job_id'          => isset( $job->id ) ? (int) $job->id : 0,
+                        'state'           => isset( $job->state ) ? $job->state : '',
+                        'timestamp'       => (int) $timestamp,
+                        'age'             => human_time_diff( $timestamp, $now ),
+                        'datetime_gmt'    => $job->{$column},
+                        'datetime_local'  => $local_datetime,
+                );
         }
 }

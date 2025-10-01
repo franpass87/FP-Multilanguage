@@ -58,6 +58,13 @@ class FPML_Processor {
         protected $logger;
 
         /**
+         * Cached plugin instance.
+         *
+         * @var FPML_Plugin|null
+         */
+        protected $plugin = null;
+
+        /**
          * Cached translator instance.
          *
          * @var FPML_TranslatorInterface|null
@@ -113,7 +120,8 @@ class FPML_Processor {
          * Constructor.
          */
         protected function __construct() {
-                $plugin = class_exists( 'FPML_Plugin' ) ? FPML_Plugin::instance() : null;
+                $plugin       = class_exists( 'FPML_Plugin' ) ? FPML_Plugin::instance() : null;
+                $this->plugin = $plugin;
 
                 if ( $plugin && method_exists( $plugin, 'is_assisted_mode' ) ) {
                         $this->assisted_mode = $plugin->is_assisted_mode();
@@ -132,6 +140,7 @@ class FPML_Processor {
                 add_action( 'fpml_run_queue', array( $this, 'run_queue' ) );
                 add_action( 'fpml_retry_failed', array( $this, 'retry_failed_jobs' ) );
                 add_action( 'fpml_resync_outdated', array( $this, 'resync_outdated_jobs' ) );
+                add_action( 'fpml_cleanup_queue', array( $this, 'handle_scheduled_cleanup' ) );
                 add_action( 'update_option_' . FPML_Settings::OPTION_KEY, array( $this, 'reschedule_events' ), 10, 2 );
         }
 
@@ -202,6 +211,16 @@ class FPML_Processor {
                 if ( ! wp_next_scheduled( 'fpml_resync_outdated' ) ) {
                         wp_schedule_event( time() + ( 10 * MINUTE_IN_SECONDS ), 'hourly', 'fpml_resync_outdated' );
                 }
+
+                $retention = $this->settings ? (int) $this->settings->get( 'queue_retention_days', 0 ) : 0;
+
+                if ( $retention > 0 ) {
+                        if ( ! wp_next_scheduled( 'fpml_cleanup_queue' ) ) {
+                                wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'fpml_cleanup_queue' );
+                        }
+                } else {
+                        $this->clear_scheduled_event( 'fpml_cleanup_queue' );
+                }
         }
 
         /**
@@ -220,6 +239,7 @@ class FPML_Processor {
                 }
 
                 $this->clear_scheduled_event( 'fpml_run_queue' );
+                $this->clear_scheduled_event( 'fpml_cleanup_queue' );
                 $this->maybe_schedule_events();
         }
 
@@ -396,7 +416,11 @@ class FPML_Processor {
                         $duration = microtime( true ) - $start_time;
                         $this->logger->log(
                                 'info',
-                                sprintf( 'Batch coda completato in %.2fs', $duration ),
+                                sprintf(
+                                        /* translators: %s: processing duration in seconds */
+                                        __( 'Batch coda completato in %s secondi', 'fp-multilanguage' ),
+                                        number_format_i18n( $duration, 2 )
+                                ),
                                 array(
                                         'jobs'      => $summary['claimed'],
                                         'processed' => $summary['processed'],
@@ -404,6 +428,7 @@ class FPML_Processor {
                                         'errors'    => $summary['errors'],
                                 )
                         );
+                        $this->maybe_cleanup_queue();
                         $this->release_lock();
                 }
 
@@ -499,6 +524,83 @@ class FPML_Processor {
                 }
 
                 return new WP_Error( 'fpml_job_type_unsupported', sprintf( __( 'Tipo di job %s non supportato.', 'fp-multilanguage' ), $job->object_type ) );
+        }
+
+        /**
+         * Perform queue cleanup when retention is configured.
+         *
+         * @since 0.3.1
+         *
+         * @return void
+         */
+        protected function maybe_cleanup_queue() {
+                if ( $this->assisted_mode || ! $this->settings ) {
+                        return;
+                }
+
+                $retention = (int) $this->settings->get( 'queue_retention_days', 0 );
+
+                if ( $retention <= 0 ) {
+                        return;
+                }
+
+                $states = array();
+
+                if ( $this->plugin && method_exists( $this->plugin, 'get_queue_cleanup_states' ) ) {
+                        $states = $this->plugin->get_queue_cleanup_states();
+                }
+
+                if ( empty( $states ) ) {
+                        return;
+                }
+
+                $result = $this->queue->cleanup_old_jobs( $states, $retention, 'updated_at' );
+
+                if ( is_wp_error( $result ) ) {
+                        $this->logger->log(
+                                'error',
+                                sprintf(
+                                        /* translators: 1: error message */
+                                        __( 'Pulizia coda non riuscita: %s', 'fp-multilanguage' ),
+                                        $result->get_error_message()
+                                ),
+                                array(
+                                        'states'    => implode( ',', $states ),
+                                        'retention' => $retention,
+                                )
+                        );
+
+                        return;
+                }
+
+                $deleted = (int) $result;
+
+                if ( $deleted > 0 ) {
+                        $this->logger->log(
+                                'info',
+                                sprintf(
+                                        /* translators: 1: number of deleted jobs, 2: retention days */
+                                        __( 'Pulizia coda completata: %1$d job rimossi oltre %2$d giorni.', 'fp-multilanguage' ),
+                                        $deleted,
+                                        $retention
+                                ),
+                                array(
+                                        'states'    => implode( ',', $states ),
+                                        'retention' => $retention,
+                                )
+                        );
+                }
+        }
+
+        /**
+         * Triggered by the scheduled cleanup event.
+         *
+         * @since 0.3.1
+         *
+         * @return void
+         */
+        public function handle_scheduled_cleanup() {
+                $this->maybe_cleanup_queue();
         }
 
         /**

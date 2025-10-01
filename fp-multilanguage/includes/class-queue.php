@@ -16,6 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class FPML_Queue {
         /**
+         * Schema version for the queue table.
+         *
+         * @since 0.3.1
+         */
+        const SCHEMA_VERSION = '2';
+
+        /**
          * Singleton instance.
          *
          * @var FPML_Queue|null
@@ -112,10 +119,30 @@ class FPML_Queue {
                         PRIMARY KEY  (id),
                         KEY object_lookup (object_type, object_id),
                         KEY state_lookup (state),
+                        KEY state_updated_lookup (state, updated_at),
                         UNIQUE KEY object_field (object_type, object_id, field)
                 ) {$charset_collate};";
 
                 dbDelta( $sql );
+
+                update_option( 'fpml_queue_schema_version', self::SCHEMA_VERSION, false );
+        }
+
+        /**
+         * Ensure the database schema is up to date.
+         *
+         * @since 0.3.1
+         *
+         * @return void
+         */
+        public function maybe_upgrade() {
+                $stored_version = get_option( 'fpml_queue_schema_version', '' );
+
+                if ( version_compare( (string) $stored_version, self::SCHEMA_VERSION, '>=' ) ) {
+                        return;
+                }
+
+                $this->install();
         }
 
         /**
@@ -276,6 +303,194 @@ class FPML_Queue {
                 }
 
                 return $this->enqueue( 'menu', $item->ID, 'title', md5( $label ) );
+        }
+
+        /**
+         * Delete jobs older than the provided retention window.
+         *
+         * @since 0.3.1
+         *
+         * @param array $states Queue states to target.
+         * @param int   $days   Retention window in days.
+         * @param string $column Date column used for comparison.
+         *
+         * @return int|WP_Error Deleted rows or WP_Error on failure.
+         */
+        public function cleanup_old_jobs( $states, $days, $column = 'updated_at' ) {
+                global $wpdb;
+
+                $days   = (int) $days;
+                $column = in_array( $column, array( 'created_at', 'updated_at' ), true ) ? $column : 'updated_at';
+                $states = array_filter( array_map( 'sanitize_key', (array) $states ) );
+
+                if ( $days <= 0 || empty( $states ) ) {
+                        return 0;
+                }
+
+                $table        = $this->get_table();
+                $now          = current_time( 'timestamp', true );
+                $cutoff       = gmdate( 'Y-m-d H:i:s', $now - ( $days * DAY_IN_SECONDS ) );
+                $placeholders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
+
+                /**
+                 * Filters the batch size used when deleting queue jobs during cleanup.
+                 *
+                 * @since 0.3.1
+                 *
+                 * @param int    $batch_size Suggested batch size.
+                 * @param array  $states     States targeted for cleanup.
+                 * @param int    $days       Retention window in days.
+                 * @param string $column     Date column used for comparison.
+                 */
+                $batch_size = (int) apply_filters( 'fpml_queue_cleanup_batch_size', 500, $states, $days, $column );
+
+                $batch_size = max( 1, $batch_size );
+                $total      = 0;
+
+                do {
+                        $prepare_args = array_merge(
+                                array( "DELETE FROM {$table} WHERE state IN ({$placeholders}) AND {$column} < %s LIMIT %d" ),
+                                $states,
+                                array( $cutoff, $batch_size )
+                        );
+
+                        $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+
+                        $deleted = $wpdb->query( $sql );
+
+                        if ( false === $deleted ) {
+                                $error = $wpdb->last_error ? $wpdb->last_error : __( 'Errore database sconosciuto.', 'fp-multilanguage' );
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'error',
+                                                __( 'Pulizia coda non riuscita a causa di un errore del database.', 'fp-multilanguage' ),
+                                                array(
+                                                        'states'  => implode( ',', $states ),
+                                                        'days'    => $days,
+                                                        'column'  => $column,
+                                                        'message' => $error,
+                                                )
+                                        );
+                                } else {
+                                        error_log( sprintf( 'FPML queue cleanup failed: %s', $error ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+                                }
+
+                                return new WP_Error(
+                                        'fpml_queue_cleanup_failed',
+                                        __( 'Impossibile completare la pulizia della coda.', 'fp-multilanguage' ),
+                                        array(
+                                                'states' => $states,
+                                                'days'   => $days,
+                                                'column' => $column,
+                                                'error'  => $error,
+                                        )
+                                );
+                        }
+
+                        $total += (int) $deleted;
+                } while ( $deleted >= $batch_size );
+
+                /**
+                 * Fires after the queue cleanup finishes.
+                 *
+                 * @since 0.3.1
+                 *
+                 * @param array  $states States targeted by the cleanup.
+                 * @param int    $days   Retention window in days.
+                 * @param int    $total  Total deleted rows.
+                 * @param string $column Date column used for comparison.
+                 */
+                do_action( 'fpml_queue_after_cleanup', $states, $days, $total, $column );
+
+                return $total;
+        }
+
+        /**
+         * Count jobs matching the cleanup criteria.
+         *
+         * @since 0.3.1
+         *
+         * @param array $states Queue states to target.
+         * @param int   $days   Retention window in days.
+         * @param string $column Date column used for comparison.
+         *
+         * @return int|WP_Error Number of matching jobs or WP_Error on failure.
+         */
+        public function count_old_jobs( $states, $days, $column = 'updated_at' ) {
+                global $wpdb;
+
+                $days   = (int) $days;
+                $column = in_array( $column, array( 'created_at', 'updated_at' ), true ) ? $column : 'updated_at';
+                $states = array_filter( array_map( 'sanitize_key', (array) $states ) );
+
+                if ( $days <= 0 || empty( $states ) ) {
+                        return 0;
+                }
+
+                $table        = $this->get_table();
+                $now          = current_time( 'timestamp', true );
+                $cutoff       = gmdate( 'Y-m-d H:i:s', $now - ( $days * DAY_IN_SECONDS ) );
+                $placeholders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
+
+                $prepare_args = array_merge(
+                        array( "SELECT COUNT(*) FROM {$table} WHERE state IN ({$placeholders}) AND {$column} < %s" ),
+                        $states,
+                        array( $cutoff )
+                );
+
+                $sql   = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+                $count = $wpdb->get_var( $sql );
+
+                if ( null === $count && $wpdb->last_error ) {
+                        return new WP_Error(
+                                'fpml_queue_count_failed',
+                                __( 'Impossibile contare i job per la pulizia della coda.', 'fp-multilanguage' ),
+                                array(
+                                        'states' => $states,
+                                        'days'   => $days,
+                                        'column' => $column,
+                                        'error'  => $wpdb->last_error,
+                                )
+                        );
+                }
+
+                return (int) $count;
+        }
+
+        /**
+         * Retrieve the oldest job in a given set of states.
+         *
+         * @since 0.3.1
+         *
+         * @param array  $states Queue states to inspect.
+         * @param string $column Date column used for ordering.
+         *
+         * @return object|null
+         */
+        public function get_oldest_job_for_states( $states, $column = 'created_at' ) {
+                global $wpdb;
+
+                $states = array_filter( array_map( 'sanitize_key', (array) $states ) );
+                $column = in_array( $column, array( 'created_at', 'updated_at' ), true ) ? $column : 'created_at';
+
+                if ( empty( $states ) ) {
+                        return null;
+                }
+
+                $table        = $this->get_table();
+                $placeholders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
+
+                $prepare_args = array_merge(
+                        array( "SELECT * FROM {$table} WHERE state IN ({$placeholders}) ORDER BY {$column} ASC LIMIT 1" ),
+                        $states
+                );
+
+                $sql = call_user_func_array( array( $wpdb, 'prepare' ), $prepare_args );
+
+                $job = $wpdb->get_row( $sql );
+
+                return $job ? $job : null;
         }
 
         /**
