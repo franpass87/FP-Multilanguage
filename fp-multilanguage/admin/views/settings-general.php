@@ -116,6 +116,13 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Pulizia automatica coda', 'fp-multilanguage' ); ?></th>
+<td>
+<input type="number" class="small-text" min="0" max="365" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[queue_retention_days]" value="<?php echo esc_attr( $options['queue_retention_days'] ); ?>" />
+<p class="fpml-field-description"><?php esc_html_e( 'Rimuove automaticamente i job completati, saltati o in errore più vecchi del numero di giorni indicato. Imposta 0 per disattivare.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Badge traduzioni', 'fp-multilanguage' ); ?></th>
 <td>
 <label>

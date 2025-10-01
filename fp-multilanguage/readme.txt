@@ -28,10 +28,15 @@ FP Multilanguage duplica contenuti inglesi sincronizzati con l'originale italian
 * Verificare sitemap EN e meta OG/Twitter.
 * Verificare redirect browser language e switcher.
 * WP-CLI: `wp fpml queue run` processa N elementi (batch size).
+* WP-CLI: `wp fpml queue cleanup --dry-run` mostra i job che verrebbero rimossi prima di confermare.
+* Configurare la retention e verificare `wp fpml queue cleanup --days=7` per rimuovere job datati.
+* Diagnostics: usa il pulsante "Pulisci coda" per eseguire la retention manuale via REST.
 
 
 == Cron & Diagnostics ==
-La scheda *Diagnostics* mette in evidenza KPI della coda (job in pending, completati, errori), stima parole/costi basata sulle tariffe configurate e riporta gli ultimi log e gli errori recenti. Dai pulsanti puoi lanciare un batch immediato, avviare un reindex completo o testare il provider direttamente via REST protetto.
+La scheda *Diagnostics* mette in evidenza KPI della coda (job in pending, completati, errori), stima parole/costi basata sulle tariffe configurate e riporta gli ultimi log e gli errori recenti. Dai pulsanti puoi lanciare un batch immediato, avviare un reindex completo, testare il provider oppure avviare la pulizia della coda rispettando la retention configurata, tutto via REST protetto.
+
+Quando la retention è attiva, oltre alla pulizia post-batch il plugin programma l'evento giornaliero `fpml_cleanup_queue` per mantenere il database allineato anche in assenza di attività.
 
 Se `DISABLE_WP_CRON` è impostato a `true`, configura un cron di sistema per mantenere attiva la pipeline. Esempio ogni 5 minuti con WP-CLI (sostituisci il percorso alla root WordPress):
 
@@ -51,6 +56,17 @@ In alternativa, puoi eseguire direttamente `wp-cron.php`:
 * Page builder: sostituzione sicura di shortcode WPBakery (`vc_row`, `vc_column`, `vc_section`, `vc_tabs`, ecc.) e supporto per `[vc_single_image]` con ID inglesi.
 
 == Changelog ==
+= 0.3.1 =
+- New: Impostazione "Pulizia automatica coda" con retention configurabile e sanificazione del cookie di consenso per il redirect.
+- New: Pulizia automatica dei job completati dopo ogni batch con log dedicato e filtro `fpml_queue_cleanup_states`.
+- New: Comando `wp fpml queue cleanup` per rimuovere manualmente i job oltre soglia, con opzioni `--days`, `--states` e `--dry-run` oltre a messaggi WP-CLI localizzati.
+- New: Migliorie WP-CLI `status` con provider configurato, retention e anzianità dei job.
+- New: `wp fpml queue estimate-cost` ora accetta `--states` e `--max-jobs` per analisi mirate.
+- New: Snapshot diagnostico e interfaccia admin mostrano l'età dei job pending/completati, la retention attiva e includono il pulsante "Pulisci coda" via REST.
+- Dev: Metodi helper (`FPML_Plugin::get_queue_age_summary`, `FPML_Queue::cleanup_old_jobs`) e uso di `current_time()` per i cutoff.
+- Dev: Pulizia coda chunked con indice composito `(state, updated_at)`, hook `fpml_queue_after_cleanup` e filtro `fpml_queue_cleanup_batch_size` per personalizzare i batch.
+- Dev: Sanitizzazione avanzata del cookie consenso per i redirect EN.
+
 = 0.3.0 =
 - New: Traduzione automatica per tassonomie, attributi WooCommerce globali/personalizzati e label menu sincronizzate.
 - New: Media EN con ALT/caption/title tradotti e sostituzione ID attachment nel frontend (incluso shortcode gallery / WPBakery).

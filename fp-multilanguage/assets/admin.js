@@ -33,6 +33,71 @@
         return;
     }
 
+    const escapeRegExp = (value) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+    const toReplacementValue = (value) => {
+        if (Number.isFinite(value)) {
+            return String(value);
+        }
+
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        if (value == null) {
+            return '';
+        }
+
+        const parsed = Number(value);
+
+        if (Number.isFinite(parsed)) {
+            return String(parsed);
+        }
+
+        return String(value);
+    };
+
+    const fillTemplate = (template, replacements) => {
+        if (!template) {
+            return '';
+        }
+
+        let output = template;
+
+        Object.keys(replacements).forEach((key) => {
+            const token = new RegExp(`{{\\s*${escapeRegExp(key)}\\s*}}`, 'g');
+            output = output.replace(token, replacements[key]);
+        });
+
+        return output;
+    };
+
+    const buildSummaryReplacements = (summary, defaults = {}) => {
+        const replacements = { ...defaults };
+
+        if (!summary || typeof summary !== 'object') {
+            return replacements;
+        }
+
+        Object.keys(summary).forEach((key) => {
+            const rawValue = summary[key];
+            let value = rawValue;
+
+            if (!Number.isFinite(value)) {
+                if (typeof rawValue === 'string') {
+                    const parsed = Number(rawValue);
+                    value = Number.isFinite(parsed) ? parsed : rawValue;
+                } else if (rawValue == null) {
+                    value = '';
+                }
+            }
+
+            replacements[key] = toReplacementValue(value);
+        });
+
+        return replacements;
+    };
+
     const setFeedback = (message, type) => {
         if (!feedback) {
             return;
@@ -137,18 +202,51 @@
 
                 let message = button.getAttribute('data-success-message') || 'Operazione completata.';
 
-                if (action === 'run-queue' && payload.summary) {
-                    const summary = payload.summary;
-                    const processed = Number(summary.processed || 0);
-                    const claimed = Number(summary.claimed || 0);
-                    const skipped = Number(summary.skipped || 0);
-                    const errors = Number(summary.errors || 0);
-                    message = `Batch completato: ${processed}/${claimed} processati, ${skipped} saltati, ${errors} errori.`;
+                if (action === 'cleanup') {
+                    const deleted = payload && typeof payload.deleted !== 'undefined' ? Number(payload.deleted) : 0;
+                    const days = payload && typeof payload.days !== 'undefined' ? Number(payload.days) : 0;
+                    const states = payload && payload.states
+                        ? (Array.isArray(payload.states) ? payload.states.join(', ') : String(payload.states))
+                        : '';
+                    const template = button.getAttribute('data-success-template') || message;
+                    const replacements = {
+                        deleted: toReplacementValue(Number.isFinite(deleted) ? deleted : 0),
+                        days: toReplacementValue(Number.isFinite(days) ? days : 0),
+                        states: toReplacementValue(states),
+                    };
+                    const filled = fillTemplate(template, replacements);
+
+                    if (filled) {
+                        message = filled;
+                    }
                 }
 
-                if (action === 'reindex' && payload.summary) {
-                    const summary = payload.summary;
-                    message = `Reindex: ${summary.posts_scanned || 0} post, ${summary.terms_scanned || 0} termini, ${summary.menus_synced || 0} menu.`;
+                if ((action === 'run-queue' || action === 'reindex') && payload.summary) {
+                    const template = button.getAttribute('data-success-template');
+
+                    if (template) {
+                        const defaults =
+                            action === 'run-queue'
+                                ? {
+                                      claimed: '0',
+                                      processed: '0',
+                                      skipped: '0',
+                                      errors: '0',
+                                  }
+                                : {
+                                      posts_scanned: '0',
+                                      posts_enqueued: '0',
+                                      translations_created: '0',
+                                      terms_scanned: '0',
+                                      menus_synced: '0',
+                                  };
+                        const replacements = buildSummaryReplacements(payload.summary, defaults);
+                        const filled = fillTemplate(template, replacements);
+
+                        if (filled) {
+                            message = filled;
+                        }
+                    }
                 }
 
                 setFeedback(message, 'success');

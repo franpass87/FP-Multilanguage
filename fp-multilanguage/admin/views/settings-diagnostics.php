@@ -45,6 +45,22 @@ $recent_errors   = isset( $snapshot['recent_errors'] ) && is_array( $snapshot['r
 $batch_average   = isset( $snapshot['batch_average'] ) && is_array( $snapshot['batch_average'] ) ? $snapshot['batch_average'] : array();
 $lock_active     = ! empty( $snapshot['lock_active'] );
 $cron_disabled   = ! empty( $snapshot['cron_disabled'] );
+$queue_age       = isset( $snapshot['queue_age'] ) && is_array( $snapshot['queue_age'] ) ? $snapshot['queue_age'] : array();
+$age_pending     = isset( $queue_age['pending'] ) && is_array( $queue_age['pending'] ) ? $queue_age['pending'] : array();
+$age_completed   = isset( $queue_age['completed'] ) && is_array( $queue_age['completed'] ) ? $queue_age['completed'] : array();
+$retention_days  = isset( $queue_age['retention_days'] ) ? (int) $queue_age['retention_days'] : 0;
+$cleanup_states  = isset( $queue_age['cleanup_states'] ) ? (array) $queue_age['cleanup_states'] : array();
+$age_pending_text   = ( ! empty( $age_pending['age'] ) && ! empty( $age_pending['datetime_local'] ) ) ? sprintf( __( '%1$s fa (%2$s)', 'fp-multilanguage' ), $age_pending['age'], $age_pending['datetime_local'] ) : __( 'Nessun job in attesa', 'fp-multilanguage' );
+$age_completed_text = ( ! empty( $age_completed['age'] ) && ! empty( $age_completed['datetime_local'] ) ) ? sprintf( __( '%1$s fa (%2$s)', 'fp-multilanguage' ), $age_completed['age'], $age_completed['datetime_local'] ) : __( 'Nessun job archiviato', 'fp-multilanguage' );
+
+/* translators: Placeholder tokens {{processed}}, {{claimed}}, {{skipped}} and {{errors}} will be replaced with queue counters. */
+$run_queue_success_template = __( 'Batch completato: {{processed}}/{{claimed}} processati, {{skipped}} saltati, {{errors}} errori.', 'fp-multilanguage' );
+
+/* translators: Placeholder tokens {{deleted}}, {{days}} and {{states}} will be replaced with cleanup results. */
+$cleanup_success_template = __( 'Pulizia completata: {{deleted}} job rimossi (>{{days}} giorni, stati: {{states}}).', 'fp-multilanguage' );
+
+/* translators: Placeholder tokens {{posts_scanned}}, {{terms_scanned}} and {{menus_synced}} will be replaced with reindex stats. */
+$reindex_success_template = __( 'Reindex completato: {{posts_scanned}} post, {{terms_scanned}} termini, {{menus_synced}} menu.', 'fp-multilanguage' );
 
 $pending_states = array( 'pending', 'translating', 'outdated' );
 $pending_jobs   = 0;
@@ -82,6 +98,7 @@ $rest_nonce        = wp_create_nonce( 'wp_rest' );
 $run_endpoint      = esc_url( rest_url( 'fpml/v1/queue/run' ) );
 $test_endpoint     = esc_url( rest_url( 'fpml/v1/test-provider' ) );
 $reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
+$cleanup_endpoint  = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
 ?>
 
 <form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
@@ -134,8 +151,21 @@ $reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
                                         <th scope="row"><?php esc_html_e( 'Errori', 'fp-multilanguage' ); ?></th>
                                         <td><?php echo esc_html( number_format_i18n( $error_jobs ) ); ?></td>
                                 </tr>
+                                <tr>
+                                        <th scope="row"><?php esc_html_e( 'Job in coda più vecchio', 'fp-multilanguage' ); ?></th>
+                                        <td><?php echo esc_html( $age_pending_text ); ?></td>
+                                </tr>
+                                <tr>
+                                        <th scope="row"><?php esc_html_e( 'Job completato più vecchio conservato', 'fp-multilanguage' ); ?></th>
+                                        <td><?php echo esc_html( $age_completed_text ); ?></td>
+                                </tr>
                         </tbody>
                 </table>
+                <?php if ( $retention_days > 0 && ! empty( $cleanup_states ) ) : ?>
+                        <p class="description"><?php echo esc_html( sprintf( __( 'Retention automatica: %1$d giorni per gli stati %2$s.', 'fp-multilanguage' ), $retention_days, implode( ', ', array_map( 'sanitize_text_field', $cleanup_states ) ) ) ); ?></p>
+                <?php else : ?>
+                        <p class="description"><?php esc_html_e( 'Retention automatica disattivata: i job completati restano nel database finché non vengono rimossi manualmente.', 'fp-multilanguage' ); ?></p>
+                <?php endif; ?>
                 <p>
                         <?php
                         printf(
@@ -147,8 +177,34 @@ $reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
                         ?>
                 </p>
                 <p class="fpml-diagnostics-actions">
-                        <button type="button" class="button button-secondary" data-fpml-action="run-queue" data-endpoint="<?php echo esc_url( $run_endpoint ); ?>" data-nonce="<?php echo esc_attr( $rest_nonce ); ?>" data-success-message="<?php echo esc_attr__( 'Batch eseguito. Aggiorna la pagina per aggiornare le metriche.', 'fp-multilanguage' ); ?>"><?php esc_html_e( 'Esegui batch ora', 'fp-multilanguage' ); ?></button>
-                        <button type="button" class="button" data-fpml-action="reindex" data-endpoint="<?php echo esc_url( $reindex_endpoint ); ?>" data-nonce="<?php echo esc_attr( $rest_nonce ); ?>" data-success-message="<?php echo esc_attr__( 'Reindex completato. Controlla la coda per nuovi job.', 'fp-multilanguage' ); ?>"><?php esc_html_e( 'Forza reindex', 'fp-multilanguage' ); ?></button>
+                        <button
+                                type="button"
+                                class="button button-secondary"
+                                data-fpml-action="run-queue"
+                                data-endpoint="<?php echo esc_url( $run_endpoint ); ?>"
+                                data-nonce="<?php echo esc_attr( $rest_nonce ); ?>"
+                                data-success-message="<?php echo esc_attr__( 'Batch eseguito. Aggiorna la pagina per aggiornare le metriche.', 'fp-multilanguage' ); ?>"
+                                data-success-template="<?php echo esc_attr( $run_queue_success_template ); ?>"
+                        ><?php esc_html_e( 'Esegui batch ora', 'fp-multilanguage' ); ?></button>
+                        <button
+                                type="button"
+                                class="button button-secondary"
+                                data-fpml-action="cleanup"
+                                data-endpoint="<?php echo esc_url( $cleanup_endpoint ); ?>"
+                                data-nonce="<?php echo esc_attr( $rest_nonce ); ?>"
+                                data-working-message="<?php echo esc_attr__( 'Pulizia in corso…', 'fp-multilanguage' ); ?>"
+                                data-success-message="<?php echo esc_attr( $cleanup_success_template ); ?>"
+                                data-success-template="<?php echo esc_attr( $cleanup_success_template ); ?>"
+                        ><?php esc_html_e( 'Pulisci coda', 'fp-multilanguage' ); ?></button>
+                        <button
+                                type="button"
+                                class="button"
+                                data-fpml-action="reindex"
+                                data-endpoint="<?php echo esc_url( $reindex_endpoint ); ?>"
+                                data-nonce="<?php echo esc_attr( $rest_nonce ); ?>"
+                                data-success-message="<?php echo esc_attr__( 'Reindex completato. Controlla la coda per nuovi job.', 'fp-multilanguage' ); ?>"
+                                data-success-template="<?php echo esc_attr( $reindex_success_template ); ?>"
+                        ><?php esc_html_e( 'Forza reindex', 'fp-multilanguage' ); ?></button>
                 </p>
                 <?php if ( $lock_active ) : ?>
                         <p class="fpml-diagnostics-warning"><?php esc_html_e( 'Attenzione: il lock del processor è attivo. Attendi la fine del batch o usa WP-CLI per forzare il reset.', 'fp-multilanguage' ); ?></p>
