@@ -1,0 +1,57 @@
+name: Build plugin zip
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          rm -rf fp-multilanguage/vendor
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Dump optimized autoload
+        run: composer dump-autoload -o --classmap-authoritative
+
+      - name: Prepare build directory
+        run: |
+          mkdir -p build/fp-multilanguage
+          rsync -a --delete \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=tests \
+            --exclude=docs \
+            --exclude=node_modules \
+            --exclude=*.md \
+            --exclude=.idea \
+            --exclude=.vscode \
+            --exclude=build \
+            --exclude=.gitattributes \
+            --exclude=.gitignore \
+            fp-multilanguage/ build/fp-multilanguage/
+
+      - name: Create zip
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d%H%M)
+          (cd build && zip -rq "fp-multilanguage-${TIMESTAMP}.zip" fp-multilanguage)
+          echo "ZIP_PATH=build/fp-multilanguage-${TIMESTAMP}.zip" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-zip
+          path: ${{ env.ZIP_PATH }}
