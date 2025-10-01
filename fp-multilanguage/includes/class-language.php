@@ -110,6 +110,12 @@ class FPML_Language {
         $lang = self::SOURCE;
 
         $requested = $query->get( 'fpml_lang' );
+
+        if ( is_string( $requested ) ) {
+            $requested = sanitize_key( $requested );
+        } else {
+            $requested = '';
+        }
         if ( empty( $requested ) && isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             $requested = strtolower( sanitize_text_field( wp_unslash( $_GET['lang'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         }
@@ -117,8 +123,15 @@ class FPML_Language {
         if ( self::TARGET === $requested ) {
             $lang = self::TARGET;
         } else {
-            $path = $this->get_current_path();
-            if ( 0 === strpos( $path, '/en/' ) || '/en' === $path ) {
+            $path      = $this->get_current_path();
+            $lowered   = strtolower( $path );
+            $is_target = ( 0 === strpos( $lowered, '/en/' ) );
+
+            if ( ! $is_target ) {
+                $is_target = ( '/en' === rtrim( $lowered, '/' ) );
+            }
+
+            if ( $is_target ) {
                 $lang = self::TARGET;
             }
         }
@@ -242,9 +255,15 @@ class FPML_Language {
             }
 
             if ( self::TARGET !== $requested ) {
-                $path = $this->get_current_path();
+                $path    = $this->get_current_path();
+                $lowered = strtolower( $path );
+                $is_target = ( 0 === strpos( $lowered, '/en/' ) );
 
-                if ( 0 === strpos( $path, '/en/' ) || '/en/' === $path ) {
+                if ( ! $is_target ) {
+                    $is_target = ( '/en' === rtrim( $lowered, '/' ) );
+                }
+
+                if ( $is_target ) {
                     $requested = self::TARGET;
                 }
             }
@@ -408,7 +427,7 @@ class FPML_Language {
         }
 
         if ( ! wp_script_is( 'fpml-switcher-dropdown', 'registered' ) ) {
-            wp_register_script( 'fpml-switcher-dropdown', '', array(), FPML_PLUGIN_VERSION, true );
+            wp_register_script( 'fpml-switcher-dropdown', false, array(), FPML_PLUGIN_VERSION, true );
         }
 
         wp_enqueue_script( 'fpml-switcher-dropdown' );
@@ -482,6 +501,12 @@ class FPML_Language {
             $current = '/' . $current;
         }
 
+        $current = $this->strip_installation_path( $current );
+
+        if ( '' === $current || '/' === $current ) {
+            return '/';
+        }
+
         return untrailingslashit( $current ) . '/';
     }
 
@@ -497,10 +522,66 @@ class FPML_Language {
     protected function strip_language_segment( $path ) {
         $path = '/' === $path ? '/' : untrailingslashit( $path ) . '/';
 
-        if ( 0 === strpos( $path, '/en/' ) ) {
+        $lowered = strtolower( $path );
+
+        if ( 0 === strpos( $lowered, '/en/' ) ) {
             $path = substr( $path, 3 );
-        } elseif ( '/en/' === $path ) {
+        } elseif ( '/en' === rtrim( $lowered, '/' ) ) {
             $path = '/';
+        }
+
+        return $path;
+    }
+
+    /**
+     * Remove the WordPress installation path from a request path.
+     *
+     * Ensures detection works on subdirectory installs.
+     *
+     * @since 0.3.1
+     *
+     * @param string $path Absolute path including the leading slash.
+     *
+     * @return string
+     */
+    protected function strip_installation_path( $path ) {
+        if ( ! is_string( $path ) || '' === $path ) {
+            return '';
+        }
+
+        if ( '/' !== substr( $path, 0, 1 ) ) {
+            $path = '/' . $path;
+        }
+
+        $base_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+
+        if ( ! is_string( $base_path ) ) {
+            $base_path = '';
+        }
+
+        $base_path = '/' . trim( $base_path, '/' );
+
+        if ( '/' === $base_path ) {
+            return $path;
+        }
+
+        $base_trailing       = trailingslashit( $base_path );
+        $base_trailing_lower = strtolower( $base_trailing );
+        $path_lower          = strtolower( $path );
+
+        if ( 0 === strpos( $path_lower, $base_trailing_lower ) ) {
+            $remainder = substr( $path, strlen( $base_trailing ) );
+            $remainder = '/' . ltrim( $remainder, '/' );
+
+            if ( '/' === substr( $path, -1 ) ) {
+                return untrailingslashit( $remainder ) . '/';
+            }
+
+            return '/' === $remainder ? '/' : $remainder;
+        }
+
+        if ( 0 === strcasecmp( rtrim( $path, '/' ), rtrim( $base_path, '/' ) ) ) {
+            return '/';
         }
 
         return $path;
@@ -848,7 +929,7 @@ class FPML_Language {
         $routing = $this->settings->get( 'routing_mode', 'segment' );
 
         if ( 'segment' !== $routing ) {
-            $url = remove_query_arg( 'lang', $url );
+            $url = remove_query_arg( array( 'lang', 'fpml_lang' ), $url );
 
             if ( self::TARGET === $lang ) {
                 $url = add_query_arg( 'lang', self::TARGET, $url );
@@ -857,6 +938,7 @@ class FPML_Language {
             return $url;
         }
 
+        $url    = remove_query_arg( array( 'lang', 'fpml_lang' ), $url );
         $parsed = wp_parse_url( $url );
 
         if ( false === $parsed ) {
@@ -873,10 +955,16 @@ class FPML_Language {
         $path = trim( $path, '/' );
 
         if ( '' === $path ) {
-            $target = home_url( '/' );
+            $formatted_path = user_trailingslashit( '' );
         } else {
-            $target = home_url( trailingslashit( $path ) );
+            $formatted_path = user_trailingslashit( $path );
         }
+
+        if ( '' !== $formatted_path && '/' !== substr( $formatted_path, 0, 1 ) ) {
+            $formatted_path = '/' . ltrim( $formatted_path, '/' );
+        }
+
+        $target = home_url( $formatted_path );
 
         if ( ! empty( $parsed['query'] ) ) {
             $target = rtrim( $target, '?' );
@@ -912,6 +1000,7 @@ class FPML_Language {
             $path = '/' . $path;
         }
 
+        $path = $this->strip_installation_path( $path );
         $path = $this->strip_language_segment( $path );
 
         return trim( $path, '/' );
