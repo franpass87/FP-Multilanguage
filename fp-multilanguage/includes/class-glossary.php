@@ -96,7 +96,7 @@ class FPML_Glossary {
          * @return void
          */
         protected function save_entries( $entries ) {
-                update_option( self::OPTION_KEY, $entries );
+                update_option( self::OPTION_KEY, $entries, false );
                 $this->entries = $entries;
         }
 

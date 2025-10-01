@@ -88,7 +88,7 @@ class FPML_Strings_Scanner {
          * @return void
          */
         protected function save_catalog( $catalog ) {
-                update_option( self::OPTION_KEY, $catalog );
+                update_option( self::OPTION_KEY, $catalog, false );
                 $this->catalog = $catalog;
         }
 

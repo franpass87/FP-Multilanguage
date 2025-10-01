@@ -54,8 +54,9 @@ return self::$instance;
  */
 protected function __construct() {
 $this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this->get_defaults() );
-add_action( 'admin_init', array( $this, 'register_settings' ) );
-add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
+        add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
+        add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
 /**
@@ -169,6 +170,38 @@ foreach ( $all as $taxonomy ) {
 if ( 0 === strpos( $taxonomy, 'pa_' ) ) {
 $taxonomies[] = $taxonomy;
 }
+
+    /**
+     * Flush rewrite rules when routing mode changes.
+     *
+     * @since 0.2.0
+     *
+     * @param array $old_value Previous option value.
+     * @param array $value     New option value.
+     * @param string $option   Option name.
+     *
+     * @return void
+     */
+    public function maybe_flush_rewrites( $old_value, $value, $option ) {
+        unset( $option );
+
+        $old_value = is_array( $old_value ) ? $old_value : array();
+        $value     = is_array( $value ) ? $value : array();
+        $defaults  = $this->get_defaults();
+
+        $old_mode = isset( $old_value['routing_mode'] ) ? $old_value['routing_mode'] : $defaults['routing_mode'];
+        $new_mode = isset( $value['routing_mode'] ) ? $value['routing_mode'] : $old_mode;
+
+        if ( $old_mode === $new_mode ) {
+            return;
+        }
+
+        if ( class_exists( 'FPML_Rewrites' ) ) {
+            FPML_Rewrites::instance()->register_rewrites();
+        }
+
+        flush_rewrite_rules( false );
+    }
 }
 
 return array_values( array_unique( $taxonomies ) );

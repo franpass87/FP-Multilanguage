@@ -16,8 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class FPML_Plugin {
         /**
-         * Singleton instance.
-         *
+         * Option tracking completed migrations.
+         */
+        const OPTION_AUTOLOAD_MIGRATED = 'fpml_options_autoload_migrated';
+
+/**
+ * Singleton instance.
+ *
          * @var FPML_Plugin|null
          */
         protected static $instance = null;
@@ -83,7 +88,10 @@ class FPML_Plugin {
                 if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
                         $this->queue->maybe_upgrade();
                 }
-                $this->logger   = FPML_Logger::instance();
+
+                $this->logger = FPML_Logger::instance();
+
+                $this->maybe_disable_autoloaded_options();
 
                 $this->define_hooks();
         }
@@ -215,7 +223,7 @@ class FPML_Plugin {
 	 *
 	 * @return void
 	 */
-        protected function define_hooks() {
+protected function define_hooks() {
                 load_plugin_textdomain( 'fp-multilanguage', false, dirname( plugin_basename( FPML_PLUGIN_FILE ) ) . '/languages' );
 
                 FPML_Settings::instance();
@@ -247,8 +255,49 @@ class FPML_Plugin {
                         add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
                         add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
                         add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
+}
+
+        /**
+         * Ensure heavy options are stored without autoload.
+         *
+         * @since 0.3.2
+         *
+         * @return void
+         */
+        protected function maybe_disable_autoloaded_options() {
+                $migrated = get_option( self::OPTION_AUTOLOAD_MIGRATED );
+
+                if ( $migrated ) {
+                        return;
                 }
+
+                $options = array();
+
+                if ( class_exists( 'FPML_Strings_Scanner' ) ) {
+                        $options[] = FPML_Strings_Scanner::OPTION_KEY;
+                }
+
+                if ( class_exists( 'FPML_Strings_Override' ) ) {
+                        $options[] = FPML_Strings_Override::OPTION_KEY;
+                }
+
+                if ( class_exists( 'FPML_Glossary' ) ) {
+                        $options[] = FPML_Glossary::OPTION_KEY;
+                }
+
+                foreach ( array_filter( array_unique( $options ) ) as $option ) {
+                        $value = get_option( $option, null );
+
+                        if ( null === $value ) {
+                                continue;
+                        }
+
+                        update_option( $option, $value, false );
+                }
+
+                update_option( self::OPTION_AUTOLOAD_MIGRATED, 1, false );
         }
+}
 
         /**
          * Handle post save events to ensure translations and enqueue jobs.

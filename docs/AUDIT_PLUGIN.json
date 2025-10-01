@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "plugin": "FP Multilanguage",
+    "date": "2025-10-01",
+    "wp_min": "6.6",
+    "php_targets": [
+      "8.2",
+      "8.3"
+    ]
+  },
+  "summary": {
+    "files_scanned": 39,
+    "files_total": 39,
+    "issues_total": 4,
+    "by_severity": {
+      "critical": 0,
+      "high": 2,
+      "medium": 2,
+      "low": 0
+    },
+    "status": "audit_complete"
+  },
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "severity": "high",
+      "category": [
+        "performance",
+        "autoload"
+      ],
+      "file": "fp-multilanguage/includes/class-strings-scanner.php",
+      "line": 90,
+      "snippet": "update_option( self::OPTION_KEY, $catalog );",
+      "diagnosis": "Catalogo stringhe, override e glossario sono salvati tramite update_option senza disabilitare l'autoload, caricando strutture potenzialmente enormi su ogni richiesta front-end.",
+      "impact": "performance",
+      "repro": [
+        "Eseguire una scansione stringhe/glossario con molte voci",
+        "Verificare via wp shell che wp_load_alloptions() includa le opzioni fpml_* pesanti"
+      ],
+      "proposed_fix": "Usare update_option( key, value, false ) per catalogo/override/glossario e migrare le installazioni esistenti impostando l'autoload a no.",
+      "effort": "M",
+      "tags": [
+        "options",
+        "autoload",
+        "performance"
+      ]
+    },
+    {
+      "id": "ISSUE-002",
+      "severity": "high",
+      "category": [
+        "functional",
+        "routing"
+      ],
+      "file": "fp-multilanguage/includes/class-settings.php",
+      "line": 208,
+      "snippet": "$data['routing_mode'] = in_array( $data['routing_mode'], array( 'segment', 'query' ), true ) ? $data['routing_mode'] : $defaults['routing_mode'];",
+      "diagnosis": "Il cambio della modalità di routing salva l'opzione ma non esegue flush_rewrite_rules, quindi le regole /en/ restano non aggiornate finché l'utente non salva manualmente i permalink.",
+      "impact": "functional",
+      "repro": [
+        "Impostare routing su query e salvare",
+        "Cambiare su segment e aprire /en/ senza aver salvato permalink"
+      ],
+      "proposed_fix": "Agganciare update_option_fpml_settings per confrontare old/new routing_mode, richiamare register_rewrites() e flush_rewrite_rules(false) quando cambia.",
+      "effort": "S",
+      "tags": [
+        "rewrite",
+        "routing",
+        "ux"
+      ]
+    },
+    {
+      "id": "ISSUE-003",
+      "severity": "medium",
+      "category": [
+        "functional",
+        "import"
+      ],
+      "file": "fp-multilanguage/includes/class-export-import.php",
+      "line": 649,
+      "snippet": "$lines = preg_split( '/\\r\\n|\\r|\\n/', $csv );",
+      "diagnosis": "L'import CSV spezza il payload per newline prima di str_getcsv, quindi campi quotati con newline vengono troncati causando righe corrotte o mancanti.",
+      "impact": "functional",
+      "repro": [
+        "Creare CSV con un campo tra virgolette contenente un newline",
+        "Provare a importarlo nelle override/glossario"
+      ],
+      "proposed_fix": "Leggere il CSV con fgetcsv su uno stream temporaneo evitando lo split manuale, così i newline quotati vengono gestiti correttamente.",
+      "effort": "M",
+      "tags": [
+        "csv",
+        "import",
+        "admin"
+      ]
+    },
+    {
+      "id": "ISSUE-004",
+      "severity": "medium",
+      "category": [
+        "functional",
+        "i18n"
+      ],
+      "file": "fp-multilanguage/includes/class-strings-override.php",
+      "line": 136,
+      "snippet": "$target = isset( $row['target'] ) ? sanitize_text_field( $row['target'] ) : '';",
+      "diagnosis": "Le override salvano le traduzioni tramite sanitize_text_field, eliminando markup HTML (link, strong, nbsp) necessario per riprodurre fedelmente i contenuti.",
+      "impact": "functional",
+      "repro": [
+        "Creare un override con un link HTML e salvarlo",
+        "Visitare il frontend in inglese e osservare che il markup viene rimosso"
+      ],
+      "proposed_fix": "Usare wp_kses_post per normalizzare i testi delle traduzioni mantenendo il markup sicuro, lasciando sanitize_text_field solo per il context.",
+      "effort": "S",
+      "tags": [
+        "i18n",
+        "admin",
+        "sanitization"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "compat": {
+    "deprecated": [],
+    "php_warnings": []
+  },
+  "perf": {
+    "hotspots": [
+      "Opzioni fpml_* salvate con autoload=YES"
+    ],
+    "autoload_options": [
+      "fpml_strings_catalog",
+      "fpml_strings_overrides",
+      "fpml_glossary_entries"
+    ],
+    "cron": []
+  },
+  "i18n": {
+    "domain_issues": [],
+    "missing": [
+      "ISSUE-004: override sanificate con sanitize_text_field() rimuovono markup HTML necessario"
+    ]
+  },
+  "tests": {
+    "gaps": [
+      "Nessun test automatico per pipeline di import/export"
+    ],
+    "suggestions": []
+  },
+  "manifest": {
+    "previous_hash": "7696830e005fe8542c1848708ec8e846bd19c77d5a8061b2b72122ce72f8f93d",
+    "current_hash": "1b0cfd658baa0901057751ea197935c2ae681b9e314a64486e8d645d08470aa4",
+    "files_count": 39
+  }
+}
