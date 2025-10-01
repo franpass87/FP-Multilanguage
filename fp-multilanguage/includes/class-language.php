@@ -473,10 +473,273 @@ class FPML_Language {
     protected function get_current_url() {
         $scheme = is_ssl() ? 'https' : 'http';
 
-        $host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : ''; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
-        $uri  = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : ''; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+        $host = isset( $_SERVER['HTTP_HOST'] ) ? $this->sanitize_host_header( $_SERVER['HTTP_HOST'] ) : ''; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+        $uri  = isset( $_SERVER['REQUEST_URI'] ) ? $this->sanitize_request_uri( $_SERVER['REQUEST_URI'] ) : '/'; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+
+        if ( '' === $uri ) {
+            $uri = '/';
+        }
+
+        if ( '' === $host ) {
+            $home_scheme = is_ssl() ? 'https' : null;
+
+            return esc_url_raw( home_url( $uri, $home_scheme ) );
+        }
 
         return esc_url_raw( $scheme . '://' . $host . $uri );
+    }
+
+    /**
+     * Sanitize the host header preserving valid port or IPv6 notations.
+     *
+     * @since 0.3.1
+     *
+     * @param string $host Raw host header.
+     *
+     * @return string
+     */
+    protected function sanitize_host_header( $host ) {
+        if ( ! is_string( $host ) ) {
+            return '';
+        }
+
+        $host = wp_unslash( $host );
+        $host = function_exists( 'wp_strip_all_tags' ) ? wp_strip_all_tags( $host ) : strip_tags( $host );
+        $host = preg_replace( '/[\r\n\t ]+/', '', $host );
+
+        if ( is_string( $host ) ) {
+            $segments = preg_split( '/[\x00-\x1F\x7F]+/', $host, 2 );
+
+            if ( is_array( $segments ) && isset( $segments[0] ) ) {
+                $host = $segments[0];
+            }
+        }
+
+        if ( null === $host ) {
+            return '';
+        }
+
+        $normalized_host = $host;
+
+        $scheme_position = stripos( $normalized_host, '://' );
+
+        if ( false !== $scheme_position ) {
+            $normalized_host = substr( $normalized_host, $scheme_position + 3 );
+        } elseif ( str_starts_with( $normalized_host, '//' ) ) {
+            $normalized_host = substr( $normalized_host, 2 );
+        }
+
+        $at_position = strrpos( $normalized_host, '@' );
+
+        if ( false !== $at_position ) {
+            $normalized_host = substr( $normalized_host, $at_position + 1 );
+        }
+
+        $maybe_ipv6_literal = str_starts_with( $normalized_host, '[' );
+
+        if ( ! $maybe_ipv6_literal && str_contains( $normalized_host, '%' ) ) {
+            $decoded        = $normalized_host;
+            $max_iterations = 5;
+            $iteration      = 0;
+
+            do {
+                $previous = $decoded;
+                $decoded  = rawurldecode( $decoded );
+
+                if ( ! is_string( $decoded ) ) {
+                    break;
+                }
+
+                $decoded = preg_replace( '/[\r\n\t ]+/', '', $decoded );
+
+                if ( ! is_string( $decoded ) ) {
+                    break;
+                }
+
+                $segments = preg_split( '/[\x00-\x1F\x7F]+/', $decoded, 2 );
+
+                if ( is_array( $segments ) && isset( $segments[0] ) ) {
+                    $decoded = $segments[0];
+                }
+
+                $iteration++;
+            } while ( $iteration < $max_iterations && $decoded !== $previous && str_contains( $decoded, '%' ) );
+
+            if ( is_string( $decoded ) ) {
+                $normalized_host = $decoded;
+
+                $scheme_position = stripos( $normalized_host, '://' );
+
+                if ( false !== $scheme_position ) {
+                    $normalized_host = substr( $normalized_host, $scheme_position + 3 );
+                } elseif ( str_starts_with( $normalized_host, '//' ) ) {
+                    $normalized_host = substr( $normalized_host, 2 );
+                }
+
+                $at_position = strrpos( $normalized_host, '@' );
+
+                if ( false !== $at_position ) {
+                    $normalized_host = substr( $normalized_host, $at_position + 1 );
+                }
+            }
+        }
+
+        $authority_segments = preg_split( '/[\/?#]/', $normalized_host, 2 );
+
+        if ( is_array( $authority_segments ) && isset( $authority_segments[0] ) && '' !== $authority_segments[0] ) {
+            $host = $authority_segments[0];
+        }
+
+        $host = preg_replace( '/[^A-Za-z0-9\.\-:\[\]_%]/', '', $host );
+
+        if ( ! is_string( $host ) ) {
+            return '';
+        }
+
+        $is_ipv6 = str_starts_with( $host, '[' );
+
+        if ( ! $is_ipv6 && str_contains( $host, '%' ) ) {
+            $host = preg_replace( '/%[0-9A-Fa-f]{2}/', '', $host );
+
+            if ( ! is_string( $host ) ) {
+                return '';
+            }
+
+            $host = str_replace( '%', '', $host );
+        }
+
+        if ( '' === $host ) {
+            return '';
+        }
+
+        if ( $is_ipv6 ) {
+            $closing = strpos( $host, ']' );
+
+            if ( false === $closing ) {
+                return '';
+            }
+
+            $address   = substr( $host, 0, $closing + 1 );
+            $remainder = substr( $host, $closing + 1 );
+
+            if ( '' === $remainder ) {
+                return $address;
+            }
+
+            if ( ':' !== $remainder[0] ) {
+                return $address;
+            }
+
+            $port = substr( $remainder, 1 );
+
+            if ( '' === $port ) {
+                return $address;
+            }
+
+            if ( ctype_digit( $port ) ) {
+                if ( strlen( $port ) > 5 ) {
+                    return $address;
+                }
+
+                if ( (int) $port > 65535 ) {
+                    return $address;
+                }
+
+                return $address . ':' . $port;
+            }
+
+            return $address;
+        }
+
+        $segments = explode( ':', $host, 2 );
+        $name     = $segments[0];
+
+        if ( '' === $name ) {
+            return '';
+        }
+
+        if ( ! isset( $segments[1] ) ) {
+            return $name;
+        }
+
+        $port = $segments[1];
+
+        if ( '' === $port ) {
+            return $name;
+        }
+
+        if ( ctype_digit( $port ) ) {
+            if ( strlen( $port ) > 5 ) {
+                return $name;
+            }
+
+            if ( (int) $port > 65535 ) {
+                return $name;
+            }
+
+            return $name . ':' . $port;
+        }
+
+        return $name;
+    }
+
+    /**
+     * Sanitize the current request URI keeping query string and fragments.
+     *
+     * @since 0.3.1
+     *
+     * @param string $uri Raw request URI.
+     *
+     * @return string
+     */
+    protected function sanitize_request_uri( $uri ) {
+        if ( ! is_string( $uri ) ) {
+            return '/';
+        }
+
+        $uri = wp_unslash( $uri );
+        $uri = function_exists( 'wp_strip_all_tags' ) ? wp_strip_all_tags( $uri ) : strip_tags( $uri );
+        $uri = preg_replace( '/[\x00-\x1F\x7F]+/', '', $uri );
+
+        if ( null === $uri ) {
+            return '/';
+        }
+
+        $uri = trim( $uri );
+
+        if ( '' === $uri ) {
+            return '/';
+        }
+
+        if ( preg_match( '#^[a-z][a-z0-9+\-.]*://#i', $uri ) ) {
+            $parts = wp_parse_url( $uri );
+
+            if ( false === $parts ) {
+                return '/';
+            }
+
+            $uri = '';
+
+            if ( isset( $parts['path'] ) ) {
+                $uri = (string) $parts['path'];
+            }
+
+            if ( isset( $parts['query'] ) && '' !== $parts['query'] ) {
+                $uri .= '?' . $parts['query'];
+            }
+
+            if ( isset( $parts['fragment'] ) && '' !== $parts['fragment'] ) {
+                $uri .= '#' . $parts['fragment'];
+            }
+
+            $uri = trim( $uri );
+        }
+
+        if ( '' === $uri ) {
+            return '/';
+        }
+
+        return '/' . ltrim( $uri, '/' );
     }
 
     /**
