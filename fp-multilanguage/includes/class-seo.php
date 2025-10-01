@@ -635,6 +635,10 @@ class FPML_SEO {
                         return;
                 }
 
+                if ( ! $this->settings->get( 'sitemap_en', true ) ) {
+                        return;
+                }
+
                 $requested = get_query_var( 'fpml_sitemap' );
 
                 if ( empty( $requested ) && isset( $_GET['fpml_sitemap'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -986,6 +990,10 @@ class FPML_SEO {
          * @return string
          */
         protected function get_sitemap_url() {
+                if ( ! $this->settings->get( 'sitemap_en', true ) ) {
+                        return '';
+                }
+
                 return home_url( '/sitemap-en.xml' );
         }
 
