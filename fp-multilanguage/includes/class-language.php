@@ -66,6 +66,24 @@ class FPML_Language {
     protected $term_pairs = null;
 
     /**
+     * Cached Forwarded header parameters for the current request.
+     *
+     * @since 0.3.3
+     *
+     * @var array<string,string>|null
+     */
+    protected $forwarded_parameters = null;
+
+    /**
+     * Normalized Forwarded header payload used to populate the cache.
+     *
+     * @since 0.3.3
+     *
+     * @var string|null
+     */
+    protected $forwarded_parameters_raw = null;
+
+    /**
      * Retrieve singleton.
      *
      * @since 0.2.0
@@ -471,9 +489,10 @@ class FPML_Language {
      * @return string
      */
     protected function get_current_url() {
-        $scheme = is_ssl() ? 'https' : 'http';
+        $scheme = $this->determine_request_scheme();
+        $explicit_scheme = $this->extract_explicit_scheme();
 
-        $host = isset( $_SERVER['HTTP_HOST'] ) ? $this->sanitize_host_header( $_SERVER['HTTP_HOST'] ) : ''; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+        $host = $this->resolve_current_host( $scheme );
         $uri  = isset( $_SERVER['REQUEST_URI'] ) ? $this->sanitize_request_uri( $_SERVER['REQUEST_URI'] ) : '/'; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
 
         if ( '' === $uri ) {
@@ -481,12 +500,428 @@ class FPML_Language {
         }
 
         if ( '' === $host ) {
-            $home_scheme = is_ssl() ? 'https' : null;
+            $home_scheme = null;
+
+            if ( '' !== $explicit_scheme ) {
+                $home_scheme = $explicit_scheme;
+            } elseif ( is_ssl() ) {
+                $home_scheme = 'https';
+            }
 
             return esc_url_raw( home_url( $uri, $home_scheme ) );
         }
 
         return esc_url_raw( $scheme . '://' . $host . $uri );
+    }
+
+    /**
+     * Determine the most accurate request scheme.
+     *
+     * @since 0.3.2
+     *
+     * @return string
+     */
+    protected function determine_request_scheme() {
+        $explicit = $this->extract_explicit_scheme();
+
+        if ( '' !== $explicit ) {
+            return $explicit;
+        }
+
+        return is_ssl() ? 'https' : 'http';
+    }
+
+    /**
+     * Extract an explicit scheme from proxy headers or server variables.
+     *
+     * @since 0.3.2
+     *
+     * @return string
+     */
+    protected function extract_explicit_scheme() {
+        $forwarded_parameters = $this->parse_forwarded_parameters();
+
+        if ( isset( $forwarded_parameters['proto'] ) ) {
+            $proto = strtolower( $forwarded_parameters['proto'] );
+
+            if ( in_array( $proto, array( 'http', 'https' ), true ) ) {
+                return $proto;
+            }
+        }
+
+        $forwarded_proto = $this->get_first_forwarded_value( 'HTTP_X_FORWARDED_PROTO' );
+
+        if ( '' !== $forwarded_proto ) {
+            $forwarded_proto = strtolower( $forwarded_proto );
+
+            if ( in_array( $forwarded_proto, array( 'http', 'https' ), true ) ) {
+                return $forwarded_proto;
+            }
+        }
+
+        $forwarded_ssl = $this->get_first_forwarded_value( 'HTTP_X_FORWARDED_SSL' );
+
+        if ( '' !== $forwarded_ssl && 'on' === strtolower( $forwarded_ssl ) ) {
+            return 'https';
+        }
+
+        if ( isset( $_SERVER['REQUEST_SCHEME'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            $request_scheme = strtolower( trim( (string) $_SERVER['REQUEST_SCHEME'] ) ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+
+            if ( in_array( $request_scheme, array( 'http', 'https' ), true ) ) {
+                return $request_scheme;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve the current host taking proxy headers into account.
+     *
+     * @since 0.3.2
+     *
+     * @param string $scheme Detected request scheme.
+     *
+     * @return string
+     */
+    protected function resolve_current_host( $scheme ) {
+        $host = '';
+
+        $forwarded_parameters = $this->parse_forwarded_parameters();
+
+        if ( isset( $forwarded_parameters['host'] ) ) {
+            $host = $this->sanitize_host_header( $forwarded_parameters['host'] );
+
+            if ( '' !== $host ) {
+                $forwarded_port = $this->get_first_forwarded_value( 'HTTP_X_FORWARDED_PORT' );
+
+                if ( '' !== $forwarded_port ) {
+                    $host = $this->maybe_append_port( $host, $forwarded_port, $scheme );
+                }
+
+                return $host;
+            }
+        }
+
+        $forwarded_host = $this->get_first_forwarded_value( 'HTTP_X_FORWARDED_HOST' );
+
+        if ( '' !== $forwarded_host ) {
+            $host = $this->sanitize_host_header( $forwarded_host );
+
+            if ( '' !== $host ) {
+                $forwarded_port = $this->get_first_forwarded_value( 'HTTP_X_FORWARDED_PORT' );
+
+                if ( '' !== $forwarded_port ) {
+                    $host = $this->maybe_append_port( $host, $forwarded_port, $scheme );
+                }
+            }
+        }
+
+        if ( '' === $host && isset( $_SERVER['HTTP_HOST'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            $host = $this->sanitize_host_header( $_SERVER['HTTP_HOST'] ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+        }
+
+        if ( '' === $host && isset( $_SERVER['SERVER_NAME'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            $server_name = $this->sanitize_host_header( $_SERVER['SERVER_NAME'] ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+
+            if ( '' !== $server_name ) {
+                $host = $server_name;
+
+                if ( isset( $_SERVER['SERVER_PORT'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+                    $host = $this->maybe_append_port( $host, (string) $_SERVER['SERVER_PORT'], $scheme ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+                }
+            }
+        }
+
+        return $host;
+    }
+
+    /**
+     * Extract the first value of a forwarded header.
+     *
+     * @since 0.3.2
+     *
+     * @param string $key Server key to inspect.
+     *
+     * @return string
+     */
+    protected function get_first_forwarded_value( $key ) {
+        if ( ! isset( $_SERVER[ $key ] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            return '';
+        }
+
+        $value = wp_unslash( (string) $_SERVER[ $key ] ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+        $value = trim( $value );
+
+        if ( '' === $value ) {
+            return '';
+        }
+
+        $segments = explode( ',', $value );
+        $first    = trim( $segments[0] );
+
+        return $first;
+    }
+
+    /**
+     * Parse the first Forwarded header value into sanitized host/proto parameters.
+     *
+     * Ensures proto is only associated with the same entry that provided the host so
+     * we never mix details from different proxy hops.
+     *
+     * @since 0.3.3
+     *
+     * @return array<string,string>
+     */
+    protected function parse_forwarded_parameters() {
+        $raw_header = null;
+
+        if ( isset( $_SERVER['HTTP_FORWARDED'] ) ) { // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            $raw_header = wp_unslash( (string) $_SERVER['HTTP_FORWARDED'] ); // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
+            $raw_header = trim( $raw_header );
+
+            if ( '' === $raw_header ) {
+                $raw_header = '';
+            } else {
+                $raw_header = preg_replace( '/[\x00-\x1F\x7F]+/', '', $raw_header );
+
+                if ( ! is_string( $raw_header ) ) {
+                    $raw_header = '';
+                }
+            }
+        }
+
+        if ( null !== $this->forwarded_parameters && $this->forwarded_parameters_raw === $raw_header ) {
+            return $this->forwarded_parameters;
+        }
+
+        $this->forwarded_parameters     = array();
+        $this->forwarded_parameters_raw = $raw_header;
+
+        if ( null === $raw_header || '' === $raw_header ) {
+            return $this->forwarded_parameters;
+        }
+
+        $entries = array();
+        $length  = strlen( $raw_header );
+        $buffer  = '';
+        $quoted  = false;
+        $escape  = false;
+
+        for ( $i = 0; $i < $length; $i++ ) {
+            $character = $raw_header[ $i ];
+
+            if ( $escape ) {
+                $buffer .= $character;
+                $escape  = false;
+                continue;
+            }
+
+            $code = ord( $character );
+
+            if ( 92 === $code ) {
+                $buffer .= $character;
+                $escape  = true;
+                continue;
+            }
+
+            if ( 34 === $code ) {
+                $quoted  = ! $quoted;
+                $buffer .= $character;
+                continue;
+            }
+
+            if ( 44 === $code && ! $quoted ) {
+                $entries[] = trim( $buffer );
+                $buffer    = '';
+                continue;
+            }
+
+            $buffer .= $character;
+        }
+
+        if ( '' !== trim( $buffer ) ) {
+            $entries[] = trim( $buffer );
+        }
+
+        if ( empty( $entries ) ) {
+            return $this->forwarded_parameters;
+        }
+
+        $parameters      = array();
+        $proto_candidate = '';
+
+        foreach ( $entries as $entry ) {
+            if ( '' === $entry ) {
+                continue;
+            }
+
+            $pairs        = array();
+            $pair_buffer  = '';
+            $pair_quoted  = false;
+            $pair_escape  = false;
+            $entry_length = strlen( $entry );
+
+            for ( $j = 0; $j < $entry_length; $j++ ) {
+                $entry_character = $entry[ $j ];
+
+                if ( $pair_escape ) {
+                    $pair_buffer .= $entry_character;
+                    $pair_escape  = false;
+                    continue;
+                }
+
+                if ( '\\' === $entry_character ) {
+                    $pair_buffer .= $entry_character;
+                    $pair_escape  = true;
+                    continue;
+                }
+
+                if ( '"' === $entry_character ) {
+                    $pair_quoted  = ! $pair_quoted;
+                    $pair_buffer .= $entry_character;
+                    continue;
+                }
+
+                if ( ';' === $entry_character && ! $pair_quoted ) {
+                    $pairs[]     = trim( $pair_buffer );
+                    $pair_buffer = '';
+                    continue;
+                }
+
+                $pair_buffer .= $entry_character;
+            }
+
+            if ( '' !== trim( $pair_buffer ) ) {
+                $pairs[] = trim( $pair_buffer );
+            }
+
+            if ( empty( $pairs ) ) {
+                continue;
+            }
+
+            $entry_host  = '';
+            $entry_proto = '';
+
+            foreach ( $pairs as $pair ) {
+                $equals_position = strpos( $pair, '=' );
+
+                if ( false === $equals_position ) {
+                    continue;
+                }
+
+                $name  = strtolower( trim( substr( $pair, 0, $equals_position ) ) );
+                $value = trim( substr( $pair, $equals_position + 1 ) );
+
+                if ( '' === $name || '' === $value ) {
+                    continue;
+                }
+
+                if ( '"' === substr( $value, 0, 1 ) && '"' === substr( $value, -1 ) ) {
+                    $value = substr( $value, 1, -1 );
+                    $value = preg_replace( '/\\\\(.)/', '$1', $value );
+
+                    if ( ! is_string( $value ) ) {
+                        continue;
+                    }
+                }
+
+                if ( 'host' === $name && '' === $entry_host ) {
+                    $sanitized_host = $this->sanitize_host_header( $value );
+
+                    if ( '' !== $sanitized_host ) {
+                        $entry_host = $sanitized_host;
+                    }
+                }
+
+                if ( 'proto' === $name && '' === $entry_proto ) {
+                    $normalized_proto = strtolower( $value );
+
+                    if ( in_array( $normalized_proto, array( 'http', 'https' ), true ) ) {
+                        $entry_proto = $normalized_proto;
+                    }
+                }
+            }
+
+            if ( '' !== $entry_host ) {
+                if ( '' === $entry_proto ) {
+                    unset( $parameters['proto'] );
+                } else {
+                    $parameters['proto'] = $entry_proto;
+                }
+
+                $parameters['host'] = $entry_host;
+                break;
+            }
+
+            if ( '' === $proto_candidate && '' !== $entry_proto ) {
+                $proto_candidate = $entry_proto;
+            }
+        }
+
+        if ( ! isset( $parameters['host'] ) && '' !== $proto_candidate ) {
+            $parameters['proto'] = $proto_candidate;
+        }
+
+        $this->forwarded_parameters = $parameters;
+
+        return $this->forwarded_parameters;
+    }
+
+
+
+    /**
+     * Maybe append a port to a host if appropriate.
+     *
+     * @since 0.3.2
+     *
+     * @param string      $host   Sanitized host.
+     * @param string|null $port   Candidate port number.
+     * @param string      $scheme Request scheme.
+     *
+     * @return string
+     */
+    protected function maybe_append_port( $host, $port, $scheme ) {
+        $port = trim( (string) $port );
+
+        if ( '' === $port || ! ctype_digit( $port ) ) {
+            return $host;
+        }
+
+        $port_number = (int) $port;
+
+        if ( $port_number < 1 || $port_number > 65535 ) {
+            return $host;
+        }
+
+        if ( 'http' === $scheme && 80 === $port_number ) {
+            return $host;
+        }
+
+        if ( 'https' === $scheme && 443 === $port_number ) {
+            return $host;
+        }
+
+        if ( str_starts_with( $host, '[' ) ) {
+            $closing = strpos( $host, ']' );
+
+            if ( false !== $closing && isset( $host[ $closing + 1 ] ) && ':' === $host[ $closing + 1 ] ) {
+                return $host;
+            }
+
+            $host_with_port = $host . ':' . $port;
+
+            return $this->sanitize_host_header( $host_with_port );
+        }
+
+        if ( str_contains( $host, ':' ) ) {
+            return $host;
+        }
+
+        $host_with_port = $host . ':' . $port;
+
+        return $this->sanitize_host_header( $host_with_port );
     }
 
     /**

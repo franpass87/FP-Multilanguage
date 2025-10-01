@@ -48,6 +48,78 @@ final class LanguageTest extends TestCase {
         );
     }
 
+    public function test_get_current_url_uses_forwarded_header_parameters(): void {
+        $_SERVER['REQUEST_URI']  = '/behind/proxy';
+        $_SERVER['HTTP_FORWARDED'] = 'for=192.0.2.60;proto="HTTPS";host="forwarded.example.com:8443"';
+
+        $language = ( new ReflectionClass( FPML_Language::class ) )->newInstanceWithoutConstructor();
+        $method   = new ReflectionMethod( FPML_Language::class, 'get_current_url' );
+        $method->setAccessible( true );
+
+        $this->assertSame(
+            'https://forwarded.example.com:8443/behind/proxy',
+            $method->invoke( $language )
+        );
+    }
+
+    public function test_get_current_url_falls_back_to_forwarded_host_when_x_headers_missing(): void {
+        $_SERVER['REQUEST_URI']   = '/proxy/path';
+        $_SERVER['HTTP_FORWARDED'] = 'proto=http;host=internal.example';
+
+        $language = ( new ReflectionClass( FPML_Language::class ) )->newInstanceWithoutConstructor();
+        $method   = new ReflectionMethod( FPML_Language::class, 'get_current_url' );
+        $method->setAccessible( true );
+
+        $this->assertSame(
+            'http://internal.example/proxy/path',
+            $method->invoke( $language )
+        );
+    }
+
+    public function test_get_current_url_uses_first_forwarded_entry_with_host_information(): void {
+        $_SERVER['REQUEST_URI']    = '/proxy/forwarded';
+        $_SERVER['HTTP_FORWARDED'] = 'for=198.51.100.17;by=10.0.0.1, for=203.0.113.43;proto=https;host=forwarded.example:4443';
+
+        $language = ( new ReflectionClass( FPML_Language::class ) )->newInstanceWithoutConstructor();
+        $method   = new ReflectionMethod( FPML_Language::class, 'get_current_url' );
+        $method->setAccessible( true );
+
+        $this->assertSame(
+            'https://forwarded.example:4443/proxy/forwarded',
+            $method->invoke( $language )
+        );
+    }
+
+    public function test_get_current_url_does_not_mix_forwarded_entries(): void {
+        $_SERVER['REQUEST_URI']    = '/proxy/mismatch';
+        $_SERVER['HTTP_FORWARDED'] = 'proto=https, host=internal.example';
+
+        $language = ( new ReflectionClass( FPML_Language::class ) )->newInstanceWithoutConstructor();
+        $method   = new ReflectionMethod( FPML_Language::class, 'get_current_url' );
+        $method->setAccessible( true );
+
+        $this->assertSame(
+            'http://internal.example/proxy/mismatch',
+            $method->invoke( $language )
+        );
+    }
+
+    public function test_get_current_url_appends_forwarded_port_to_forwarded_host(): void {
+        $_SERVER['REQUEST_URI']          = '/proxy/forwarded-port';
+        $_SERVER['HTTP_FORWARDED']       = 'for=198.51.100.17;host=forwarded.example';
+        $_SERVER['HTTP_X_FORWARDED_PORT'] = '8443';
+        $_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
+
+        $language = ( new ReflectionClass( FPML_Language::class ) )->newInstanceWithoutConstructor();
+        $method   = new ReflectionMethod( FPML_Language::class, 'get_current_url' );
+        $method->setAccessible( true );
+
+        $this->assertSame(
+            'https://forwarded.example:8443/proxy/forwarded-port',
+            $method->invoke( $language )
+        );
+    }
+
     public function test_sanitize_host_allows_ipv6_notation_and_strips_noise(): void {
         $_SERVER['HTTPS'] = 'on';
 
