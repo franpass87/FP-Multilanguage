@@ -647,25 +647,26 @@ class FPML_Export_Import {
          * @return array
          */
         protected function parse_csv_rows( $csv ) {
-                $lines = preg_split( '/\r\n|\r|\n/', $csv );
-                $lines = array_filter( array_map( 'trim', $lines ) );
+                $csv    = (string) $csv;
+                $buffer = fopen( 'php://temp', 'w+' );
 
-                if ( empty( $lines ) ) {
+                if ( false === $buffer ) {
                         return array();
                 }
+
+                fwrite( $buffer, $csv );
+                rewind( $buffer );
 
                 $header = array();
                 $rows   = array();
 
-                foreach ( $lines as $index => $line ) {
-                        $columns = str_getcsv( $line );
-
-                        if ( 0 === $index ) {
-                                $header = array_map( 'sanitize_key', $columns );
+                while ( ( $columns = fgetcsv( $buffer ) ) !== false ) {
+                        if ( empty( $columns ) || ( 1 === count( $columns ) && '' === trim( (string) $columns[0] ) ) ) {
                                 continue;
                         }
 
                         if ( empty( $header ) ) {
+                                $header = array_map( 'sanitize_key', $columns );
                                 continue;
                         }
 
@@ -677,6 +678,8 @@ class FPML_Export_Import {
 
                         $rows[] = $row;
                 }
+
+                fclose( $buffer );
 
                 return $rows;
         }

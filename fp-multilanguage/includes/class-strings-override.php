@@ -84,7 +84,7 @@ class FPML_Strings_Override {
          * @return void
          */
         protected function save_overrides( $overrides ) {
-                update_option( self::OPTION_KEY, $overrides );
+                update_option( self::OPTION_KEY, $overrides, false );
                 $this->overrides = $overrides;
         }
 
@@ -133,7 +133,7 @@ class FPML_Strings_Override {
                                 continue;
                         }
 
-                        $target = isset( $row['target'] ) ? sanitize_text_field( $row['target'] ) : '';
+                        $target = isset( $row['target'] ) ? wp_kses_post( $row['target'] ) : '';
                         $context = isset( $row['context'] ) ? sanitize_text_field( $row['context'] ) : $this->overrides[ $hash ]['context'];
 
                         $this->overrides[ $hash ]['target']     = $target;
@@ -157,7 +157,7 @@ class FPML_Strings_Override {
          */
         public function add_override( $source, $target, $context = '' ) {
                 $source  = sanitize_text_field( $source );
-                $target  = sanitize_text_field( $target );
+                $target  = wp_kses_post( $target );
                 $context = sanitize_text_field( $context );
 
                 if ( '' === $source || '' === $target ) {
