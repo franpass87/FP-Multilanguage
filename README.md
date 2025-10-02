@@ -1,13 +1,90 @@
-# FP-Multilanguage
+# FP Multilanguage
 
-FP Multilanguage is a custom WordPress plugin that handles multilingual content management.
+> Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
 
-## Release process
+| Field | Value |
+| --- | --- |
+| **Plugin Name** | FP Multilanguage |
+| **Version** | 0.3.1 |
+| **Author** | [Francesco Passeri](https://francescopasseri.com) |
+| **Author Email** | [info@francescopasseri.com](mailto:info@francescopasseri.com) |
+| **Author URI** | https://francescopasseri.com |
+| **Requires WordPress** | 5.8+ |
+| **Tested up to** | 6.5 |
+| **Requires PHP** | 7.4+ (8.x recommended) |
+| **License** | GPLv2 or later |
+| **Plugin Homepage** | https://francescopasseri.com |
 
-See [README-BUILD.md](README-BUILD.md) for detailed build prerequisites and commands. In summary:
+## About
+FP Multilanguage keeps an English copy of Italian content aligned across posts, pages, custom post types, taxonomies, menus, media metadata, and SEO tags. It enforces dedicated `/en/` routing, browser-based redirects, and English-specific sitemaps while integrating with real translation providers (OpenAI, DeepL, Google Cloud Translation, LibreTranslate). The plugin ships with a diagnostics dashboard, REST tools, and WP-CLI commands for queue management.
 
-1. Update the plugin version if needed using the build script:
-   - `bash build.sh --bump=patch`
-   - or `bash build.sh --set-version=1.2.3`
-2. Upload the generated ZIP file from the `build/` directory to your WordPress installation or release it on GitHub.
-3. Tag the release as `vX.Y.Z` to trigger the automated GitHub Action that attaches the ZIP artifact to the workflow run.
+* **Text Domain:** `fp-multilanguage`
+* **Domain Path:** `/languages`
+
+## Features
+- Differential translation queue that reprocesses only modified fragments and preserves Gutenberg, ACF, and shortcode structures.
+- Automatic duplication for posts, CPTs, taxonomies, WooCommerce product attributes, navigation menus, and media text fields.
+- Provider adapters with configurable pricing metrics to estimate OpenAI, DeepL, Google, and LibreTranslate costs.
+- Frontend locale override, English sitemap generation, hreflang/canonical management, and browser language redirects.
+- Assisted mode when WPML or Polylang is active to avoid conflicts while keeping glossary/override tooling available.
+- Diagnostics snapshot with queue KPIs, REST actions, and WP-CLI commands for batch runs, cleanup, and queue retention.
+
+## Installation
+1. Upload the `fp-multilanguage` directory to `/wp-content/plugins/` or install the generated ZIP from the Releases tab.
+2. Activate the plugin via **Plugins → Installed Plugins** in WordPress.
+3. Visit **Settings → FP Multilanguage** to configure providers, glossary rules, routing, and automation options.
+4. Run an initial sync from the Diagnostics tab or via `wp fpml queue run` to populate English copies.
+
+## Usage
+- Create or edit Italian content; the queue enqueues incremental jobs that translate the touched sections into English.
+- Monitor queue size, job age, provider health, and cost projections from **Diagnostics → Queue**.
+- Configure WP-Cron or a system cron to execute `wp fpml queue run` and keep translations up to date when `DISABLE_WP_CRON` is enabled.
+- Use REST diagnostics buttons or WP-CLI (`wp fpml queue cleanup`, `wp fpml queue estimate-cost`, `wp fpml queue status`) for maintenance tasks.
+- Enable assisted mode automatically when WPML/Polylang is detected to retain overrides without duplicating content.
+
+## Hooks & Filters
+| Hook | Type | Description |
+| --- | --- | --- |
+| `fpml_post_jobs_enqueued` | action | Fires after English duplicates are enqueued for a source post. |
+| `fpml_translatable_post_types` | filter | Adjust the list of post types processed by the queue. |
+| `fpml_translatable_taxonomies` | filter | Control which taxonomies receive English counterparts. |
+| `fpml_queue_cleanup_states` | filter | Define the job states eligible for cleanup retention. |
+| `fpml_queue_after_cleanup` | action | Runs after a queue cleanup completes with statistics. |
+| `fpml_queue_cleanup_batch_size` | filter | Override the batch size used while cleaning queue entries. |
+| `fpml_menu_item_translated` | action | Fires when a navigation menu field is translated. |
+| `fpml_term_translated` | action | Fires when taxonomy term metadata is translated. |
+| `fpml_post_translated` | action | Fires when translated post fields are saved. |
+| `fpml_strings_scan_targets` | filter | Allow customization of the strings scanner targets. |
+
+## Command Line & Automation
+- `wp fpml queue run` — Process pending translation jobs (batch size configurable by filter).
+- `wp fpml queue cleanup [--days=<int>] [--states=<list>]` — Remove processed jobs respecting retention thresholds.
+- `wp fpml queue estimate-cost [--states=<list>] [--max-jobs=<int>]` — Estimate provider cost exposure.
+- `wp fpml queue status` — Display queue KPIs, configured provider, and retention state.
+
+## Documentation
+Extended documentation lives in the [`docs/`](docs) directory:
+- [`docs/overview.md`](docs/overview.md) — Functional overview and feature summary.
+- [`docs/architecture.md`](docs/architecture.md) — Internal architecture, data flows, and hooks.
+- [`docs/faq.md`](docs/faq.md) — Operational FAQ for administrators and developers.
+
+## Support
+Create an issue at <https://github.com/francescopasseri/FP-Multilanguage/issues> or contact <https://francescopasseri.com> for enterprise assistance.
+
+## Development Workflow
+- Run `npm install` to install JavaScript tooling (conventional-changelog CLI).
+- `npm run sync:author` — Synchronise author metadata across plugin headers, readme files, and manifests. Use `APPLY=true npm run sync:author` to write changes.
+- `npm run sync:docs` — Align documentation references (currently reuses the author sync script with documentation mode).
+- `npm run changelog:from-git` — Generate or update `CHANGELOG.md` based on conventional commits.
+- `composer run build` — Produce a production-ready build in `fp-multilanguage/vendor`.
+
+## Assumptions
+- GitHub issues at <https://github.com/francescopasseri/FP-Multilanguage/issues> serve as the public support channel.
+- Conventional commits (Angular preset) are used for changelog generation.
+
+## Release Process
+See [README-BUILD.md](README-BUILD.md) for full build prerequisites. Typical release flow:
+1. Update the version with `bash build.sh --bump=patch` or `--set-version=X.Y.Z`.
+2. Run `npm run changelog:from-git` and review `CHANGELOG.md`.
+3. Execute `composer run build` to assemble the distributable ZIP in `build/`.
+4. Upload the ZIP to WordPress or GitHub and tag the release as `vX.Y.Z`.

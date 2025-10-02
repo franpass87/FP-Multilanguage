@@ -1,6 +1,6 @@
 {
     "name": "francescopasseri/fp-multilanguage",
-    "description": "FP Multilanguage WordPress plugin",
+    "description": "Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.",
     "type": "wordpress-plugin",
     "require": {
         "php": ">=8.0"
@@ -29,6 +29,28 @@
             "rm -rf fp-multilanguage/vendor",
             "@composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader",
             "composer dump-autoload -o --classmap-authoritative"
+        ],
+        "sync:author": [
+            "@php tools/sync-author-metadata.php --apply=${APPLY:-false}"
+        ],
+        "sync:docs": [
+            "@php tools/sync-author-metadata.php --docs --apply=${APPLY:-false}"
+        ],
+        "changelog:from-git": [
+            "npm run changelog:from-git"
         ]
-    }
+    },
+    "homepage": "https://francescopasseri.com",
+    "support": {
+        "issues": "https://github.com/francescopasseri/FP-Multilanguage/issues",
+        "source": "https://github.com/francescopasseri/FP-Multilanguage"
+    },
+    "authors": [
+        {
+            "name": "Francesco Passeri",
+            "email": "info@francescopasseri.com",
+            "homepage": "https://francescopasseri.com",
+            "role": "Developer"
+        }
+    ]
 }

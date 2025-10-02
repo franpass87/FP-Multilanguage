@@ -1,0 +1,19 @@
+{
+  "name": "fp-multilanguage",
+  "version": "0.3.1",
+  "description": "Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.",
+  "author": "Francesco Passeri <info@francescopasseri.com> (https://francescopasseri.com)",
+  "homepage": "https://francescopasseri.com",
+  "bugs": {
+    "url": "https://github.com/francescopasseri/FP-Multilanguage/issues"
+  },
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "sync:author": "php tools/sync-author-metadata.php --apply=${APPLY:-false}",
+    "sync:docs": "php tools/sync-author-metadata.php --docs --apply=${APPLY:-false}",
+    "changelog:from-git": "conventional-changelog -p angular -i CHANGELOG.md -s || true"
+  },
+  "devDependencies": {
+    "conventional-changelog-cli": "^3.0.0"
+  }
+}

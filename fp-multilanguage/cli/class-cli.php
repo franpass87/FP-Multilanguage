@@ -3,6 +3,8 @@
  * WP-CLI integration for FP Multilanguage.
  *
  * @package FP_Multilanguage
+ * @author Francesco Passeri
+ * @link https://francescopasseri.com
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
