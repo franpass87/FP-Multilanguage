@@ -4,82 +4,92 @@ Tags: translation, multilanguage, openai, deepl, google translate, seo
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Plugin Homepage: https://francescopasseri.com
 
-Plugin WordPress per tradurre automaticamente contenuti e SEO dall'italiano all'inglese con provider reali (OpenAI, DeepL, Google, LibreTranslate), gestione coda e routing /en/.
+Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
 
-== Descrizione ==
-FP Multilanguage duplica contenuti inglesi sincronizzati con l'originale italiano, include routing dedicato /en/ o query string, sitemap EN, gestione slug, hreflang/canonical e supporto per Gutenberg, ACF e campi personalizzati. Traduce automaticamente tassonomie (categorie, tag, attributi WooCommerce), label menu, ALT/caption/title dei media e mantiene sincronizzati gli ID attachment nel frontend EN, forzando il locale `en_US` per caricare stringhe tema/plugin.
+== Description ==
+FP Multilanguage duplicates English content that stays synced with the original Italian post while enforcing `/en/` routing or query-string switches, EN-specific sitemaps, hreflang, canonical URLs, and browser language detection. It translates taxonomy terms, WooCommerce product data, menus, media metadata, and SEO/Open Graph/Twitter tags, keeping attachments and slug mappings aligned between languages.
 
-== Installazione ==
-1. Carica la cartella `fp-multilanguage` in `/wp-content/plugins/`.
-2. Attiva il plugin tramite il menu "Plugin" in WordPress.
-3. Configura i provider e le opzioni in **Impostazioni → FP Multilanguage**.
+= Key Features =
+* Queue-driven incremental translation that only processes modified fragments and preserves complex Gutenberg, ACF, and shortcode layouts.
+* Provider adapters for OpenAI, DeepL, Google Cloud Translation, and LibreTranslate with configurable pricing metrics.
+* Automatic duplication for posts, pages, CPTs, taxonomies, WooCommerce attributes, menu labels, and media captions/ALT fields.
+* Frontend locale override, dedicated English sitemap routing, and redirect rules based on browser preferences.
+* Diagnostics dashboard with queue KPIs, REST tools, and WP-CLI commands for batch runs, cleanup, and cost estimation.
 
-== Test rapidi ==
-* Creare Pagina IT → verifica duplicato EN su /en/... con hreflang/canonical.
-* Modificare titolo IT → EN marcata outdated → ritradotta solo parte modificata.
-* Creare Categoria + assegnazione post → EN crea termine e associazione.
-* Aggiungere attributo WooCommerce (globale o personalizzato) → traduzione EN aggiornata su prodotto/vetrina.
-* Inserire immagine con ALT + pagina WPBakery → in EN sono sostituiti ID attachment e testi mantenendo il layout.
-* Attivare provider con chiave → Test provider OK in Diagnostics.
-* Verificare sitemap EN e meta OG/Twitter.
-* Verificare redirect browser language e switcher.
-* WP-CLI: `wp fpml queue run` processa N elementi (batch size).
-* WP-CLI: `wp fpml queue cleanup --dry-run` mostra i job che verrebbero rimossi prima di confermare.
-* Configurare la retention e verificare `wp fpml queue cleanup --days=7` per rimuovere job datati.
-* Diagnostics: usa il pulsante "Pulisci coda" per eseguire la retention manuale via REST.
+= Requirements =
+* WordPress 5.8 or later
+* PHP 7.4 or later (8.x recommended)
+* API credentials for at least one translation provider (OpenAI, DeepL, Google, or LibreTranslate)
 
+== Installation ==
+1. Upload the `fp-multilanguage` folder to `/wp-content/plugins/` or install the packaged ZIP via the WordPress admin.
+2. Activate the plugin through the **Plugins** menu in WordPress.
+3. Configure providers and routing rules in **Settings → FP Multilanguage**.
+4. Run an initial sync from the Diagnostics tab or via `wp fpml queue run`.
 
-== Cron & Diagnostics ==
-La scheda *Diagnostics* mette in evidenza KPI della coda (job in pending, completati, errori), stima parole/costi basata sulle tariffe configurate e riporta gli ultimi log e gli errori recenti. Dai pulsanti puoi lanciare un batch immediato, avviare un reindex completo, testare il provider oppure avviare la pulizia della coda rispettando la retention configurata, tutto via REST protetto.
+== Usage ==
+* Create or update Italian content; the plugin enqueues differential jobs that translate the updated sections into English.
+* Use the Diagnostics tab to monitor queue size, job age, estimated costs, and provider connectivity.
+* Schedule regular queue processing with WP-Cron or WP-CLI (`wp cron event run --due-now`) when `DISABLE_WP_CRON` is true.
+* Trigger manual cleanups or estimates via WP-CLI (`wp fpml queue cleanup`, `wp fpml queue estimate-cost`).
+* Integrate assisted mode alongside WPML or Polylang to reuse glossary and overrides while disabling automatic duplication.
 
-Quando la retention è attiva, oltre alla pulizia post-batch il plugin programma l'evento giornaliero `fpml_cleanup_queue` per mantenere il database allineato anche in assenza di attività.
+== Frequently Asked Questions ==
+= Does the plugin support manual edits on the English copy? =
+Yes. Manual changes persist; the queue only overwrites segments touched on the Italian source and highlights outdated sections in Diagnostics.
 
-Se `DISABLE_WP_CRON` è impostato a `true`, configura un cron di sistema per mantenere attiva la pipeline. Esempio ogni 5 minuti con WP-CLI (sostituisci il percorso alla root WordPress):
+= How does assisted mode behave with WPML or Polylang? =
+When either plugin is active, FP Multilanguage keeps provider, glossary, and override tools available but pauses automatic duplication, routing rules, and queue operations to avoid conflicts.
 
-```
-*/5 * * * * cd /percorso/sito && wp cron event run --due-now >/dev/null 2>&1
-```
+= Can I choose which post types and taxonomies are translated? =
+Use the settings screen or the `fpml_translatable_post_types` and `fpml_translatable_taxonomies` filters to whitelist or exclude content types programmatically.
 
-In alternativa, puoi eseguire direttamente `wp-cron.php`:
+= How are API costs estimated? =
+Diagnostics combines queue metadata with provider-specific pricing profiles to estimate total characters processed and expected costs per provider.
 
-```
-*/5 * * * * php /percorso/sito/wp-cron.php >/dev/null 2>&1
-```
+= What happens if the queue grows too large? =
+Configure automatic cleanup retention or run `wp fpml queue cleanup --days=7` to purge processed jobs. Hooks such as `fpml_queue_cleanup_states` and `fpml_queue_cleanup_batch_size` allow fine-tuning.
 
-== Compatibilità ==
-* Se WPML o Polylang sono attivi, FP Multilanguage entra in modalità *assistita*: lascia disponibili provider, glossario, override stringhe ed export/import ma disattiva duplicazione automatica, routing /en/, sitemap EN e coda interna. La UI mostra un avviso e blocca comandi REST/WP-CLI sulla coda per evitare conflitti.
-* WooCommerce: traduce categorie, tag prodotto, attributi globali `pa_*` e attributi personalizzati, sincronizza ALT/caption/title media collegati e mantiene il locale EN lato frontend.
-* Page builder: sostituzione sicura di shortcode WPBakery (`vc_row`, `vc_column`, `vc_section`, `vc_tabs`, ecc.) e supporto per `[vc_single_image]` con ID inglesi.
+= Does the plugin translate media files? =
+It keeps using the original media binary but translates captions, ALT text, and titles. On the English frontend it replaces attachment IDs within shortcodes or builder structures to avoid layout regressions.
+
+== Hooks ==
+* `fpml_post_jobs_enqueued` — Fired after English duplicates are enqueued for a post update.
+* `fpml_translatable_post_types` — Filter the list of post types processed by the queue.
+* `fpml_translatable_taxonomies` — Filter the taxonomies mirrored into English.
+* `fpml_queue_cleanup_states` — Customize the job states eligible for retention cleanup.
+* `fpml_queue_after_cleanup` — Action triggered once a cleanup run finishes with totals.
+* `fpml_queue_cleanup_batch_size` — Filter the batch size used during cleanup routines.
+* `fpml_menu_item_translated` — Action executed when a menu field receives a translated value.
+* `fpml_term_translated` — Action executed when a taxonomy term field is translated.
+* `fpml_post_translated` — Action executed when post fields are persisted after translation.
+* `fpml_strings_scan_targets` — Filter the targets inspected by the strings scanner.
+
+== Support ==
+Open GitHub issues at https://github.com/francescopasseri/FP-Multilanguage/issues or contact https://francescopasseri.com for commercial support.
 
 == Changelog ==
+For the complete history see [CHANGELOG.md](https://github.com/francescopasseri/FP-Multilanguage/blob/main/CHANGELOG.md).
+
+= 0.3.1 - 2025-10-01 =
+* Added automatic queue cleanup with retention controls and REST/WP-CLI actions.
+* Improved diagnostics with job age summaries, consent cookie sanitization, and additional helpers.
+
+= 0.3.0 - 2025-09-30 =
+* Introduced translation for taxonomies, WooCommerce attributes, navigation menus, and media metadata.
+* Forced frontend locale to `en_US` and extended diagnostics with batching KPIs.
+
+= 0.2.1 - 2025-09-30 =
+* Fixed recursive translation handling for ACF repeaters and shortcode exclusions.
+
+= 0.2.0 - 2025-09-28 =
+* Initial development release with Diagnostics dashboard, queue processor, and WP-Cron helpers.
+
+== Upgrade Notice ==
 = 0.3.1 =
-- New: Impostazione "Pulizia automatica coda" con retention configurabile e sanificazione del cookie di consenso per il redirect.
-- New: Pulizia automatica dei job completati dopo ogni batch con log dedicato e filtro `fpml_queue_cleanup_states`.
-- New: Comando `wp fpml queue cleanup` per rimuovere manualmente i job oltre soglia, con opzioni `--days`, `--states` e `--dry-run` oltre a messaggi WP-CLI localizzati.
-- New: Migliorie WP-CLI `status` con provider configurato, retention e anzianità dei job.
-- New: `wp fpml queue estimate-cost` ora accetta `--states` e `--max-jobs` per analisi mirate.
-- New: Snapshot diagnostico e interfaccia admin mostrano l'età dei job pending/completati, la retention attiva e includono il pulsante "Pulisci coda" via REST.
-- Dev: Metodi helper (`FPML_Plugin::get_queue_age_summary`, `FPML_Queue::cleanup_old_jobs`) e uso di `current_time()` per i cutoff.
-- Dev: Pulizia coda chunked con indice composito `(state, updated_at)`, hook `fpml_queue_after_cleanup` e filtro `fpml_queue_cleanup_batch_size` per personalizzare i batch.
-- Dev: Sanitizzazione avanzata del cookie consenso per i redirect EN.
-
-= 0.3.0 =
-- New: Traduzione automatica per tassonomie, attributi WooCommerce globali/personalizzati e label menu sincronizzate.
-- New: Media EN con ALT/caption/title tradotti e sostituzione ID attachment nel frontend (incluso shortcode gallery / WPBakery).
-- New: Locale frontend forzato a `en_US` per caricare stringhe tema/plugin e colonna/filtro lingua nell'admin con badge/notice configurabili.
-- New: Limite `max_chars_per_batch` per controllare il carico sui provider e KPI diagnostici dedicati (termini/menu tradotti).
-- Tweak: Shortcode WPBakery esclusi precompilati e parsing `[vc_single_image]` per mantenere layout identici in EN.
-
-= 0.2.1 =
-- Fix: preservazione strutture ACF/repeater con traduzione ricorsiva delle sole stringhe.
-- Fix: rispetto effettivo di “Shortcode esclusi” con masking/restore sicuro in diff e processor.
-- Docs: BUILD-STATE aggiornato alla Fase 14.
-
-= 0.2.0 =
-* Versione iniziale in sviluppo.
-* Dashboard diagnostica con KPI, test provider e stima costi dalla scheda Diagnostics.
-* Notice WP-Cron con esempi di crontab quando DISABLE_WP_CRON è attivo.
+Review the new cleanup retention options and configure retention days to keep the queue size under control.

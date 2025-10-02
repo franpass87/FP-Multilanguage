@@ -3,6 +3,8 @@
  * Content diff helper to perform incremental translation while preserving markup.
  *
  * @package FP_Multilanguage
+ * @author Francesco Passeri
+ * @link https://francescopasseri.com
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

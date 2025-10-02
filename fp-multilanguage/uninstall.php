@@ -3,6 +3,8 @@
  * Uninstall handler.
  *
  * @package FP_Multilanguage
+ * @author Francesco Passeri
+ * @link https://francescopasseri.com
  */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
