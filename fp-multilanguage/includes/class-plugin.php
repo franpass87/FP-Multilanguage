@@ -257,7 +257,8 @@ protected function define_hooks() {
                         add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
                         add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
                         add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
-}
+                }
+        }
 
         /**
          * Ensure heavy options are stored without autoload.
@@ -299,7 +300,6 @@ protected function define_hooks() {
 
                 update_option( self::OPTION_AUTOLOAD_MIGRATED, 1, false );
         }
-}
 
         /**
          * Handle post save events to ensure translations and enqueue jobs.
