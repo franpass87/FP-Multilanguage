@@ -119,15 +119,46 @@ class FPML_Provider_DeepL extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
-                        if ( in_array( $code, array( 429, 500, 502, 503 ), true ) ) {
+
+                        // Errori temporanei - retry ha senso
+                        if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
                                         return new WP_Error( 'fpml_deepl_rate_limit', __( 'DeepL ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                }
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'warning',
+                                                sprintf( 'DeepL tentativo %d/%d fallito con codice %d', $attempt, $max_attempts, $code ),
+                                                array(
+                                                        'provider' => 'deepl',
+                                                        'attempt'  => $attempt,
+                                                        'http_code' => $code,
+                                                )
+                                        );
                                 }
 
                                 $this->backoff( $attempt );
                                 continue;
                         }
 
+                        // Errori client (4xx eccetto 429) - NON ritentare
+                        if ( $code >= 400 && $code < 500 ) {
+                                $body_content = wp_remote_retrieve_body( $response );
+                                $error_code = 'fpml_deepl_client_error';
+
+                                if ( 401 === $code || 403 === $code ) {
+                                        $error_code = 'fpml_deepl_auth_error';
+                                } elseif ( 400 === $code ) {
+                                        $error_code = 'fpml_deepl_invalid_request';
+                                } elseif ( 456 === $code ) {
+                                        $error_code = 'fpml_deepl_quota_exceeded';
+                                }
+
+                                return new WP_Error( $error_code, sprintf( __( 'Errore client DeepL (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
+                        }
+
+                        // Altri errori
                         if ( $code < 200 || $code >= 300 ) {
                                 $body_content = wp_remote_retrieve_body( $response );
                                 return new WP_Error( 'fpml_deepl_error', sprintf( __( 'Risposta non valida da DeepL (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );

@@ -852,6 +852,9 @@ protected function define_hooks() {
                                         break;
                                 }
 
+                                // Pre-load all post meta to avoid N+1 queries
+                                update_meta_cache( 'post', $query->posts );
+
                                 foreach ( $query->posts as $post_id ) {
                                         $post = get_post( $post_id );
 
@@ -906,6 +909,11 @@ protected function define_hooks() {
 
                         if ( is_wp_error( $terms ) ) {
                                 continue;
+                        }
+
+                        // Pre-load term meta to avoid N+1 queries
+                        if ( ! empty( $terms ) ) {
+                                update_meta_cache( 'term', $terms );
                         }
 
                         foreach ( $terms as $term_id ) {

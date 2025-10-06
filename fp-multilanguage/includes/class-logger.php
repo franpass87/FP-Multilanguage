@@ -306,4 +306,110 @@ class FPML_Logger {
 
                 return $text;
         }
+
+        /**
+         * Log translation start event.
+         *
+         * @since 0.3.2
+         *
+         * @param int    $job_id   Queue job ID.
+         * @param string $provider Provider slug.
+         * @param int    $chars    Character count.
+         *
+         * @return void
+         */
+        public function log_translation_start( $job_id, $provider, $chars ) {
+                $this->log(
+                        'info',
+                        sprintf( 'Translation started for job #%d', $job_id ),
+                        array(
+                                'event'      => 'translation.start',
+                                'job_id'     => $job_id,
+                                'provider'   => $provider,
+                                'characters' => $chars,
+                        )
+                );
+        }
+
+        /**
+         * Log translation complete event.
+         *
+         * @since 0.3.2
+         *
+         * @param int   $job_id      Queue job ID.
+         * @param int   $duration_ms Duration in milliseconds.
+         * @param float $cost        Estimated cost.
+         *
+         * @return void
+         */
+        public function log_translation_complete( $job_id, $duration_ms, $cost ) {
+                $this->log(
+                        'info',
+                        sprintf( 'Translation completed for job #%d', $job_id ),
+                        array(
+                                'event'    => 'translation.complete',
+                                'job_id'   => $job_id,
+                                'duration' => $duration_ms,
+                                'cost'     => $cost,
+                        )
+                );
+        }
+
+        /**
+         * Log API error event.
+         *
+         * @since 0.3.2
+         *
+         * @param string      $provider     Provider slug.
+         * @param string      $code         Error code.
+         * @param string      $message      Error message.
+         * @param int|null    $http_status  HTTP status code if available.
+         *
+         * @return void
+         */
+        public function log_api_error( $provider, $code, $message, $http_status = null ) {
+                $context = array(
+                        'event'         => 'api.error',
+                        'provider'      => $provider,
+                        'error_code'    => $code,
+                        'error_message' => $message,
+                );
+
+                if ( null !== $http_status ) {
+                        $context['http_status'] = $http_status;
+                }
+
+                $this->log(
+                        'error',
+                        sprintf( 'API error from %s: %s', $provider, $message ),
+                        $context
+                );
+        }
+
+        /**
+         * Retrieve logs filtered by event type.
+         *
+         * @since 0.3.2
+         *
+         * @param string $event_type Event type to filter (e.g. 'translation.start').
+         * @param int    $limit      Maximum entries to return.
+         *
+         * @return array
+         */
+        public function get_logs_by_event( $event_type, $limit = 100 ) {
+                $all_logs = $this->get_logs( $limit * 2 );
+                $filtered = array();
+
+                foreach ( $all_logs as $log ) {
+                        if ( isset( $log['context']['event'] ) && $log['context']['event'] === $event_type ) {
+                                $filtered[] = $log;
+
+                                if ( count( $filtered ) >= $limit ) {
+                                        break;
+                                }
+                        }
+                }
+
+                return $filtered;
+        }
 }
