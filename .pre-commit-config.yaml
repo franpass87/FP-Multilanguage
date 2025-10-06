@@ -1,0 +1,46 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit
+# Setup: pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.txt$'
+      - id: end-of-file-fixer
+        exclude: '\.txt$'
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: local
+    hooks:
+      - id: phpunit
+        name: PHPUnit Tests
+        entry: vendor/bin/phpunit
+        language: system
+        types: [php]
+        pass_filenames: false
+        stages: [commit]
+      
+      - id: phpcs
+        name: PHP CodeSniffer
+        entry: vendor/bin/phpcs
+        language: system
+        args: ['--standard=WordPress', '--warning-severity=0']
+        types: [php]
+        files: ^fp-multilanguage/
+      
+      - id: phpstan
+        name: PHPStan Static Analysis
+        entry: vendor/bin/phpstan
+        language: system
+        args: ['analyze', '--no-progress']
+        types: [php]
+        pass_filenames: false
+        stages: [commit]

@@ -1,0 +1,30 @@
+parameters:
+    level: 5
+    paths:
+        - fp-multilanguage/includes
+        - fp-multilanguage/admin
+        - fp-multilanguage/rest
+        - fp-multilanguage/cli
+    
+    excludePaths:
+        - fp-multilanguage/vendor
+        - fp-multilanguage/languages
+    
+    ignoreErrors:
+        # WordPress globals
+        - '#Undefined variable: \$wpdb#'
+        - '#Access to an undefined property WP_#'
+        
+        # WordPress functions (not in scope)
+        - '#Function (add_action|add_filter|apply_filters|do_action)#'
+        - '#Function (get_option|update_option|delete_option)#'
+        - '#Function (get_post_meta|update_post_meta)#'
+    
+    bootstrapFiles:
+        - tests/bootstrap.php
+    
+    scanDirectories:
+        - fp-multilanguage/includes
+    
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
