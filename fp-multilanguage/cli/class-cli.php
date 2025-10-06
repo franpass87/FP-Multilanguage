@@ -176,32 +176,107 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                  *
                  * @since 0.2.0
                  *
+                 * @param array $args       Positional arguments.
+                 * @param array $assoc_args Associative arguments.
+                 *
                  * @return void
                  */
                 public function run( $args, $assoc_args ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
                         $this->ensure_queue_available();
 
-                        $processor = FPML_Processor::instance();
-                        $result    = $processor->run_queue();
+                        // Check if progress bar should be shown
+                        $show_progress = isset( $assoc_args['progress'] ) && $assoc_args['progress'];
+                        
+                        // Get batch size if specified
+                        $batch_size = isset( $assoc_args['batch'] ) ? absint( $assoc_args['batch'] ) : 0;
 
-                        if ( is_wp_error( $result ) ) {
-                                WP_CLI::error( $result->get_error_message() );
+                        if ( $show_progress && $batch_size > 0 ) {
+                                // With progress bar
+                                $this->run_with_progress( $batch_size );
+                        } else {
+                                // Original behavior
+                                $processor = FPML_Processor::instance();
+                                $result    = $processor->run_queue();
+
+                                if ( is_wp_error( $result ) ) {
+                                        WP_CLI::error( $result->get_error_message() );
+                                }
+
+                                if ( empty( $result['claimed'] ) ) {
+                                        WP_CLI::success( __( 'Nessun job disponibile in coda.', 'fp-multilanguage' ) );
+
+                                        return;
+                                }
+
+                                WP_CLI::success(
+                                        sprintf(
+                                                /* translators: 1: processed jobs, 2: skipped jobs, 3: errored jobs, 4: claimed jobs */
+                                                __( 'Batch completato: %1$d processati, %2$d saltati, %3$d errori su %4$d job.', 'fp-multilanguage' ),
+                                                isset( $result['processed'] ) ? (int) $result['processed'] : 0,
+                                                isset( $result['skipped'] ) ? (int) $result['skipped'] : 0,
+                                                isset( $result['errors'] ) ? (int) $result['errors'] : 0,
+                                                isset( $result['claimed'] ) ? (int) $result['claimed'] : 0
+                                        )
+                                );
                         }
+                }
 
-                        if ( empty( $result['claimed'] ) ) {
+                /**
+                 * Run queue with progress bar.
+                 *
+                 * @since 0.3.2
+                 *
+                 * @param int $batch_size Number of jobs to process.
+                 *
+                 * @return void
+                 */
+                protected function run_with_progress( $batch_size ) {
+                        $queue = FPML_Queue::instance();
+                        $processor = FPML_Processor::instance();
+
+                        // Get jobs to process
+                        $jobs = $queue->get_next_jobs( $batch_size );
+
+                        if ( empty( $jobs ) ) {
                                 WP_CLI::success( __( 'Nessun job disponibile in coda.', 'fp-multilanguage' ) );
-
                                 return;
                         }
 
+                        $total = count( $jobs );
+                        WP_CLI::log( sprintf( __( 'Processando %d job...', 'fp-multilanguage' ), $total ) );
+
+                        // Create progress bar
+                        $progress = \WP_CLI\Utils\make_progress_bar( __( 'Traduzioni', 'fp-multilanguage' ), $total );
+
+                        $stats = array(
+                                'processed' => 0,
+                                'skipped'   => 0,
+                                'errors'    => 0,
+                        );
+
+                        foreach ( $jobs as $job ) {
+                                $result = $processor->process_job( $job );
+
+                                if ( is_wp_error( $result ) ) {
+                                        $stats['errors']++;
+                                } elseif ( 'skipped' === $result ) {
+                                        $stats['skipped']++;
+                                } else {
+                                        $stats['processed']++;
+                                }
+
+                                $progress->tick();
+                        }
+
+                        $progress->finish();
+
                         WP_CLI::success(
                                 sprintf(
-                                        /* translators: 1: processed jobs, 2: skipped jobs, 3: errored jobs, 4: claimed jobs */
-                                        __( 'Batch completato: %1$d processati, %2$d saltati, %3$d errori su %4$d job.', 'fp-multilanguage' ),
-                                        isset( $result['processed'] ) ? (int) $result['processed'] : 0,
-                                        isset( $result['skipped'] ) ? (int) $result['skipped'] : 0,
-                                        isset( $result['errors'] ) ? (int) $result['errors'] : 0,
-                                        isset( $result['claimed'] ) ? (int) $result['claimed'] : 0
+                                        /* translators: 1: processed jobs, 2: skipped jobs, 3: errored jobs */
+                                        __( 'Batch completato: %1$d processati, %2$d saltati, %3$d errori.', 'fp-multilanguage' ),
+                                        $stats['processed'],
+                                        $stats['skipped'],
+                                        $stats['errors']
                                 )
                         );
                 }

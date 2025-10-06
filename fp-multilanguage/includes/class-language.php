@@ -1514,9 +1514,21 @@ class FPML_Language {
             return 0;
         }
 
-        $pairs = $this->get_term_pairs();
+        // Check cache first
+        $cache_key = 'fpml_term_trans_' . $source_id;
+        $cached = wp_cache_get( $cache_key, 'fpml_terms' );
 
-        return isset( $pairs['source_to_target'][ $source_id ] ) ? (int) $pairs['source_to_target'][ $source_id ] : 0;
+        if ( false !== $cached ) {
+            return (int) $cached;
+        }
+
+        $pairs = $this->get_term_pairs();
+        $result = isset( $pairs['source_to_target'][ $source_id ] ) ? (int) $pairs['source_to_target'][ $source_id ] : 0;
+
+        // Cache for 1 hour
+        wp_cache_set( $cache_key, $result, 'fpml_terms', HOUR_IN_SECONDS );
+
+        return $result;
     }
 
     /**
@@ -1535,9 +1547,21 @@ class FPML_Language {
             return 0;
         }
 
-        $pairs = $this->get_term_pairs();
+        // Check cache first
+        $cache_key = 'fpml_term_source_' . $target_id;
+        $cached = wp_cache_get( $cache_key, 'fpml_terms' );
 
-        return isset( $pairs['target_to_source'][ $target_id ] ) ? (int) $pairs['target_to_source'][ $target_id ] : 0;
+        if ( false !== $cached ) {
+            return (int) $cached;
+        }
+
+        $pairs = $this->get_term_pairs();
+        $result = isset( $pairs['target_to_source'][ $target_id ] ) ? (int) $pairs['target_to_source'][ $target_id ] : 0;
+
+        // Cache for 1 hour
+        wp_cache_set( $cache_key, $result, 'fpml_terms', HOUR_IN_SECONDS );
+
+        return $result;
     }
 
     /**
@@ -1597,6 +1621,10 @@ class FPML_Language {
         );
 
         update_option( 'fpml_term_pairs', $this->term_pairs, false );
+
+        // Invalidate cache
+        wp_cache_delete( 'fpml_term_trans_' . $source_id, 'fpml_terms' );
+        wp_cache_delete( 'fpml_term_source_' . $target_id, 'fpml_terms' );
 
         return true;
     }

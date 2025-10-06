@@ -125,15 +125,44 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
-                        if ( in_array( $code, array( 429, 500, 502, 503 ), true ) ) {
+
+                        // Errori temporanei - retry ha senso
+                        if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
                                         return new WP_Error( 'fpml_openai_rate_limit', __( 'OpenAI ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                }
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'warning',
+                                                sprintf( 'OpenAI tentativo %d/%d fallito con codice %d', $attempt, $max_attempts, $code ),
+                                                array(
+                                                        'provider' => 'openai',
+                                                        'attempt'  => $attempt,
+                                                        'http_code' => $code,
+                                                )
+                                        );
                                 }
 
                                 $this->backoff( $attempt );
                                 continue;
                         }
 
+                        // Errori client (4xx eccetto 429) - NON ritentare
+                        if ( $code >= 400 && $code < 500 ) {
+                                $body = wp_remote_retrieve_body( $response );
+                                $error_code = 'fpml_openai_client_error';
+
+                                if ( 401 === $code || 403 === $code ) {
+                                        $error_code = 'fpml_openai_auth_error';
+                                } elseif ( 400 === $code ) {
+                                        $error_code = 'fpml_openai_invalid_request';
+                                }
+
+                                return new WP_Error( $error_code, sprintf( __( 'Errore client OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body ) ) );
+                        }
+
+                        // Altri errori
                         if ( $code < 200 || $code >= 300 ) {
                                 $body = wp_remote_retrieve_body( $response );
                                 return new WP_Error( 'fpml_openai_error', sprintf( __( 'Risposta non valida da OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body ) ) );

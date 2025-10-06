@@ -67,6 +67,13 @@ Extended documentation lives in the [`docs/`](docs) directory:
 - [`docs/overview.md`](docs/overview.md) — Functional overview and feature summary.
 - [`docs/architecture.md`](docs/architecture.md) — Internal architecture, data flows, and hooks.
 - [`docs/faq.md`](docs/faq.md) — Operational FAQ for administrators and developers.
+- [`docs/api-reference.md`](docs/api-reference.md) — Complete API reference with hooks, filters, REST endpoints, and examples.
+- [`docs/troubleshooting.md`](docs/troubleshooting.md) — Troubleshooting guide for common issues.
+- [`docs/performance-optimization.md`](docs/performance-optimization.md) — Performance tuning and optimization strategies.
+- [`docs/deployment-guide.md`](docs/deployment-guide.md) — Production deployment best practices.
+- [`docs/developer-guide.md`](docs/developer-guide.md) — Developer guide for extending the plugin.
+- [`docs/webhooks-guide.md`](docs/webhooks-guide.md) — Webhook notifications setup (Slack, Discord, Teams).
+- [`docs/examples/`](docs/examples/) — Practical code examples for common integrations.
 
 ## Support
 Create an issue at <https://github.com/francescopasseri/FP-Multilanguage/issues> or contact <https://francescopasseri.com> for enterprise assistance.

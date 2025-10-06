@@ -122,9 +122,23 @@ class FPML_Provider_LibreTranslate extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
-                        if ( in_array( $code, array( 429, 500, 502, 503 ), true ) ) {
+
+                        // Errori temporanei - retry ha senso
+                        if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
                                         return new WP_Error( 'fpml_libretranslate_rate_limit', __( 'LibreTranslate ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                }
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'warning',
+                                                sprintf( 'LibreTranslate tentativo %d/%d fallito con codice %d', $attempt, $max_attempts, $code ),
+                                                array(
+                                                        'provider' => 'libretranslate',
+                                                        'attempt'  => $attempt,
+                                                        'http_code' => $code,
+                                                )
+                                        );
                                 }
 
                                 $this->backoff( $attempt );
@@ -132,6 +146,21 @@ class FPML_Provider_LibreTranslate extends FPML_Base_Provider {
                         }
 
                         $body_content = wp_remote_retrieve_body( $response );
+
+                        // Errori client (4xx eccetto 429) - NON ritentare
+                        if ( $code >= 400 && $code < 500 ) {
+                                $error_code = 'fpml_libretranslate_client_error';
+
+                                if ( 401 === $code || 403 === $code ) {
+                                        $error_code = 'fpml_libretranslate_auth_error';
+                                } elseif ( 400 === $code ) {
+                                        $error_code = 'fpml_libretranslate_invalid_request';
+                                }
+
+                                return new WP_Error( $error_code, sprintf( __( 'Errore client LibreTranslate (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
+                        }
+
+                        // Altri errori
                         if ( $code < 200 || $code >= 300 ) {
                                 return new WP_Error( 'fpml_libretranslate_error', sprintf( __( 'Risposta non valida da LibreTranslate (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }

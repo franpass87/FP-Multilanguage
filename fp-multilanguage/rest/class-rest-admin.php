@@ -93,6 +93,16 @@ class FPML_REST_Admin {
                                 'permission_callback' => array( $this, 'check_permissions' ),
                         )
                 );
+
+                register_rest_route(
+                        'fpml/v1',
+                        '/health',
+                        array(
+                                'methods'             => \WP_REST_Server::READABLE,
+                                'callback'            => array( $this, 'handle_health_check' ),
+                                'permission_callback' => '__return_true',
+                        )
+                );
         }
 
         /**
@@ -306,5 +316,62 @@ class FPML_REST_Admin {
                                 'days'    => $days,
                         )
                 );
+        }
+
+        /**
+         * Health check endpoint for monitoring.
+         *
+         * @since 0.3.2
+         *
+         * @param WP_REST_Request $request Request instance.
+         *
+         * @return WP_REST_Response
+         */
+        public function handle_health_check( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                $queue = FPML_Queue::instance();
+                $processor = FPML_Processor::instance();
+                $plugin = FPML_Plugin::instance();
+
+                global $wpdb;
+                $table = $wpdb->prefix . 'fpml_queue';
+
+                // Check database accessibility
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+                $db_check = $wpdb->query( $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) );
+
+                $health = array(
+                        'status' => 'ok',
+                        'version' => defined( 'FPML_PLUGIN_VERSION' ) ? FPML_PLUGIN_VERSION : 'unknown',
+                        'checks' => array(
+                                'database' => array(
+                                        'accessible' => false !== $db_check,
+                                ),
+                                'queue' => array(
+                                        'accessible' => true,
+                                        'locked' => $processor->is_locked(),
+                                        'pending_jobs' => $queue->count_by_state( 'pending' ),
+                                        'error_jobs' => $queue->count_by_state( 'error' ),
+                                ),
+                                'provider' => array(
+                                        'configured' => ! is_wp_error( $processor->get_translator_instance() ),
+                                ),
+                                'assisted_mode' => $plugin->is_assisted_mode(),
+                        ),
+                        'timestamp' => current_time( 'mysql', true ),
+                );
+
+                // Determine overall status
+                $pending = isset( $health['checks']['queue']['pending_jobs'] ) ? (int) $health['checks']['queue']['pending_jobs'] : 0;
+                $errors = isset( $health['checks']['queue']['error_jobs'] ) ? (int) $health['checks']['queue']['error_jobs'] : 0;
+
+                if ( $pending > 10000 || $errors > 100 ) {
+                        $health['status'] = 'warning';
+                }
+
+                if ( ! $health['checks']['database']['accessible'] || ! $health['checks']['provider']['configured'] ) {
+                        $health['status'] = 'error';
+                }
+
+                return rest_ensure_response( $health );
         }
 }
