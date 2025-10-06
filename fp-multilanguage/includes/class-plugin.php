@@ -235,6 +235,10 @@ protected function define_hooks() {
                 FPML_Strings_Scanner::instance();
                 FPML_Export_Import::instance();
 
+                if ( class_exists( 'FPML_Webhooks' ) ) {
+                        FPML_Webhooks::instance();
+                }
+
                 if ( ! $this->assisted_mode ) {
                         FPML_Rewrites::instance();
                         FPML_Language::instance();

@@ -146,9 +146,24 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
-                        if ( in_array( $code, array( 429, 500, 502, 503 ), true ) ) {
+
+                        // Errori temporanei - retry ha senso
+                        if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
                                         return new WP_Error( 'fpml_google_rate_limit', __( 'Google Translate ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                }
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'warning',
+                                                sprintf( 'Google v3 tentativo %d/%d fallito con codice %d', $attempt, $max_attempts, $code ),
+                                                array(
+                                                        'provider' => 'google',
+                                                        'api_version' => 'v3',
+                                                        'attempt'  => $attempt,
+                                                        'http_code' => $code,
+                                                )
+                                        );
                                 }
 
                                 $this->backoff( $attempt );
@@ -157,12 +172,23 @@ class FPML_Provider_Google extends FPML_Base_Provider {
 
                         $body_content = wp_remote_retrieve_body( $response );
 
-                        if ( $code < 200 || $code >= 300 ) {
-                                // If v3 is not enabled fall back to v2.
+                        // Errori client (4xx) - check for fallback to v2
+                        if ( $code >= 400 && $code < 500 ) {
+                                // If v3 is not enabled fall back to v2
                                 if ( in_array( $code, array( 400, 401, 403, 404 ), true ) ) {
                                         return null;
                                 }
+                                
+                                $error_code = 'fpml_google_client_error';
+                                if ( 401 === $code || 403 === $code ) {
+                                        $error_code = 'fpml_google_auth_error';
+                                }
 
+                                return new WP_Error( $error_code, sprintf( __( 'Errore client Google Translate v3 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
+                        }
+
+                        // Altri errori
+                        if ( $code < 200 || $code >= 300 ) {
                                 return new WP_Error( 'fpml_google_error', sprintf( __( 'Risposta non valida da Google Translate v3 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }
 
@@ -216,9 +242,24 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
-                        if ( in_array( $code, array( 429, 500, 502, 503 ), true ) ) {
+
+                        // Errori temporanei - retry ha senso
+                        if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
                                         return new WP_Error( 'fpml_google_rate_limit', __( 'Google Translate ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                }
+
+                                if ( class_exists( 'FPML_Logger' ) ) {
+                                        FPML_Logger::instance()->log(
+                                                'warning',
+                                                sprintf( 'Google v2 tentativo %d/%d fallito con codice %d', $attempt, $max_attempts, $code ),
+                                                array(
+                                                        'provider' => 'google',
+                                                        'api_version' => 'v2',
+                                                        'attempt'  => $attempt,
+                                                        'http_code' => $code,
+                                                )
+                                        );
                                 }
 
                                 $this->backoff( $attempt );
@@ -226,6 +267,21 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         }
 
                         $body_content = wp_remote_retrieve_body( $response );
+
+                        // Errori client (4xx eccetto 429) - NON ritentare
+                        if ( $code >= 400 && $code < 500 ) {
+                                $error_code = 'fpml_google_client_error';
+
+                                if ( 401 === $code || 403 === $code ) {
+                                        $error_code = 'fpml_google_auth_error';
+                                } elseif ( 400 === $code ) {
+                                        $error_code = 'fpml_google_invalid_request';
+                                }
+
+                                return new WP_Error( $error_code, sprintf( __( 'Errore client Google Translate v2 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
+                        }
+
+                        // Altri errori
                         if ( $code < 200 || $code >= 300 ) {
                                 return new WP_Error( 'fpml_google_error', sprintf( __( 'Risposta non valida da Google Translate v2 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }

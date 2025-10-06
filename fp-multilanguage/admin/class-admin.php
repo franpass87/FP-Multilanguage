@@ -86,6 +86,7 @@ const MENU_SLUG = 'fpml-settings';
                 add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
                 add_action( 'admin_notices', array( $this, 'maybe_render_cron_notice' ) );
                 add_action( 'admin_notices', array( $this, 'maybe_render_editor_notice' ) );
+                add_action( 'wp_dashboard_setup', array( $this, 'register_dashboard_widget' ) );
                 add_action( 'admin_post_fpml_scan_strings', array( $this, 'handle_scan_strings' ) );
         add_action( 'admin_post_fpml_save_overrides', array( $this, 'handle_save_overrides' ) );
         add_action( 'admin_post_fpml_import_overrides', array( $this, 'handle_import_overrides' ) );
@@ -1061,5 +1062,108 @@ protected function get_tabs() {
 
         wp_safe_redirect( $url );
         exit;
+    }
+
+    /**
+     * Register dashboard widget.
+     *
+     * @since 0.3.2
+     *
+     * @return void
+     */
+    public function register_dashboard_widget() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        wp_add_dashboard_widget(
+            'fpml_dashboard_widget',
+            __( 'FP Multilanguage - Riepilogo Traduzioni', 'fp-multilanguage' ),
+            array( $this, 'render_dashboard_widget' )
+        );
+    }
+
+    /**
+     * Render dashboard widget content.
+     *
+     * @since 0.3.2
+     *
+     * @return void
+     */
+    public function render_dashboard_widget() {
+        $queue = FPML_Queue::instance();
+        $counts = $queue->get_state_counts();
+        $processor = FPML_Processor::instance();
+
+        $pending = isset( $counts['pending'] ) ? (int) $counts['pending'] : 0;
+        $errors = isset( $counts['error'] ) ? (int) $counts['error'] : 0;
+        $done_today = $this->get_completed_today();
+
+        ?>
+        <div class="fpml-dashboard-widget" style="padding: 8px 0;">
+            <ul style="margin: 0; padding: 0; list-style: none;">
+                <li style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <strong><?php esc_html_e( 'In coda:', 'fp-multilanguage' ); ?></strong>
+                    <span style="<?php echo $pending > 100 ? 'color: #d63638;' : ''; ?>">
+                        <?php echo esc_html( number_format_i18n( $pending ) ); ?>
+                    </span>
+                </li>
+                <li style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <strong><?php esc_html_e( 'Completati oggi:', 'fp-multilanguage' ); ?></strong>
+                    <span style="color: #00a32a;">
+                        <?php echo esc_html( number_format_i18n( $done_today ) ); ?>
+                    </span>
+                </li>
+                <?php if ( $errors > 0 ) : ?>
+                <li style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <strong><?php esc_html_e( 'Errori:', 'fp-multilanguage' ); ?></strong>
+                    <span style="color: #d63638;">
+                        <?php echo esc_html( number_format_i18n( $errors ) ); ?>
+                    </span>
+                </li>
+                <?php endif; ?>
+                <li style="margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <strong><?php esc_html_e( 'Processore:', 'fp-multilanguage' ); ?></strong>
+                    <span>
+                        <?php
+                        echo $processor->is_locked() 
+                            ? '<span style="color: #d63638;">●</span> ' . esc_html__( 'Occupato', 'fp-multilanguage' )
+                            : '<span style="color: #00a32a;">●</span> ' . esc_html__( 'Libero', 'fp-multilanguage' );
+                        ?>
+                    </span>
+                </li>
+            </ul>
+            
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #dcdcde;">
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-settings&tab=diagnostics' ) ); ?>" class="button button-small">
+                    <?php esc_html_e( 'Vedi Diagnostica Completa', 'fp-multilanguage' ); ?> →
+                </a>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Get count of jobs completed today.
+     *
+     * @since 0.3.2
+     *
+     * @return int
+     */
+    protected function get_completed_today() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'fpml_queue';
+        $today = current_time( 'Y-m-d' );
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE state = %s AND DATE(updated_at) = %s",
+                'done',
+                $today
+            )
+        );
+
+        return absint( $count );
     }
 }
