@@ -1,10 +1,6 @@
 /*
- * Admin scripts for FP Multilanguage - LEGACY VERSION
+ * Admin scripts for FP Multilanguage.
  * @since 0.2.0
- * @deprecated Usa la versione modulare in js/ per lo sviluppo
- * 
- * Questo file è mantenuto per retrocompatibilità.
- * Per modifiche, usa i moduli in js/ e ricostruisci con build.sh
  */
 (function () {
     const toggles = document.querySelectorAll('[data-fpml-toggle-target]');

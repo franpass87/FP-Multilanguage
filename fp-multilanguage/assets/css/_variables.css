@@ -1,0 +1,37 @@
+/**
+ * CSS Variables e Configurazione
+ * @since 0.3.2
+ */
+
+:root {
+    /* Colori */
+    --fpml-color-primary: #007cba;
+    --fpml-color-success: #46b450;
+    --fpml-color-success-text: #198754;
+    --fpml-color-error: #d63638;
+    --fpml-color-info: #2271b1;
+    --fpml-color-text: #1d2327;
+    --fpml-color-text-muted: #50575e;
+    
+    /* Bordi */
+    --fpml-border-color: #dcdcde;
+    --fpml-border-radius: 4px;
+    
+    /* Spaziatura */
+    --fpml-spacing-xs: 4px;
+    --fpml-spacing-sm: 8px;
+    --fpml-spacing-md: 12px;
+    --fpml-spacing-lg: 16px;
+    --fpml-spacing-xl: 20px;
+    --fpml-spacing-xxl: 24px;
+    
+    /* Sfondo */
+    --fpml-bg-white: #fff;
+    --fpml-bg-light: #f6f7f7;
+    --fpml-bg-border: #f0f0f1;
+    
+    /* Successo/Errore backgrounds */
+    --fpml-bg-success: #ecf7ed;
+    --fpml-bg-error: #fce8e6;
+    --fpml-bg-info: #f0f6fc;
+}

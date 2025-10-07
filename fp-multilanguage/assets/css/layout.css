@@ -1,0 +1,45 @@
+/**
+ * Layout e struttura generale
+ * @since 0.3.2
+ */
+
+.fpml-settings-wrap {
+    background: var(--fpml-bg-white);
+    padding: var(--fpml-spacing-xl);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+}
+
+.fpml-settings-tabs {
+    display: flex;
+    gap: var(--fpml-spacing-sm);
+    margin-bottom: var(--fpml-spacing-xl);
+}
+
+.fpml-settings-tabs a.nav-tab-active {
+    background-color: var(--fpml-color-primary);
+    color: var(--fpml-bg-white);
+}
+
+.fpml-flex-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-lg);
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-flex-group p {
+    flex: 1 1 220px;
+    margin: 0;
+}
+
+.fpml-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-xxl);
+    margin-top: var(--fpml-spacing-xxl);
+}
+
+.fpml-grid > div {
+    flex: 1 1 280px;
+}

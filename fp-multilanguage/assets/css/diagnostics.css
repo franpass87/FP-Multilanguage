@@ -1,0 +1,89 @@
+/**
+ * Diagnostics UI components
+ * @since 0.3.2
+ */
+
+.fpml-diagnostics-feedback {
+    margin-top: var(--fpml-spacing-lg);
+    padding: 10px 14px;
+    border-radius: var(--fpml-border-radius);
+    border: 1px solid transparent;
+    background: var(--fpml-bg-light);
+    color: var(--fpml-color-text);
+}
+
+.fpml-diagnostics-feedback.is-success {
+    border-color: var(--fpml-color-success);
+    background: var(--fpml-bg-success);
+}
+
+.fpml-diagnostics-feedback.is-error {
+    border-color: var(--fpml-color-error);
+    background: var(--fpml-bg-error);
+    color: var(--fpml-color-error);
+}
+
+.fpml-diagnostics-feedback.is-info {
+    border-color: var(--fpml-color-info);
+    background: var(--fpml-bg-info);
+}
+
+.fpml-diagnostics-warning {
+    color: var(--fpml-color-error);
+    font-weight: 600;
+}
+
+.fpml-diagnostics-success {
+    color: var(--fpml-color-success-text);
+    font-weight: 600;
+}
+
+.fpml-diagnostics-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-sm);
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-diagnostics-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.fpml-diagnostics-list li {
+    margin-bottom: 6px;
+}
+
+.fpml-provider-result {
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-provider-result__metrics {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px var(--fpml-spacing-md);
+    margin: 0 0 var(--fpml-spacing-md);
+}
+
+.fpml-provider-result__metrics dt {
+    font-weight: 600;
+}
+
+.fpml-provider-result__metrics dd {
+    margin: 0;
+}
+
+.fpml-provider-result__title {
+    margin: var(--fpml-spacing-md) 0 var(--fpml-spacing-xs);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.fpml-provider-result__text {
+    margin: 0;
+    padding: 10px;
+    background: var(--fpml-bg-light);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    white-space: pre-wrap;
+}

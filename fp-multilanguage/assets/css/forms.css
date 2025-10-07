@@ -1,0 +1,38 @@
+/**
+ * Form styles
+ * @since 0.3.2
+ */
+
+.fpml-field-description {
+    color: var(--fpml-color-text-muted);
+    font-size: 13px;
+}
+
+.fpml-rate-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-md);
+}
+
+.fpml-rate-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fpml-spacing-xs);
+}
+
+.fpml-inline-form {
+    margin: 0 0 var(--fpml-spacing-lg);
+    display: inline-block;
+}
+
+.fpml-block-form {
+    margin-top: var(--fpml-spacing-xl);
+}
+
+.fpml-import-export textarea {
+    width: 100%;
+}
+
+.fpml-import-export select {
+    min-width: 120px;
+}

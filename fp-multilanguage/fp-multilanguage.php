@@ -22,19 +22,25 @@ define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 $autoload = __DIR__ . '/vendor/autoload.php';
 
 if ( is_readable( $autoload ) ) {
-        require $autoload;
+	require $autoload;
 }
 
+// Autoloader PSR-4 custom
+require_once FPML_PLUGIN_DIR . 'includes/class-autoloader.php';
+$fpml_autoloader = new FPML_Autoloader( FPML_PLUGIN_DIR . 'includes/' );
+$fpml_autoloader->register();
+
+// Fallback: carica file legacy se l'autoloader non li gestisce
 autoload_fpml_files();
 
 require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
 
 if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
-        require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
+	require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
 }
 
 if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
-        require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
+	require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
 }
 
 /**
