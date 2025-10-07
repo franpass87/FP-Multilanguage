@@ -1,12 +1,13 @@
 /**
- * Admin scripts for FP Multilanguage - Main entry point
+ * Admin scripts for FP Multilanguage - ES6 Modules Entry Point
  * @since 0.3.2
  * 
- * Questo file importa e inizializza tutti i moduli.
+ * Questo file è l'entry point per la modalità sviluppo con moduli ES6.
+ * Carica i moduli dalla cartella js/ e inizializza l'applicazione.
  */
 
-import { initToggles } from './toggle.js';
-import { initActionButtons } from './action-buttons.js';
+import { initToggles } from './js/toggle.js';
+import { initActionButtons } from './js/action-buttons.js';
 
 (function () {
     // Inizializza i toggle

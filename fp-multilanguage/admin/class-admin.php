@@ -142,9 +142,13 @@ public function enqueue_assets( $hook ) {
 	$is_dev_mode = defined( 'FPML_DEV_MODE' ) && FPML_DEV_MODE;
 
 	if ( $is_dev_mode ) {
-		// Modalità sviluppo: carica i moduli separati
-		wp_enqueue_style( 'fpml-admin', FPML_PLUGIN_URL . 'assets/admin.css', array(), FPML_PLUGIN_VERSION );
-		wp_enqueue_script( 'fpml-admin', FPML_PLUGIN_URL . 'assets/admin.js', array(), FPML_PLUGIN_VERSION, array( 'type' => 'module', 'in_footer' => true ) );
+		// Modalità sviluppo: carica i moduli separati con CSS import
+		wp_enqueue_style( 'fpml-admin', FPML_PLUGIN_URL . 'assets/css/admin.css', array(), FPML_PLUGIN_VERSION );
+		
+		// Registra lo script come modulo ES6
+		wp_register_script( 'fpml-admin', FPML_PLUGIN_URL . 'assets/admin-modules.js', array(), FPML_PLUGIN_VERSION, true );
+		wp_script_add_data( 'fpml-admin', 'type', 'module' );
+		wp_enqueue_script( 'fpml-admin' );
 	} else {
 		// Modalità produzione: carica file compilati
 		wp_enqueue_style( 'fpml-admin', FPML_PLUGIN_URL . 'assets/admin-compiled.css', array(), FPML_PLUGIN_VERSION );

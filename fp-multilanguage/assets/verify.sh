@@ -2,7 +2,7 @@
 # Script di verifica integrità moduli
 # @since 0.3.2
 
-set -e
+# Non usare set -e perché vogliamo vedere tutti i problemi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CSS_DIR="$SCRIPT_DIR/css"
@@ -25,9 +25,9 @@ CSS_MODULES=(
 CSS_OK=0
 for module in "${CSS_MODULES[@]}"; do
     if [ -f "$CSS_DIR/$module" ]; then
-        lines=$(wc -l < "$CSS_DIR/$module")
+        lines=$(wc -l < "$CSS_DIR/$module" 2>/dev/null || echo "?")
         echo "  ✅ $module ($lines righe)"
-        ((CSS_OK++))
+        CSS_OK=$((CSS_OK + 1))
     else
         echo "  ❌ $module MANCANTE!"
     fi
@@ -49,9 +49,9 @@ JS_MODULES=(
 JS_OK=0
 for module in "${JS_MODULES[@]}"; do
     if [ -f "$JS_DIR/$module" ]; then
-        lines=$(wc -l < "$JS_DIR/$module")
+        lines=$(wc -l < "$JS_DIR/$module" 2>/dev/null || echo "?")
         echo "  ✅ $module ($lines righe)"
-        ((JS_OK++))
+        JS_OK=$((JS_OK + 1))
     else
         echo "  ❌ $module MANCANTE!"
     fi
@@ -62,14 +62,14 @@ echo ""
 # Verifica file compilati
 echo "📦 File compilati:"
 if [ -f "$SCRIPT_DIR/admin-compiled.css" ]; then
-    lines=$(wc -l < "$SCRIPT_DIR/admin-compiled.css")
+    lines=$(wc -l < "$SCRIPT_DIR/admin-compiled.css" 2>/dev/null || echo "?")
     echo "  ✅ admin-compiled.css ($lines righe)"
 else
     echo "  ❌ admin-compiled.css MANCANTE! Esegui build-css.sh"
 fi
 
 if [ -f "$SCRIPT_DIR/admin-compiled.js" ]; then
-    lines=$(wc -l < "$SCRIPT_DIR/admin-compiled.js")
+    lines=$(wc -l < "$SCRIPT_DIR/admin-compiled.js" 2>/dev/null || echo "?")
     echo "  ✅ admin-compiled.js ($lines righe)"
 else
     echo "  ❌ admin-compiled.js MANCANTE! Esegui build-js.sh"
@@ -89,7 +89,7 @@ BUILD_OK=0
 for script in "${BUILD_SCRIPTS[@]}"; do
     if [ -f "$SCRIPT_DIR/$script" ] && [ -x "$SCRIPT_DIR/$script" ]; then
         echo "  ✅ $script (eseguibile)"
-        ((BUILD_OK++))
+        BUILD_OK=$((BUILD_OK + 1))
     elif [ -f "$SCRIPT_DIR/$script" ]; then
         echo "  ⚠️  $script (non eseguibile - esegui: chmod +x $script)"
     else
