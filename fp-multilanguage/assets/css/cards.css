@@ -1,0 +1,31 @@
+/**
+ * Card components
+ * @since 0.3.2
+ */
+
+.fpml-diagnostics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--fpml-spacing-xl);
+    margin-top: var(--fpml-spacing-xxl);
+}
+
+.fpml-diagnostics-card {
+    background: var(--fpml-bg-white);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    padding: var(--fpml-spacing-xl);
+}
+
+.fpml-diagnostics-card h2 {
+    margin-top: 0;
+    font-size: 18px;
+}
+
+.fpml-sandbox-panel {
+    margin-top: 32px;
+    padding: var(--fpml-spacing-xl);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    background: var(--fpml-bg-white);
+}

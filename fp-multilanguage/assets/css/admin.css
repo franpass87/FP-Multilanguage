@@ -1,0 +1,14 @@
+/**
+ * Admin styles for FP Multilanguage - Main bundle
+ * @since 0.3.2
+ * 
+ * Questo file importa tutti i moduli CSS.
+ * Per lo sviluppo, modifica i file nella cartella css/
+ */
+
+@import url('css/_variables.css');
+@import url('css/layout.css');
+@import url('css/forms.css');
+@import url('css/tables.css');
+@import url('css/cards.css');
+@import url('css/diagnostics.css');

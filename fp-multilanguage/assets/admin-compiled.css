@@ -1,0 +1,289 @@
+/**
+ * Admin styles for FP Multilanguage - Compiled bundle
+ * @since 0.3.2
+ * 
+ * Questo file è generato automaticamente.
+ * Per modifiche, edita i file nella cartella css/ ed esegui build-css.sh
+ */
+
+
+/* _variables.css */
+/**
+ * CSS Variables e Configurazione
+ * @since 0.3.2
+ */
+
+:root {
+    /* Colori */
+    --fpml-color-primary: #007cba;
+    --fpml-color-success: #46b450;
+    --fpml-color-success-text: #198754;
+    --fpml-color-error: #d63638;
+    --fpml-color-info: #2271b1;
+    --fpml-color-text: #1d2327;
+    --fpml-color-text-muted: #50575e;
+    
+    /* Bordi */
+    --fpml-border-color: #dcdcde;
+    --fpml-border-radius: 4px;
+    
+    /* Spaziatura */
+    --fpml-spacing-xs: 4px;
+    --fpml-spacing-sm: 8px;
+    --fpml-spacing-md: 12px;
+    --fpml-spacing-lg: 16px;
+    --fpml-spacing-xl: 20px;
+    --fpml-spacing-xxl: 24px;
+    
+    /* Sfondo */
+    --fpml-bg-white: #fff;
+    --fpml-bg-light: #f6f7f7;
+    --fpml-bg-border: #f0f0f1;
+    
+    /* Successo/Errore backgrounds */
+    --fpml-bg-success: #ecf7ed;
+    --fpml-bg-error: #fce8e6;
+    --fpml-bg-info: #f0f6fc;
+}
+
+/* layout.css */
+/**
+ * Layout e struttura generale
+ * @since 0.3.2
+ */
+
+.fpml-settings-wrap {
+    background: var(--fpml-bg-white);
+    padding: var(--fpml-spacing-xl);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+}
+
+.fpml-settings-tabs {
+    display: flex;
+    gap: var(--fpml-spacing-sm);
+    margin-bottom: var(--fpml-spacing-xl);
+}
+
+.fpml-settings-tabs a.nav-tab-active {
+    background-color: var(--fpml-color-primary);
+    color: var(--fpml-bg-white);
+}
+
+.fpml-flex-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-lg);
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-flex-group p {
+    flex: 1 1 220px;
+    margin: 0;
+}
+
+.fpml-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-xxl);
+    margin-top: var(--fpml-spacing-xxl);
+}
+
+.fpml-grid > div {
+    flex: 1 1 280px;
+}
+
+/* forms.css */
+/**
+ * Form styles
+ * @since 0.3.2
+ */
+
+.fpml-field-description {
+    color: var(--fpml-color-text-muted);
+    font-size: 13px;
+}
+
+.fpml-rate-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-md);
+}
+
+.fpml-rate-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fpml-spacing-xs);
+}
+
+.fpml-inline-form {
+    margin: 0 0 var(--fpml-spacing-lg);
+    display: inline-block;
+}
+
+.fpml-block-form {
+    margin-top: var(--fpml-spacing-xl);
+}
+
+.fpml-import-export textarea {
+    width: 100%;
+}
+
+.fpml-import-export select {
+    min-width: 120px;
+}
+
+/* tables.css */
+/**
+ * Table styles
+ * @since 0.3.2
+ */
+
+.fpml-table th,
+.fpml-table td {
+    vertical-align: top;
+}
+
+.fpml-diagnostics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fpml-diagnostics-table th,
+.fpml-diagnostics-table td {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--fpml-bg-border);
+}
+
+.fpml-sandbox-table td,
+.fpml-sandbox-table th {
+    word-break: break-word;
+}
+
+.fpml-diagnostics-card--logs table {
+    margin-top: var(--fpml-spacing-md);
+}
+
+/* cards.css */
+/**
+ * Card components
+ * @since 0.3.2
+ */
+
+.fpml-diagnostics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--fpml-spacing-xl);
+    margin-top: var(--fpml-spacing-xxl);
+}
+
+.fpml-diagnostics-card {
+    background: var(--fpml-bg-white);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    padding: var(--fpml-spacing-xl);
+}
+
+.fpml-diagnostics-card h2 {
+    margin-top: 0;
+    font-size: 18px;
+}
+
+.fpml-sandbox-panel {
+    margin-top: 32px;
+    padding: var(--fpml-spacing-xl);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    background: var(--fpml-bg-white);
+}
+
+/* diagnostics.css */
+/**
+ * Diagnostics UI components
+ * @since 0.3.2
+ */
+
+.fpml-diagnostics-feedback {
+    margin-top: var(--fpml-spacing-lg);
+    padding: 10px 14px;
+    border-radius: var(--fpml-border-radius);
+    border: 1px solid transparent;
+    background: var(--fpml-bg-light);
+    color: var(--fpml-color-text);
+}
+
+.fpml-diagnostics-feedback.is-success {
+    border-color: var(--fpml-color-success);
+    background: var(--fpml-bg-success);
+}
+
+.fpml-diagnostics-feedback.is-error {
+    border-color: var(--fpml-color-error);
+    background: var(--fpml-bg-error);
+    color: var(--fpml-color-error);
+}
+
+.fpml-diagnostics-feedback.is-info {
+    border-color: var(--fpml-color-info);
+    background: var(--fpml-bg-info);
+}
+
+.fpml-diagnostics-warning {
+    color: var(--fpml-color-error);
+    font-weight: 600;
+}
+
+.fpml-diagnostics-success {
+    color: var(--fpml-color-success-text);
+    font-weight: 600;
+}
+
+.fpml-diagnostics-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fpml-spacing-sm);
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-diagnostics-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.fpml-diagnostics-list li {
+    margin-bottom: 6px;
+}
+
+.fpml-provider-result {
+    margin-top: var(--fpml-spacing-md);
+}
+
+.fpml-provider-result__metrics {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px var(--fpml-spacing-md);
+    margin: 0 0 var(--fpml-spacing-md);
+}
+
+.fpml-provider-result__metrics dt {
+    font-weight: 600;
+}
+
+.fpml-provider-result__metrics dd {
+    margin: 0;
+}
+
+.fpml-provider-result__title {
+    margin: var(--fpml-spacing-md) 0 var(--fpml-spacing-xs);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.fpml-provider-result__text {
+    margin: 0;
+    padding: 10px;
+    background: var(--fpml-bg-light);
+    border: 1px solid var(--fpml-border-color);
+    border-radius: var(--fpml-border-radius);
+    white-space: pre-wrap;
+}

@@ -1,0 +1,29 @@
+/**
+ * Table styles
+ * @since 0.3.2
+ */
+
+.fpml-table th,
+.fpml-table td {
+    vertical-align: top;
+}
+
+.fpml-diagnostics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fpml-diagnostics-table th,
+.fpml-diagnostics-table td {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--fpml-bg-border);
+}
+
+.fpml-sandbox-table td,
+.fpml-sandbox-table th {
+    word-break: break-word;
+}
+
+.fpml-diagnostics-card--logs table {
+    margin-top: var(--fpml-spacing-md);
+}
