@@ -235,19 +235,68 @@ protected function define_hooks() {
                 FPML_Strings_Scanner::instance();
                 FPML_Export_Import::instance();
 
-                if ( class_exists( 'FPML_Webhooks' ) ) {
-                        FPML_Webhooks::instance();
-                }
+		if ( class_exists( 'FPML_Webhooks' ) ) {
+			FPML_Webhooks::instance();
+		}
 
-                if ( ! $this->assisted_mode ) {
-                        FPML_Rewrites::instance();
-                        FPML_Language::instance();
-                        FPML_Content_Diff::instance();
-                        FPML_Processor::instance();
-                        FPML_Menu_Sync::instance();
-                        FPML_Media_Front::instance();
-                        FPML_SEO::instance();
-                }
+		// Inizializza feature di automazione (0.4.0+).
+		if ( class_exists( 'FPML_Health_Check' ) ) {
+			FPML_Health_Check::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Detection' ) ) {
+			FPML_Auto_Detection::instance();
+
+			// Hook per reindex automatico post types e tassonomie (0.4.0+).
+			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
+			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
+		}
+
+		if ( class_exists( 'FPML_Auto_Translate' ) ) {
+			FPML_Auto_Translate::instance();
+		}
+
+		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
+			FPML_SEO_Optimizer::instance();
+		}
+
+		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
+			FPML_Setup_Wizard::instance();
+		}
+
+		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
+			FPML_Provider_Fallback::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Relink' ) ) {
+			FPML_Auto_Relink::instance();
+		}
+
+		if ( class_exists( 'FPML_Dashboard_Widget' ) ) {
+			FPML_Dashboard_Widget::instance();
+		}
+
+		if ( class_exists( 'FPML_Rush_Mode' ) ) {
+			FPML_Rush_Mode::instance();
+		}
+
+		if ( class_exists( 'FPML_Featured_Image_Sync' ) ) {
+			FPML_Featured_Image_Sync::instance();
+		}
+
+		if ( class_exists( 'FPML_ACF_Support' ) ) {
+			FPML_ACF_Support::instance();
+		}
+
+		if ( ! $this->assisted_mode ) {
+			FPML_Rewrites::instance();
+			FPML_Language::instance();
+			FPML_Content_Diff::instance();
+			FPML_Processor::instance();
+			FPML_Menu_Sync::instance();
+			FPML_Media_Front::instance();
+			FPML_SEO::instance();
+		}
 
                 if ( class_exists( 'FPML_REST_Admin' ) ) {
                         FPML_REST_Admin::instance();
@@ -398,29 +447,35 @@ protected function define_hooks() {
                 $this->sync_term_translation( $term_id, $taxonomy );
         }
 
-        /**
-         * Retrieve allowed post types for translation.
-         *
-         * @since 0.2.0
-         *
-         * @return array
-         */
-        protected function get_translatable_post_types() {
-                $post_types = get_post_types(
-                        array(
-                                'public' => true,
-                        ),
-                        'names'
-                );
+	/**
+	 * Retrieve allowed post types for translation.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @return array
+	 */
+	protected function get_translatable_post_types() {
+		$post_types = get_post_types(
+			array(
+				'public' => true,
+			),
+			'names'
+		);
 
-                if ( ! in_array( 'attachment', $post_types, true ) ) {
-                        $post_types[] = 'attachment';
-                }
+		if ( ! in_array( 'attachment', $post_types, true ) ) {
+			$post_types[] = 'attachment';
+		}
 
-                $post_types = apply_filters( 'fpml_translatable_post_types', $post_types );
+		// Aggiungi post types personalizzati accettati (0.4.0+).
+		$custom_post_types = get_option( 'fpml_custom_translatable_post_types', array() );
+		if ( ! empty( $custom_post_types ) ) {
+			$post_types = array_merge( $post_types, $custom_post_types );
+		}
 
-                return array_filter( array_map( 'sanitize_key', $post_types ) );
-        }
+		$post_types = apply_filters( 'fpml_translatable_post_types', $post_types );
+
+		return array_filter( array_map( 'sanitize_key', $post_types ) );
+	}
 
         /**
          * Ensure a translation post exists and return it.
@@ -694,11 +749,17 @@ protected function define_hooks() {
                         'names'
                 );
 
-                $taxonomies = apply_filters( 'fpml_translatable_taxonomies', $taxonomies );
+		// Aggiungi tassonomie personalizzate accettate (0.4.0+).
+		$custom_taxonomies = get_option( 'fpml_custom_translatable_taxonomies', array() );
+		if ( ! empty( $custom_taxonomies ) ) {
+			$taxonomies = array_merge( $taxonomies, $custom_taxonomies );
+		}
 
-                if ( empty( $taxonomies ) || ! in_array( $taxonomy, $taxonomies, true ) ) {
-                        return;
-                }
+		$taxonomies = apply_filters( 'fpml_translatable_taxonomies', $taxonomies );
+
+		if ( empty( $taxonomies ) || ! in_array( $taxonomy, $taxonomies, true ) ) {
+			return;
+		}
 
                 $term = get_term( $term_id, $taxonomy );
 
@@ -944,8 +1005,143 @@ protected function define_hooks() {
                  * @param array         $summary Summary data.
                  * @param FPML_Plugin   $plugin  Plugin instance.
                  */
-                return apply_filters( 'fpml_reindex_summary', $summary, $this );
-        }
+		return apply_filters( 'fpml_reindex_summary', $summary, $this );
+	}
+
+	/**
+	 * Reindex specifico post type.
+	 *
+	 * @since 0.4.0
+	 *
+	 * @param string $post_type Post type slug.
+	 *
+	 * @return array Summary.
+	 */
+	public function reindex_post_type( $post_type ) {
+		if ( $this->is_assisted_mode() ) {
+			return array();
+		}
+
+		$summary = array(
+			'posts_scanned'        => 0,
+			'posts_enqueued'       => 0,
+			'translations_created' => 0,
+		);
+
+		$paged = 1;
+
+		do {
+			$query = new WP_Query(
+				array(
+					'post_type'      => $post_type,
+					'post_status'    => 'any',
+					'posts_per_page' => 100,
+					'paged'          => $paged,
+					'fields'         => 'ids',
+					'orderby'        => 'ID',
+					'order'          => 'ASC',
+				)
+			);
+
+			if ( ! $query->have_posts() ) {
+				break;
+			}
+
+			update_meta_cache( 'post', $query->posts );
+
+			foreach ( $query->posts as $post_id ) {
+				$post = get_post( $post_id );
+
+				if ( ! $post instanceof WP_Post ) {
+					continue;
+				}
+
+				if ( get_post_meta( $post->ID, '_fpml_is_translation', true ) ) {
+					continue;
+				}
+
+				$summary['posts_scanned']++;
+
+				$existing_target = (int) get_post_meta( $post->ID, '_fpml_pair_id', true );
+				$target_post     = $this->ensure_post_translation( $post );
+
+				if ( ! $target_post ) {
+					continue;
+				}
+
+				if ( ! $existing_target ) {
+					$summary['translations_created']++;
+				}
+
+				$this->enqueue_post_jobs( $post, $target_post, true );
+				$summary['posts_enqueued']++;
+			}
+
+			$paged++;
+		} while ( $paged <= $query->max_num_pages );
+
+		wp_reset_postdata();
+
+		$this->logger->log(
+			'info',
+			sprintf( 'Reindex post type %s completato', $post_type ),
+			$summary
+		);
+
+		return $summary;
+	}
+
+	/**
+	 * Reindex specifica tassonomia.
+	 *
+	 * @since 0.4.0
+	 *
+	 * @param string $taxonomy Taxonomy slug.
+	 *
+	 * @return array Summary.
+	 */
+	public function reindex_taxonomy( $taxonomy ) {
+		if ( $this->is_assisted_mode() ) {
+			return array();
+		}
+
+		$summary = array(
+			'terms_scanned' => 0,
+		);
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'fields'     => 'ids',
+			)
+		);
+
+		if ( is_wp_error( $terms ) ) {
+			return $summary;
+		}
+
+		if ( ! empty( $terms ) ) {
+			update_meta_cache( 'term', $terms );
+		}
+
+		foreach ( $terms as $term_id ) {
+			if ( get_term_meta( $term_id, '_fpml_is_translation', true ) ) {
+				continue;
+			}
+
+			$summary['terms_scanned']++;
+			$this->sync_term_translation( $term_id, $taxonomy );
+		}
+
+		$this->logger->log(
+			'info',
+			sprintf( 'Reindex tassonomia %s completato', $taxonomy ),
+			$summary
+		);
+
+		return $summary;
+	}
 
         /**
          * Build a diagnostics snapshot for the admin dashboard.
