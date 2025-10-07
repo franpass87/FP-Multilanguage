@@ -69,45 +69,51 @@ $this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this-
  * @return array
  */
 public function get_defaults() {
-return array(
-'provider'                => '',
-'openai_api_key'          => '',
-'openai_model'            => 'gpt-4o-mini',
-'deepl_api_key'           => '',
-'deepl_use_free'          => false,
-'google_api_key'          => '',
-'google_project_id'       => '',
-'libretranslate_api_url'  => '',
-'libretranslate_api_key'  => '',
-'batch_size'              => 5,
-'max_chars'               => 4500,
-'max_chars_per_batch'     => 20000,
-'cron_frequency'          => '15min',
-'routing_mode'            => 'segment',
-'browser_redirect'        => false,
-'browser_redirect_requires_consent' => false,
-'browser_redirect_consent_cookie'   => '',
-'marketing_tone'          => false,
-'preserve_html'           => true,
-'translate_slugs'         => false,
-'slug_redirect'           => false,
-'noindex_en'              => false,
-'sitemap_en'              => true,
-            'sandbox_mode'            => false,
-            'anonymize_logs'          => false,
-            'glossary_case_sensitive' => false,
-            'show_translation_badge'  => true,
-            'show_editor_notice'      => true,
-            'queue_retention_days'    => 14,
-            'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc,_wp_attachment_image_alt,_product_attributes',
-            'exclude_regex'           => '',
-            'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
-'rate_openai'             => '',
-'rate_deepl'              => '',
-'rate_google'             => '',
-'rate_libretranslate'     => '',
-'remove_data'             => false,
-);
+		return array(
+			'provider'                => '',
+			'openai_api_key'          => '',
+			'openai_model'            => 'gpt-4o-mini',
+			'deepl_api_key'           => '',
+			'deepl_use_free'          => false,
+			'google_api_key'          => '',
+			'google_project_id'       => '',
+			'libretranslate_api_url'  => '',
+			'libretranslate_api_key'  => '',
+			'batch_size'              => 5,
+			'max_chars'               => 4500,
+			'max_chars_per_batch'     => 20000,
+			'cron_frequency'          => '15min',
+			'routing_mode'            => 'segment',
+			'browser_redirect'        => false,
+			'browser_redirect_requires_consent' => false,
+			'browser_redirect_consent_cookie'   => '',
+			'marketing_tone'          => false,
+			'preserve_html'           => true,
+			'translate_slugs'         => false,
+			'slug_redirect'           => false,
+			'noindex_en'              => false,
+			'sitemap_en'              => true,
+			'sandbox_mode'            => false,
+			'anonymize_logs'          => false,
+			'glossary_case_sensitive' => false,
+			'show_translation_badge'  => true,
+			'show_editor_notice'      => true,
+			'queue_retention_days'    => 14,
+			'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc,_wp_attachment_image_alt,_product_attributes',
+			'exclude_regex'           => '',
+			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
+			'rate_openai'             => '',
+			'rate_deepl'              => '',
+			'rate_google'             => '',
+			'rate_libretranslate'     => '',
+			'remove_data'             => false,
+			// Nuove opzioni 0.4.0+.
+			'auto_translate_on_publish' => false,
+			'auto_optimize_seo'         => true,
+			'enable_health_check'       => true,
+			'enable_auto_detection'     => true,
+			'setup_completed'           => false,
+		);
 }
 
 /**
@@ -261,16 +267,23 @@ $data['anonymize_logs']          = ! empty( $data['anonymize_logs'] );
         $data['meta_whitelist']          = sanitize_textarea_field( $data['meta_whitelist'] );
 $data['exclude_regex']           = sanitize_textarea_field( $data['exclude_regex'] );
 $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shortcodes'] );
-$data['rate_openai']             = sanitize_text_field( $data['rate_openai'] );
-$data['rate_deepl']              = sanitize_text_field( $data['rate_deepl'] );
-$data['rate_google']             = sanitize_text_field( $data['rate_google'] );
-$data['rate_libretranslate']     = sanitize_text_field( $data['rate_libretranslate'] );
-$data['remove_data']             = ! empty( $data['remove_data'] );
+	$data['rate_openai']             = sanitize_text_field( $data['rate_openai'] );
+	$data['rate_deepl']              = sanitize_text_field( $data['rate_deepl'] );
+	$data['rate_google']             = sanitize_text_field( $data['rate_google'] );
+	$data['rate_libretranslate']     = sanitize_text_field( $data['rate_libretranslate'] );
+	$data['remove_data']             = ! empty( $data['remove_data'] );
 
-update_option( 'fpml_remove_data', $data['remove_data'] );
+	// Nuove opzioni 0.4.0+.
+	$data['auto_translate_on_publish'] = ! empty( $data['auto_translate_on_publish'] );
+	$data['auto_optimize_seo']         = ! empty( $data['auto_optimize_seo'] );
+	$data['enable_health_check']       = ! empty( $data['enable_health_check'] );
+	$data['enable_auto_detection']     = ! empty( $data['enable_auto_detection'] );
+	$data['setup_completed']           = ! empty( $data['setup_completed'] );
 
-$this->settings = $data;
+	update_option( 'fpml_remove_data', $data['remove_data'] );
 
-return $data;
+	$this->settings = $data;
+
+	return $data;
 }
 }

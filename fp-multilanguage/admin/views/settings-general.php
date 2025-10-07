@@ -141,6 +141,46 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Traduzione automatica alla pubblicazione', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[auto_translate_on_publish]" value="1" <?php checked( $options['auto_translate_on_publish'], true ); ?> />
+<?php esc_html_e( 'Traduci automaticamente i contenuti appena vengono pubblicati (modalità sincrona).', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'I post verranno tradotti immediatamente alla pubblicazione. Puoi sovrascrivere questa impostazione per singoli post.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Ottimizzazione SEO automatica', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[auto_optimize_seo]" value="1" <?php checked( $options['auto_optimize_seo'], true ); ?> />
+<?php esc_html_e( 'Genera automaticamente meta description, focus keyword e Open Graph tags per i contenuti tradotti.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'Compatibile con Yoast SEO, Rank Math, All in One SEO e SEOPress.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Health Check automatico', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[enable_health_check]" value="1" <?php checked( $options['enable_health_check'], true ); ?> />
+<?php esc_html_e( 'Monitora lo stato del sistema e applica correzioni automatiche ogni ora.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'Rileva job bloccati, lock scaduti, errori ripetuti e li risolve automaticamente.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Rilevamento automatico contenuti', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[enable_auto_detection]" value="1" <?php checked( $options['enable_auto_detection'], true ); ?> />
+<?php esc_html_e( 'Rileva automaticamente nuovi post types e tassonomie e suggerisci la traduzione.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'Quando installi nuovi plugin con custom post types, riceverai una notifica per abilitare la traduzione.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Elimina dati alla disinstallazione', 'fp-multilanguage' ); ?></th>
 <td>
 <label>
