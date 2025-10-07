@@ -112,6 +112,11 @@ public function get_defaults() {
 			'auto_optimize_seo'         => true,
 			'enable_health_check'       => true,
 			'enable_auto_detection'     => true,
+			'enable_auto_relink'        => true,
+			'sync_featured_images'      => true,
+			'duplicate_featured_images' => false,
+			'enable_rush_mode'          => true,
+			'enable_acf_support'        => true,
 			'setup_completed'           => false,
 		);
 }
@@ -278,6 +283,11 @@ $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shor
 	$data['auto_optimize_seo']         = ! empty( $data['auto_optimize_seo'] );
 	$data['enable_health_check']       = ! empty( $data['enable_health_check'] );
 	$data['enable_auto_detection']     = ! empty( $data['enable_auto_detection'] );
+	$data['enable_auto_relink']        = ! empty( $data['enable_auto_relink'] );
+	$data['sync_featured_images']      = ! empty( $data['sync_featured_images'] );
+	$data['duplicate_featured_images'] = ! empty( $data['duplicate_featured_images'] );
+	$data['enable_rush_mode']          = ! empty( $data['enable_rush_mode'] );
+	$data['enable_acf_support']        = ! empty( $data['enable_acf_support'] );
 	$data['setup_completed']           = ! empty( $data['setup_completed'] );
 
 	update_option( 'fpml_remove_data', $data['remove_data'] );

@@ -260,6 +260,34 @@ protected function define_hooks() {
 			FPML_SEO_Optimizer::instance();
 		}
 
+		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
+			FPML_Setup_Wizard::instance();
+		}
+
+		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
+			FPML_Provider_Fallback::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Relink' ) ) {
+			FPML_Auto_Relink::instance();
+		}
+
+		if ( class_exists( 'FPML_Dashboard_Widget' ) ) {
+			FPML_Dashboard_Widget::instance();
+		}
+
+		if ( class_exists( 'FPML_Rush_Mode' ) ) {
+			FPML_Rush_Mode::instance();
+		}
+
+		if ( class_exists( 'FPML_Featured_Image_Sync' ) ) {
+			FPML_Featured_Image_Sync::instance();
+		}
+
+		if ( class_exists( 'FPML_ACF_Support' ) ) {
+			FPML_ACF_Support::instance();
+		}
+
 		if ( ! $this->assisted_mode ) {
 			FPML_Rewrites::instance();
 			FPML_Language::instance();

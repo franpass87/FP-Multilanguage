@@ -181,6 +181,50 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Auto-relink link interni', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[enable_auto_relink]" value="1" <?php checked( $options['enable_auto_relink'], true ); ?> />
+<?php esc_html_e( 'Sostituisci automaticamente link interni nei contenuti tradotti.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'I link a post/pagine italiani vengono convertiti automaticamente alle versioni inglesi (consigliato per SEO).', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Sincronizzazione immagini in evidenza', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[sync_featured_images]" value="1" <?php checked( $options['sync_featured_images'], true ); ?> />
+<?php esc_html_e( 'Sincronizza automaticamente le immagini in evidenza alle traduzioni.', 'fp-multilanguage' ); ?>
+</label>
+<br />
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[duplicate_featured_images]" value="1" <?php checked( $options['duplicate_featured_images'], true ); ?> />
+<?php esc_html_e( 'Duplica le immagini invece di riutilizzarle (usa più spazio disco).', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Modalità Rush automatica', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[enable_rush_mode]" value="1" <?php checked( $options['enable_rush_mode'], true ); ?> />
+<?php esc_html_e( 'Aumenta automaticamente performance quando la coda supera 500 job.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'Il sistema adatterà batch size e frequenza cron per smaltire la coda più velocemente.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Supporto Advanced Custom Fields', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[enable_acf_support]" value="1" <?php checked( $options['enable_acf_support'], true ); ?> />
+<?php esc_html_e( 'Gestisci automaticamente relazioni ACF (post_object, relationship, taxonomy).', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description"><?php esc_html_e( 'I campi ACF con relazioni verranno automaticamente collegati alle traduzioni corrette.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Elimina dati alla disinstallazione', 'fp-multilanguage' ); ?></th>
 <td>
 <label>
