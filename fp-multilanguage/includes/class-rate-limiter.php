@@ -139,27 +139,30 @@ class FPML_Rate_Limiter {
 	}
 
 	/**
-	 * Wait until rate limit allows next request.
+	 * Check if rate limit allows next request, throw exception if not.
 	 *
 	 * @since 0.3.2
+	 * @since 0.4.0 Changed to throw exception instead of blocking with sleep().
 	 *
 	 * @param string $provider       Provider slug.
 	 * @param int    $max_per_minute Maximum requests per minute.
 	 *
 	 * @return void
+	 * @throws Exception When rate limit is exceeded.
 	 */
 	public static function wait_if_needed( $provider, $max_per_minute = self::DEFAULT_RPM ) {
 		$status = self::get_status( $provider );
 
 		if ( ! $status['available'] && $status['reset_in'] > 0 ) {
-			// Wait until reset (max 60 seconds)
-			$wait_seconds = min( $status['reset_in'], 60 );
-			
-			if ( function_exists( 'wp_sleep' ) ) {
-				wp_sleep( $wait_seconds );
-			} else {
-				sleep( $wait_seconds );
-			}
+			throw new Exception(
+				sprintf(
+					/* translators: %1$s provider name, %2$d seconds to wait */
+					__( 'Rate limit exceeded for %1$s. Retry after %2$d seconds.', 'fp-multilanguage' ),
+					$provider,
+					$status['reset_in']
+				),
+				429 // HTTP 429 Too Many Requests
+			);
 		}
 	}
 }

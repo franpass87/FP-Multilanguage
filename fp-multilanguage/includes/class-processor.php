@@ -431,10 +431,55 @@ class FPML_Processor {
                                 )
                         );
                         $this->maybe_cleanup_queue();
+                        $this->notify_admin_if_enabled( $summary );
                         $this->release_lock();
                 }
 
                 return $summary;
+        }
+
+        /**
+         * Send email notification to admin if enabled.
+         *
+         * @since 0.4.0
+         *
+         * @param array $summary Batch summary.
+         *
+         * @return void
+         */
+        protected function notify_admin_if_enabled( $summary ) {
+                if ( ! $this->settings || ! $this->settings->get( 'enable_email_notifications', false ) ) {
+                        return;
+                }
+
+                // Only notify if there were actual jobs processed
+                if ( empty( $summary['claimed'] ) ) {
+                        return;
+                }
+
+                $admin_email = get_option( 'admin_email' );
+                if ( empty( $admin_email ) ) {
+                        return;
+                }
+
+                $subject = sprintf(
+                        /* translators: %s site name */
+                        __( '[%s] Batch traduzioni completato', 'fp-multilanguage' ),
+                        get_bloginfo( 'name' )
+                );
+
+                $duration = isset( $summary['duration'] ) ? $summary['duration'] : 0;
+
+                $message = sprintf(
+                        __( "Ciao,\n\nIl batch di traduzioni è stato completato:\n\n✅ Processati: %d\n❌ Errori: %d\n⏭️  Saltati: %d\n⏱️  Durata: %.2fs\n\nVai al pannello: %s\n\n---\nQuesto è un messaggio automatico di FP Multilanguage", 'fp-multilanguage' ),
+                        $summary['processed'] ?? 0,
+                        $summary['errors'] ?? 0,
+                        $summary['skipped'] ?? 0,
+                        $duration,
+                        admin_url( 'admin.php?page=fpml-settings&tab=diagnostics' )
+                );
+
+                wp_mail( $admin_email, $subject, $message );
         }
 
         /**

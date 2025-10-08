@@ -118,6 +118,7 @@ public function get_defaults() {
 			'enable_rush_mode'          => true,
 			'enable_acf_support'        => true,
 			'setup_completed'           => false,
+			'enable_email_notifications' => false,
 		);
 }
 
