@@ -48,6 +48,15 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         return new WP_Error( 'fpml_google_missing_key', __( 'Configura un API key di Google Cloud Translation per procedere con la traduzione.', 'fp-multilanguage' ) );
                 }
 
+                // Check cache first
+                $cache = FPML_Container::get( 'translation_cache' );
+                if ( $cache ) {
+                        $cached = $cache->get( $text, $this->get_slug(), $source, $target );
+                        if ( false !== $cached ) {
+                                return $cached;
+                        }
+                }
+
                 $max_chars = (int) $this->get_option( 'max_chars', 4500 );
                 $chunks    = $this->chunk_text( $text, $max_chars );
                 $source    = strtolower( $source );
@@ -64,6 +73,11 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         }
 
                         $translated .= $this->apply_glossary_post( $result, $source, $target, $domain );
+                }
+
+                // Store in cache
+                if ( $cache && '' !== $translated ) {
+                        $cache->set( $text, $this->get_slug(), $translated, $source, $target );
                 }
 
                 return $translated;

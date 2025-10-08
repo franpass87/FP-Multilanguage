@@ -195,4 +195,9 @@ function fpml_register_services() {
 	FPML_Container::register( 'content_indexer', function() {
 		return FPML_Content_Indexer::instance();
 	} );
+
+	// Translation cache.
+	FPML_Container::register( 'translation_cache', function() {
+		return FPML_Translation_Cache::instance();
+	} );
 }

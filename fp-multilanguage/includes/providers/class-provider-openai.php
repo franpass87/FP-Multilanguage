@@ -38,39 +38,53 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                 return ! empty( $key ) && ! empty( $model );
         }
 
-        /**
-         * {@inheritdoc}
-         */
-        public function translate( $text, $source = 'it', $target = 'en', $domain = 'general' ) {
-                if ( '' === trim( (string) $text ) ) {
-                        return '';
-                }
+	/**
+	 * {@inheritdoc}
+	 */
+	public function translate( $text, $source = 'it', $target = 'en', $domain = 'general' ) {
+		if ( '' === trim( (string) $text ) ) {
+			return '';
+		}
 
-                if ( ! $this->is_configured() ) {
-                        return new WP_Error( 'fpml_openai_missing_key', __( 'Configura una chiave API OpenAI valida per procedere con la traduzione.', 'fp-multilanguage' ) );
-                }
+		if ( ! $this->is_configured() ) {
+			return new WP_Error( 'fpml_openai_missing_key', __( 'Configura una chiave API OpenAI valida per procedere con la traduzione.', 'fp-multilanguage' ) );
+		}
 
-                $max_chars = (int) $this->get_option( 'max_chars', 4500 );
-                $chunks    = $this->chunk_text( $text, $max_chars );
-                $source    = strtolower( $source );
-                $target    = strtolower( $target );
+		// Check cache first
+		$cache = FPML_Container::get( 'translation_cache' );
+		if ( $cache ) {
+			$cached = $cache->get( $text, $this->get_slug(), $source, $target );
+			if ( false !== $cached ) {
+				return $cached;
+			}
+		}
 
-                $translated = '';
-                $marketing  = (bool) $this->get_option( 'marketing_tone', false );
+		$max_chars = (int) $this->get_option( 'max_chars', 4500 );
+		$chunks    = $this->chunk_text( $text, $max_chars );
+		$source    = strtolower( $source );
+		$target    = strtolower( $target );
 
-                foreach ( $chunks as $chunk ) {
-                        $chunk_to_send = $this->apply_glossary_pre( $chunk, $source, $target, $domain );
-                        $result        = $this->request_translation( $chunk_to_send, $source, $target, $domain, $marketing );
+		$translated = '';
+		$marketing  = (bool) $this->get_option( 'marketing_tone', false );
 
-                        if ( is_wp_error( $result ) ) {
-                                return $result;
-                        }
+		foreach ( $chunks as $chunk ) {
+			$chunk_to_send = $this->apply_glossary_pre( $chunk, $source, $target, $domain );
+			$result        = $this->request_translation( $chunk_to_send, $source, $target, $domain, $marketing );
 
-                        $translated .= $this->apply_glossary_post( $result, $source, $target, $domain );
-                }
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
 
-                return $translated;
-        }
+			$translated .= $this->apply_glossary_post( $result, $source, $target, $domain );
+		}
+
+		// Store in cache
+		if ( $cache && '' !== $translated ) {
+			$cache->set( $text, $this->get_slug(), $translated, $source, $target );
+		}
+
+		return $translated;
+	}
 
         /**
          * Perform request to OpenAI API.

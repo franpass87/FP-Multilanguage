@@ -1,6 +1,6 @@
 <?php
 /**
- * Lightweight logger that stores events in an option.
+ * Lightweight logger that stores events in a database table.
  *
  * @package FP_Multilanguage
  * @author Francesco Passeri
@@ -12,15 +12,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Persist log entries without writing files.
+ * Persist log entries in database table for better performance.
  *
  * @since 0.2.0
+ * @since 0.4.0 Changed from option storage to database table.
  */
 class FPML_Logger {
         /**
-         * Option key for log storage.
+         * Option key for legacy log storage (deprecated).
          *
          * @var string
+         * @deprecated 0.4.0
          */
         protected $option_key = 'fpml_logs';
 
@@ -30,6 +32,20 @@ class FPML_Logger {
          * @var int
          */
         protected $max_entries = 200;
+
+        /**
+         * Table name.
+         *
+         * @var string
+         */
+        protected $table;
+
+        /**
+         * Use database table instead of option.
+         *
+         * @var bool
+         */
+        protected $use_table = true;
 
         /**
          * Singleton instance.
@@ -57,13 +73,67 @@ class FPML_Logger {
          * Constructor.
          */
         protected function __construct() {
+                global $wpdb;
+
+                $this->table       = $wpdb->prefix . 'fpml_logs';
+                $this->use_table   = (bool) apply_filters( 'fpml_logger_use_table', true );
                 $this->max_entries = (int) apply_filters( 'fpml_logger_max_entries', $this->max_entries );
+
+                // Install table if needed
+                if ( $this->use_table ) {
+                        $this->maybe_install_table();
+                }
+        }
+
+        /**
+         * Install logs table.
+         *
+         * @since 0.4.0
+         *
+         * @return void
+         */
+        public function install_table() {
+                global $wpdb;
+
+                $charset = $wpdb->get_charset_collate();
+
+                $sql = "CREATE TABLE IF NOT EXISTS {$this->table} (
+                        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                        timestamp datetime NOT NULL,
+                        level varchar(20) NOT NULL,
+                        message text NOT NULL,
+                        context longtext NULL,
+                        PRIMARY KEY (id),
+                        KEY level (level),
+                        KEY timestamp (timestamp)
+                ) {$charset};";
+
+                require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+                dbDelta( $sql );
+
+                update_option( 'fpml_logger_table_version', '1', false );
+        }
+
+        /**
+         * Maybe install table if not exists.
+         *
+         * @since 0.4.0
+         *
+         * @return void
+         */
+        protected function maybe_install_table() {
+                $version = get_option( 'fpml_logger_table_version', '' );
+
+                if ( '' === $version ) {
+                        $this->install_table();
+                }
         }
 
         /**
          * Write a log entry.
          *
          * @since 0.2.0
+         * @since 0.4.0 Changed to use database table.
          *
          * @param string $level   info|warn|error.
          * @param string $message Message to log.
@@ -76,29 +146,75 @@ class FPML_Logger {
                 $message = $this->sanitize_text( $message );
                 $context = $this->sanitize_context( $context );
 
-                $entry = array(
-                        'timestamp' => current_time( 'mysql', true ),
-                        'level'     => $level,
-                        'message'   => $message,
-                        'context'   => $context,
+                if ( $this->use_table ) {
+                        global $wpdb;
+
+                        $wpdb->insert(
+                                $this->table,
+                                array(
+                                        'timestamp' => current_time( 'mysql', true ),
+                                        'level'     => $level,
+                                        'message'   => $message,
+                                        'context'   => wp_json_encode( $context ),
+                                ),
+                                array( '%s', '%s', '%s', '%s' )
+                        );
+
+                        // Auto-cleanup old logs (5% chance)
+                        if ( 0 === wp_rand( 1, 20 ) ) {
+                                $this->cleanup_old_logs();
+                        }
+                } else {
+                        // Legacy option-based storage
+                        $entry = array(
+                                'timestamp' => current_time( 'mysql', true ),
+                                'level'     => $level,
+                                'message'   => $message,
+                                'context'   => $context,
+                        );
+
+                        $logs = get_option( $this->option_key, array() );
+                        $logs = is_array( $logs ) ? $logs : array();
+
+                        array_unshift( $logs, $entry );
+
+                        if ( count( $logs ) > $this->max_entries ) {
+                                $logs = array_slice( $logs, 0, $this->max_entries );
+                        }
+
+                        update_option( $this->option_key, $logs, false );
+                }
+        }
+
+        /**
+         * Cleanup old log entries.
+         *
+         * @since 0.4.0
+         *
+         * @param int $days Days to retain (default 30).
+         *
+         * @return int Number of deleted rows.
+         */
+        public function cleanup_old_logs( $days = 30 ) {
+                global $wpdb;
+
+                $threshold = date( 'Y-m-d H:i:s', strtotime( '-' . absint( $days ) . ' days' ) );
+
+                $deleted = $wpdb->query(
+                        $wpdb->prepare(
+                                "DELETE FROM {$this->table} WHERE timestamp < %s LIMIT 1000",
+                                $threshold
+                        )
                 );
 
-                $logs = get_option( $this->option_key, array() );
-                $logs = is_array( $logs ) ? $logs : array();
-
-                array_unshift( $logs, $entry );
-
-                if ( count( $logs ) > $this->max_entries ) {
-                        $logs = array_slice( $logs, 0, $this->max_entries );
-                }
-
-                update_option( $this->option_key, $logs, false );
+                return $deleted ? (int) $deleted : 0;
         }
 
         /**
          * Retrieve logs.
          *
          * @since 0.2.0
+         * @since 0.4.0 Changed to read from database table.
          *
          * @param int $limit Maximum entries to return.
          *
@@ -106,24 +222,60 @@ class FPML_Logger {
          */
         public function get_logs( $limit = 50 ) {
                 $limit = max( 1, absint( $limit ) );
-                $logs  = get_option( $this->option_key, array() );
 
-                if ( ! is_array( $logs ) ) {
-                        return array();
+                if ( $this->use_table ) {
+                        global $wpdb;
+
+                        $results = $wpdb->get_results(
+                                $wpdb->prepare(
+                                        "SELECT * FROM {$this->table} ORDER BY timestamp DESC LIMIT %d",
+                                        $limit
+                                ),
+                                ARRAY_A
+                        );
+
+                        if ( ! $results ) {
+                                return array();
+                        }
+
+                        // Decode context JSON
+                        foreach ( $results as &$result ) {
+                                if ( ! empty( $result['context'] ) ) {
+                                        $decoded = json_decode( $result['context'], true );
+                                        $result['context'] = is_array( $decoded ) ? $decoded : array();
+                                } else {
+                                        $result['context'] = array();
+                                }
+                        }
+
+                        return $results;
+                } else {
+                        // Legacy option-based storage
+                        $logs = get_option( $this->option_key, array() );
+
+                        if ( ! is_array( $logs ) ) {
+                                return array();
+                        }
+
+                        return array_slice( $logs, 0, $limit );
                 }
-
-                return array_slice( $logs, 0, $limit );
         }
 
         /**
          * Remove all stored logs.
          *
          * @since 0.2.0
+         * @since 0.4.0 Updated to support database table.
          *
          * @return void
          */
         public function clear() {
-                delete_option( $this->option_key );
+                if ( $this->use_table ) {
+                        global $wpdb;
+                        $wpdb->query( "TRUNCATE TABLE {$this->table}" );
+                } else {
+                        delete_option( $this->option_key );
+                }
         }
 
         /**
