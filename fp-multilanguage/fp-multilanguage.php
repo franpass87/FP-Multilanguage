@@ -26,6 +26,7 @@ if ( is_readable( $autoload ) ) {
 }
 
 autoload_fpml_files();
+fpml_register_services();
 
 require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
 
@@ -147,3 +148,51 @@ add_action( 'plugins_loaded', 'fpml_run_plugin' );
 
 register_activation_hook( __FILE__, array( 'FPML_Plugin', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'FPML_Plugin', 'deactivate' ) );
+
+/**
+ * Register services in the dependency container.
+ *
+ * @since 0.4.0
+ * @return void
+ */
+function fpml_register_services() {
+	if ( ! class_exists( 'FPML_Container' ) ) {
+		return;
+	}
+
+	// Core services.
+	FPML_Container::register( 'settings', function() {
+		return FPML_Settings::instance();
+	} );
+
+	FPML_Container::register( 'logger', function() {
+		return FPML_Logger::instance();
+	} );
+
+	FPML_Container::register( 'queue', function() {
+		return FPML_Queue::instance();
+	} );
+
+	// Translation services.
+	FPML_Container::register( 'translation_manager', function() {
+		return FPML_Translation_Manager::instance();
+	} );
+
+	FPML_Container::register( 'job_enqueuer', function() {
+		return FPML_Job_Enqueuer::instance();
+	} );
+
+	// Diagnostic services.
+	FPML_Container::register( 'diagnostics', function() {
+		return FPML_Diagnostics::instance();
+	} );
+
+	FPML_Container::register( 'cost_estimator', function() {
+		return FPML_Cost_Estimator::instance();
+	} );
+
+	// Content indexing.
+	FPML_Container::register( 'content_indexer', function() {
+		return FPML_Content_Indexer::instance();
+	} );
+}
