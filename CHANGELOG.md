@@ -4,7 +4,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Planned documentation improvements and automation refinements.
+- Planned bulk translation manager for mass content processing.
+- Analytics dashboard with cost tracking and performance metrics.
+- Advanced glossary with context-aware terms and forbidden words.
+
+## [0.4.1] - 2025-10-08
+### Added
+- **API Keys Encryption**: All API keys (OpenAI, DeepL, Google, LibreTranslate) are now encrypted using AES-256-CBC.
+- **Translation Versioning System**: Complete backup and rollback functionality for all translations with audit trail.
+- **Preview Translation REST Endpoint**: New endpoint `/wp-json/fpml/v1/preview-translation` for testing translations without saving.
+- Migration tool (`tools/migrate-api-keys.php`) for automatic encryption of existing API keys with backup.
+- 21 new unit tests across 2 test files: `test-secure-settings.php` (9 tests), `test-translation-versioning.php` (12 tests).
+- Comprehensive documentation: API reference for preview endpoint, implementation guides, and deployment checklists.
+
+### Security
+- API keys stored in database are now encrypted with AES-256-CBC using WordPress AUTH_KEY/SALT as derivation base.
+- Encryption/decryption is transparent through WordPress filters, no code changes required.
+- Migration script creates automatic backup before encrypting existing keys.
+- Audit trail for all translation changes: tracks who, when, which provider, and what changed.
+
+### Improved
+- Translation Cache now registered in dependency injection container for better architecture.
+- Secure Settings service registered for centralized encryption handling.
+- Translation Versioning service registered with automatic hooking to translation events.
+- REST API authentication includes both capability check (`manage_options`) and nonce validation.
+
+### Developer Experience
+- New `FPML_Secure_Settings` class with encryption/decryption methods and migration support.
+- New `FPML_Translation_Versioning` class with save, retrieve, rollback, and cleanup methods.
+- Preview endpoint supports testing different providers without changing configuration.
+- Cache-aware preview reduces API costs by checking cache before making requests.
+- Complete PHP DocBlocks with `@since 0.4.1` tags for all new functionality.
+
+### Documentation
+- Added `NUOVE_FUNZIONALITA_E_CORREZIONI.md` with detailed feature implementation guide (752 lines).
+- Added `RACCOMANDAZIONI_PRIORITARIE.md` with top 5 feature recommendations and 2025 roadmap (891 lines).
+- Added `docs/api-preview-endpoint.md` with complete REST API reference and examples (687 lines).
+- Added `RIEPILOGO_FINALE_IMPLEMENTAZIONE.md` with deployment guide and troubleshooting (1,200+ lines).
+- Created quick-start guides: `📋_LEGGI_QUI.md` and `✅_IMPLEMENTAZIONE_COMPLETATA.md`.
+
+### Database
+- New table `{prefix}_fpml_translation_versions` for storing translation history:
+  - Tracks object type, object ID, field name, old/new values, provider, user, and timestamp.
+  - Includes cleanup functionality to maintain retention policies (default 90 days, keep 5 versions minimum).
+  - Indexed on `object_type`, `object_id`, and `created_at` for efficient queries.
+
+### Performance
+- Preview endpoint uses dual-layer cache (object cache + transients) for instant responses.
+- Translation versioning only saves when values actually change, avoiding duplicate entries.
+- Cleanup operations use batched deletes to prevent long table locks.
+
+### Testing
+- Test coverage increased from ~30% to ~50% (+67%).
+- All encryption/decryption cycles tested including edge cases and fallbacks.
+- Version save, retrieve, rollback, and cleanup operations fully tested.
+- Post and term rollback functionality verified with unit tests.
 
 ## [0.3.2] - 2025-10-05
 ### Added
@@ -77,7 +131,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Provider integration layer with glossary, override strings, and import/export helpers.
 - WP-CLI commands for queue status, batch execution, and cron guidance.
 
-[Unreleased]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.3.2...v0.4.1
 [0.3.2]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/francescopasseri/FP-Multilanguage/compare/v0.2.1...v0.3.0
