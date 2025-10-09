@@ -58,10 +58,36 @@ class FPML_Bulk_Translation_Manager {
 	 */
 	private function __construct() {
 		add_action( 'admin_init', array( $this, 'register_bulk_actions' ) );
+		add_action( 'admin_menu', array( $this, 'add_progress_page' ) );
 		add_action( 'wp_ajax_fpml_bulk_estimate', array( $this, 'ajax_estimate_cost' ) );
 		add_action( 'wp_ajax_fpml_bulk_translate', array( $this, 'ajax_start_bulk_translation' ) );
 		add_action( 'wp_ajax_fpml_bulk_progress', array( $this, 'ajax_get_progress' ) );
 		add_action( 'fpml_process_bulk_batch', array( $this, 'process_batch' ), 10, 2 );
+	}
+
+	/**
+	 * Add bulk progress admin page.
+	 *
+	 * @return void
+	 */
+	public function add_progress_page() {
+		add_submenu_page(
+			'fpml',
+			__( 'Bulk Translation Progress', 'fp-multilanguage' ),
+			'', // Hidden from menu
+			'manage_options',
+			'fpml-bulk-progress',
+			array( $this, 'render_progress_page' )
+		);
+	}
+
+	/**
+	 * Render bulk progress page.
+	 *
+	 * @return void
+	 */
+	public function render_progress_page() {
+		require_once FPML_PLUGIN_DIR . 'admin/views/bulk-progress.php';
 	}
 
 	/**
