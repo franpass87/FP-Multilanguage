@@ -12,12 +12,326 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-        /**
-         * Manage the translation queue from the command line.
-         *
-         * @since 0.2.0
-         */
-        class FPML_CLI_Queue_Command extends WP_CLI_Command {
+	/**
+	 * Extended CLI commands for FP Multilanguage.
+	 *
+	 * @since 0.5.0
+	 */
+	class FPML_CLI_Extended_Command extends WP_CLI_Command {
+
+		/**
+		 * Test all translation providers.
+		 *
+		 * ## OPTIONS
+		 *
+		 * [--text=<text>]
+		 * : Text to translate for testing
+		 * ---
+		 * default: "Ciao mondo, questo è un test."
+		 * ---
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml provider test --all
+		 *     wp fpml provider test --text="Benvenuto"
+		 *
+		 * @subcommand provider-test
+		 */
+		public function provider_test( $args, $assoc_args ) {
+			$text = isset( $assoc_args['text'] ) ? $assoc_args['text'] : 'Ciao mondo, questo è un test.';
+			
+			$providers = array( 'openai', 'deepl', 'google', 'libretranslate' );
+			$results = array();
+
+			WP_CLI::line( 'Testing translation providers...' );
+			WP_CLI::line( "Text: $text" );
+			WP_CLI::line( '' );
+
+			foreach ( $providers as $provider ) {
+				WP_CLI::line( "Testing $provider..." );
+				
+				$start = microtime( true );
+				
+				try {
+					$translation_manager = FPML_Container::resolve( 'translation_manager' );
+					$translated = $translation_manager->translate_text( $text, 'it', 'en', $provider );
+					$elapsed = microtime( true ) - $start;
+
+					if ( is_wp_error( $translated ) ) {
+						$results[] = array(
+							'provider' => $provider,
+							'status' => '❌ Failed',
+							'translation' => $translated->get_error_message(),
+							'time' => '-',
+						);
+					} else {
+						$results[] = array(
+							'provider' => $provider,
+							'status' => '✅ Success',
+							'translation' => $translated,
+							'time' => round( $elapsed, 2 ) . 's',
+						);
+					}
+				} catch ( Exception $e ) {
+					$results[] = array(
+						'provider' => $provider,
+						'status' => '❌ Error',
+						'translation' => $e->getMessage(),
+						'time' => '-',
+					);
+				}
+			}
+
+			WP_CLI::line( '' );
+			\WP_CLI\Utils\format_items( 'table', $results, array( 'provider', 'status', 'translation', 'time' ) );
+		}
+
+		/**
+		 * Get translation cache statistics.
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml cache stats
+		 *
+		 * @subcommand cache-stats
+		 */
+		public function cache_stats() {
+			$cache = FPML_Container::resolve( 'translation_cache' );
+			
+			if ( ! $cache ) {
+				WP_CLI::error( 'Translation cache not available.' );
+			}
+
+			$stats = $cache->get_stats();
+
+			WP_CLI::line( 'Translation Cache Statistics:' );
+			WP_CLI::line( '' );
+			WP_CLI::line( "Total entries: {$stats['total_entries']}" );
+			WP_CLI::line( "Cache hits: {$stats['hits']}" );
+			WP_CLI::line( "Cache misses: {$stats['misses']}" );
+			WP_CLI::line( "Hit rate: {$stats['hit_rate']}%" );
+			WP_CLI::line( "Total saved: \${$stats['cost_saved']}" );
+		}
+
+		/**
+		 * Rollback a translation to a previous version.
+		 *
+		 * ## OPTIONS
+		 *
+		 * --post=<post_id>
+		 * : Post ID to rollback
+		 *
+		 * --version=<version_id>
+		 * : Version ID to rollback to
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml rollback --post=123 --version=5
+		 *
+		 * @subcommand rollback
+		 */
+		public function rollback( $args, $assoc_args ) {
+			if ( ! isset( $assoc_args['post'] ) || ! isset( $assoc_args['version'] ) ) {
+				WP_CLI::error( 'Both --post and --version are required.' );
+			}
+
+			$post_id = intval( $assoc_args['post'] );
+			$version_id = intval( $assoc_args['version'] );
+
+			$versioning = FPML_Container::resolve( 'translation_versioning' );
+			
+			if ( ! $versioning ) {
+				WP_CLI::error( 'Translation versioning not available.' );
+			}
+
+			WP_CLI::line( "Rolling back post $post_id to version $version_id..." );
+
+			$result = $versioning->rollback( $version_id );
+
+			if ( is_wp_error( $result ) ) {
+				WP_CLI::error( $result->get_error_message() );
+			}
+
+			WP_CLI::success( "Successfully rolled back post $post_id to version $version_id." );
+		}
+
+		/**
+		 * Export translations to various formats.
+		 *
+		 * ## OPTIONS
+		 *
+		 * --format=<format>
+		 * : Export format (json, csv, tmx)
+		 *
+		 * [--days=<days>]
+		 * : Number of days to export
+		 * ---
+		 * default: 30
+		 * ---
+		 *
+		 * [--file=<file>]
+		 * : Output file path
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml export --format=json --days=30 --file=translations.json
+		 *     wp fpml export --format=tmx --file=memory.tmx
+		 *
+		 * @subcommand export
+		 */
+		public function export( $args, $assoc_args ) {
+			$format = isset( $assoc_args['format'] ) ? $assoc_args['format'] : 'json';
+			$days = isset( $assoc_args['days'] ) ? intval( $assoc_args['days'] ) : 30;
+			$file = isset( $assoc_args['file'] ) ? $assoc_args['file'] : null;
+
+			WP_CLI::line( "Exporting translations (last $days days) to $format format..." );
+
+			$content = '';
+
+			switch ( $format ) {
+				case 'tmx':
+					$tm = FPML_Container::resolve( 'translation_memory' );
+					if ( ! $tm ) {
+						WP_CLI::error( 'Translation memory not available.' );
+					}
+					$content = $tm->export_to_tmx();
+					break;
+
+				case 'csv':
+					$analytics = FPML_Container::resolve( 'analytics_dashboard' );
+					if ( ! $analytics ) {
+						WP_CLI::error( 'Analytics not available.' );
+					}
+					// Export analytics data as CSV
+					$data = $analytics->get_analytics_data( $days );
+					$content = $this->array_to_csv( $data['recent'] );
+					break;
+
+				case 'json':
+				default:
+					$analytics = FPML_Container::resolve( 'analytics_dashboard' );
+					if ( ! $analytics ) {
+						WP_CLI::error( 'Analytics not available.' );
+					}
+					$data = $analytics->get_analytics_data( $days );
+					$content = wp_json_encode( $data, JSON_PRETTY_PRINT );
+					break;
+			}
+
+			if ( $file ) {
+				file_put_contents( $file, $content );
+				WP_CLI::success( "Exported to $file" );
+			} else {
+				WP_CLI::line( $content );
+			}
+		}
+
+		/**
+		 * Get Translation Memory statistics.
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml tm stats
+		 *
+		 * @subcommand tm-stats
+		 */
+		public function tm_stats() {
+			$tm = FPML_Container::resolve( 'translation_memory' );
+			
+			if ( ! $tm ) {
+				WP_CLI::error( 'Translation memory not available.' );
+			}
+
+			$stats = $tm->get_stats();
+
+			WP_CLI::line( 'Translation Memory Statistics:' );
+			WP_CLI::line( '' );
+			WP_CLI::line( "Total segments: " . number_format( $stats['total_segments'] ) );
+			WP_CLI::line( "Recent matches: " . number_format( $stats['recent_matches'] ) );
+			WP_CLI::line( "Cost saved: $" . number_format( $stats['estimated_savings'], 2 ) );
+			WP_CLI::line( "Avg fuzzy similarity: {$stats['avg_fuzzy_similarity']}%" );
+			WP_CLI::line( '' );
+
+			if ( ! empty( $stats['top_segments'] ) ) {
+				WP_CLI::line( 'Top 10 reused segments:' );
+				\WP_CLI\Utils\format_items( 'table', $stats['top_segments'], array( 'source_text', 'use_count' ) );
+			}
+		}
+
+		/**
+		 * Clear various caches.
+		 *
+		 * ## OPTIONS
+		 *
+		 * <type>
+		 * : Cache type to clear (translation, all)
+		 *
+		 * ## EXAMPLES
+		 *
+		 *     wp fpml clear translation
+		 *     wp fpml clear all
+		 *
+		 * @subcommand clear
+		 */
+		public function clear( $args ) {
+			$type = isset( $args[0] ) ? $args[0] : 'all';
+
+			switch ( $type ) {
+				case 'translation':
+					$cache = FPML_Container::resolve( 'translation_cache' );
+					if ( $cache ) {
+						$cache->clear_all();
+						WP_CLI::success( 'Translation cache cleared.' );
+					}
+					break;
+
+				case 'all':
+					$cache = FPML_Container::resolve( 'translation_cache' );
+					if ( $cache ) {
+						$cache->clear_all();
+					}
+					wp_cache_flush();
+					WP_CLI::success( 'All caches cleared.' );
+					break;
+
+				default:
+					WP_CLI::error( "Invalid cache type: $type" );
+			}
+		}
+
+		/**
+		 * Convert array to CSV format.
+		 *
+		 * @param array $data Data array.
+		 * @return string CSV content.
+		 */
+		private function array_to_csv( $data ) {
+			if ( empty( $data ) ) {
+				return '';
+			}
+
+			$csv = '';
+			$headers = array_keys( $data[0] );
+			$csv .= implode( ',', $headers ) . "\n";
+
+			foreach ( $data as $row ) {
+				$csv .= implode( ',', array_map( function( $value ) {
+					return '"' . str_replace( '"', '""', $value ) . '"';
+				}, $row ) ) . "\n";
+			}
+
+			return $csv;
+		}
+	}
+
+	WP_CLI::add_command( 'fpml', 'FPML_CLI_Extended_Command' );
+
+	/**
+	 * Manage the translation queue from the command line.
+	 *
+	 * @since 0.2.0
+	 */
+	class FPML_CLI_Queue_Command extends WP_CLI_Command {
                 /**
                  * Ensure queue commands are available when assisted mode is disabled.
                  *

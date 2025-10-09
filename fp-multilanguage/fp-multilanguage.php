@@ -3,7 +3,7 @@
  * Plugin Name: FP Multilanguage
  * Plugin URI: https://francescopasseri.com
  * Description: Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
- * Version: 0.3.1
+ * Version: 0.5.0
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * Text Domain: fp-multilanguage
@@ -14,7 +14,7 @@
  * @link https://francescopasseri.com
  */
 
-define( 'FPML_PLUGIN_VERSION', '0.3.1' );
+define( 'FPML_PLUGIN_VERSION', '0.5.0' );
 define( 'FPML_PLUGIN_FILE', __FILE__ );
 define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -209,5 +209,40 @@ function fpml_register_services() {
 	// Translation versioning.
 	FPML_Container::register( 'translation_versioning', function() {
 		return FPML_Translation_Versioning::instance();
+	} );
+
+	// Bulk translation manager.
+	FPML_Container::register( 'bulk_translation_manager', function() {
+		return FPML_Bulk_Translation_Manager::instance();
+	} );
+
+	// Analytics dashboard.
+	FPML_Container::register( 'analytics_dashboard', function() {
+		return FPML_Analytics_Dashboard::instance();
+	} );
+
+	// Advanced glossary.
+	FPML_Container::register( 'advanced_glossary', function() {
+		return FPML_Advanced_Glossary::instance();
+	} );
+
+	// Translation memory.
+	FPML_Container::register( 'translation_memory', function() {
+		return FPML_Translation_Memory::instance();
+	} );
+
+	// Public API.
+	FPML_Container::register( 'public_api', function() {
+		return FPML_Public_API::instance();
+	} );
+
+	// Webhook notifications.
+	FPML_Container::register( 'webhook_notifications', function() {
+		return FPML_Webhook_Notifications::instance();
+	} );
+
+	// Debug mode.
+	FPML_Container::register( 'debug_mode', function() {
+		return FPML_Debug_Mode::instance();
 	} );
 }
