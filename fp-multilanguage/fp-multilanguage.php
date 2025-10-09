@@ -200,4 +200,14 @@ function fpml_register_services() {
 	FPML_Container::register( 'translation_cache', function() {
 		return FPML_Translation_Cache::instance();
 	} );
+
+	// Secure settings.
+	FPML_Container::register( 'secure_settings', function() {
+		return FPML_Secure_Settings::instance();
+	} );
+
+	// Translation versioning.
+	FPML_Container::register( 'translation_versioning', function() {
+		return FPML_Translation_Versioning::instance();
+	} );
 }

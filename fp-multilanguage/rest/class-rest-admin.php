@@ -94,16 +94,50 @@ class FPML_REST_Admin {
                         )
                 );
 
-                register_rest_route(
-                        'fpml/v1',
-                        '/health',
-                        array(
-                                'methods'             => \WP_REST_Server::READABLE,
-                                'callback'            => array( $this, 'handle_health_check' ),
-                                'permission_callback' => '__return_true',
-                        )
-                );
-        }
+		register_rest_route(
+			'fpml/v1',
+			'/health',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'handle_health_check' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'fpml/v1',
+			'/preview-translation',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_preview_translation' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+				'args'                => array(
+					'text' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
+					),
+					'provider' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
+					'source' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'default'           => 'it',
+						'sanitize_callback' => 'sanitize_key',
+					),
+					'target' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'default'           => 'en',
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+	}
 
         /**
          * Ensure the current request is authorized.
@@ -372,6 +406,148 @@ class FPML_REST_Admin {
                         $health['status'] = 'error';
                 }
 
-                return rest_ensure_response( $health );
-        }
+		return rest_ensure_response( $health );
+	}
+
+	/**
+	 * Preview translation without saving.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_preview_translation( $request ) {
+		$text     = $request->get_param( 'text' );
+		$provider = $request->get_param( 'provider' );
+		$source   = $request->get_param( 'source' );
+		$target   = $request->get_param( 'target' );
+
+		if ( empty( $text ) ) {
+			return new WP_Error(
+				'fpml_empty_text',
+				__( 'Testo da tradurre mancante.', 'fp-multilanguage' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$processor  = FPML_Processor::instance();
+		$translator = $processor->get_translator_instance();
+
+		// Override provider if specified
+		if ( ! empty( $provider ) ) {
+			$settings = FPML_Settings::instance();
+			$current_provider = $settings->get( 'provider', '' );
+			
+			if ( $provider !== $current_provider ) {
+				// Temporarily switch provider for preview
+				$translator = $this->get_translator_by_slug( $provider );
+			}
+		}
+
+		if ( is_wp_error( $translator ) ) {
+			$translator->add_data( array( 'status' => 400 ), $translator->get_error_code() );
+			return $translator;
+		}
+
+		// Check cache first
+		$cache = FPML_Container::get( 'translation_cache' );
+		if ( $cache ) {
+			$cached = $cache->get( $text, $provider ?: 'current', $source, $target );
+			if ( false !== $cached ) {
+				return rest_ensure_response(
+					array(
+						'success'        => true,
+						'original'       => $text,
+						'translated'     => $cached,
+						'provider'       => $provider ?: FPML_Settings::instance()->get( 'provider', '' ),
+						'cached'         => true,
+						'characters'     => mb_strlen( $text, 'UTF-8' ),
+						'estimated_cost' => 0,
+					)
+				);
+			}
+		}
+
+		// Translate
+		$start       = microtime( true );
+		$translated  = $translator->translate( $text, $source, $target, 'general' );
+		$elapsed     = microtime( true ) - $start;
+
+		if ( is_wp_error( $translated ) ) {
+			$translated->add_data( array( 'status' => 400 ), $translated->get_error_code() );
+			return $translated;
+		}
+
+		$cost = $translator->estimate_cost( $text );
+
+		// Cache the result
+		if ( $cache ) {
+			$cache->set( $text, $provider ?: 'current', $translated, $source, $target );
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'        => true,
+				'original'       => $text,
+				'translated'     => wp_kses_post( $translated ),
+				'provider'       => $provider ?: FPML_Settings::instance()->get( 'provider', '' ),
+				'cached'         => false,
+				'elapsed'        => round( $elapsed, 4 ),
+				'characters'     => mb_strlen( $text, 'UTF-8' ),
+				'estimated_cost' => $cost,
+			)
+		);
+	}
+
+	/**
+	 * Get translator instance by provider slug.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param string $provider Provider slug.
+	 *
+	 * @return FPML_Translator_Interface|WP_Error
+	 */
+	protected function get_translator_by_slug( $provider ) {
+		$settings = FPML_Settings::instance();
+
+		switch ( $provider ) {
+			case 'openai':
+				$api_key = $settings->get( 'openai_api_key', '' );
+				$model   = $settings->get( 'openai_model', 'gpt-4o-mini' );
+				if ( empty( $api_key ) ) {
+					return new WP_Error( 'fpml_no_api_key', __( 'API key OpenAI mancante.', 'fp-multilanguage' ) );
+				}
+				return new FPML_Provider_OpenAI( $api_key, $model );
+
+			case 'deepl':
+				$api_key  = $settings->get( 'deepl_api_key', '' );
+				$use_free = $settings->get( 'deepl_use_free', false );
+				if ( empty( $api_key ) ) {
+					return new WP_Error( 'fpml_no_api_key', __( 'API key DeepL mancante.', 'fp-multilanguage' ) );
+				}
+				return new FPML_Provider_DeepL( $api_key, $use_free );
+
+			case 'google':
+				$api_key    = $settings->get( 'google_api_key', '' );
+				$project_id = $settings->get( 'google_project_id', '' );
+				if ( empty( $api_key ) ) {
+					return new WP_Error( 'fpml_no_api_key', __( 'API key Google mancante.', 'fp-multilanguage' ) );
+				}
+				return new FPML_Provider_Google( $api_key, $project_id );
+
+			case 'libretranslate':
+				$api_url = $settings->get( 'libretranslate_api_url', '' );
+				$api_key = $settings->get( 'libretranslate_api_key', '' );
+				if ( empty( $api_url ) ) {
+					return new WP_Error( 'fpml_no_api_url', __( 'URL API LibreTranslate mancante.', 'fp-multilanguage' ) );
+				}
+				return new FPML_Provider_LibreTranslate( $api_url, $api_key );
+
+			default:
+				return new WP_Error( 'fpml_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
+		}
+	}
 }

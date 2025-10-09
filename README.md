@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | **Plugin Name** | FP Multilanguage |
-| **Version** | 0.3.1 |
+| **Version** | 0.4.1 |
 | **Author** | [Francesco Passeri](https://francescopasseri.com) |
 | **Author Email** | [info@francescopasseri.com](mailto:info@francescopasseri.com) |
 | **Author URI** | https://francescopasseri.com |
@@ -22,6 +22,13 @@ FP Multilanguage keeps an English copy of Italian content aligned across posts, 
 * **Domain Path:** `/languages`
 
 ## Features
+
+### 🆕 New in v0.4.1
+- **🔐 API Keys Encryption**: All API keys (OpenAI, DeepL, Google, LibreTranslate) are encrypted in database using AES-256-CBC.
+- **💾 Translation Versioning**: Complete backup and rollback functionality for all translations with full audit trail.
+- **🔍 Preview Endpoint**: REST API endpoint to test translations without saving, with cost estimation and multi-provider support.
+
+### Core Features
 - Differential translation queue that reprocesses only modified fragments and preserves Gutenberg, ACF, and shortcode structures.
 - Automatic duplication for posts, CPTs, taxonomies, WooCommerce product attributes, navigation menus, and media text fields.
 - Provider adapters with configurable pricing metrics to estimate OpenAI, DeepL, Google, and LibreTranslate costs.
@@ -34,6 +41,15 @@ FP Multilanguage keeps an English copy of Italian content aligned across posts, 
 2. Activate the plugin via **Plugins → Installed Plugins** in WordPress.
 3. Visit **Settings → FP Multilanguage** to configure providers, glossary rules, routing, and automation options.
 4. Run an initial sync from the Diagnostics tab or via `wp fpml queue run` to populate English copies.
+
+### ⚠️ Upgrading to v0.4.1
+If upgrading from a previous version:
+1. **Backup your database**: `wp db export backup-$(date +%Y%m%d).sql`
+2. **Update the plugin** via WordPress admin or manual upload
+3. **Migrate API keys** (one-time): `php tools/migrate-api-keys.php` or `wp eval-file tools/migrate-api-keys.php`
+4. **Verify encryption**: Check that your API keys now have the `ENC:` prefix in the database
+
+See [RELEASE_NOTES_v0.4.1.md](RELEASE_NOTES_v0.4.1.md) for complete upgrade guide.
 
 ## Usage
 - Create or edit Italian content; the queue enqueues incremental jobs that translate the touched sections into English.
@@ -61,8 +77,20 @@ FP Multilanguage keeps an English copy of Italian content aligned across posts, 
 - `wp fpml queue cleanup [--days=<int>] [--states=<list>]` — Remove processed jobs respecting retention thresholds.
 - `wp fpml queue estimate-cost [--states=<list>] [--max-jobs=<int>]` — Estimate provider cost exposure.
 - `wp fpml queue status` — Display queue KPIs, configured provider, and retention state.
+- `wp eval-file tools/migrate-api-keys.php` — **[v0.4.1]** Migrate existing API keys to encrypted format with automatic backup.
 
 ## Documentation
+
+### 🆕 v0.4.1 Documentation
+- [`📋_LEGGI_QUI.md`](📋_LEGGI_QUI.md) — **START HERE** - Quick overview and getting started (2 min read).
+- [`✅_IMPLEMENTAZIONE_COMPLETATA.md`](✅_IMPLEMENTAZIONE_COMPLETATA.md) — Complete feature summary and quick start guide.
+- [`RIEPILOGO_FINALE_IMPLEMENTAZIONE.md`](RIEPILOGO_FINALE_IMPLEMENTAZIONE.md) — Comprehensive deployment guide with troubleshooting.
+- [`NUOVE_FUNZIONALITA_E_CORREZIONI.md`](NUOVE_FUNZIONALITA_E_CORREZIONI.md) — Detailed implementation guide with code examples.
+- [`RACCOMANDAZIONI_PRIORITARIE.md`](RACCOMANDAZIONI_PRIORITARIE.md) — Top 5 feature recommendations and 2025 roadmap.
+- [`docs/api-preview-endpoint.md`](docs/api-preview-endpoint.md) — Complete REST API reference for preview endpoint.
+- [`RELEASE_NOTES_v0.4.1.md`](RELEASE_NOTES_v0.4.1.md) — Official release notes with upgrade guide.
+
+### Core Documentation
 Extended documentation lives in the [`docs/`](docs) directory:
 - [`docs/overview.md`](docs/overview.md) — Functional overview and feature summary.
 - [`docs/architecture.md`](docs/architecture.md) — Internal architecture, data flows, and hooks.
