@@ -200,7 +200,57 @@ fetch('/wp-json/fpml/v1/preview-translation', {
 
 ---
 
-## 📈 Funzionalità Suggerite per il Futuro
+## ✅ AGGIORNAMENTO v0.5.0 - TUTTE LE FUNZIONALITÀ IMPLEMENTATE!
+
+**Data**: 2025-10-09
+
+Tutte le funzionalità suggerite sono state implementate con successo! 
+
+📄 **Vedi documento completo**: `IMPLEMENTAZIONE_FUNZIONALITA_v0.5.0.md`
+
+### Funzionalità Implementate
+
+1. ✅ **Bulk Translation Manager** - `includes/bulk/class-bulk-translation-manager.php`
+2. ✅ **Analytics Dashboard** - `includes/analytics/class-analytics-dashboard.php`
+3. ✅ **Advanced Glossary** - `includes/glossary/class-advanced-glossary.php`
+4. ✅ **Translation Memory** - `includes/memory/class-translation-memory.php`
+5. ✅ **Public API with JWT** - `includes/api/class-public-api.php`
+6. ✅ **Webhook Notifications** - `includes/notifications/class-webhook-notifications.php`
+7. ✅ **Extended CLI Commands** - `cli/class-cli.php` (aggiornato)
+8. ✅ **Debug Mode** - `includes/debug/class-debug-mode.php`
+
+### Quick Access
+
+- **Analytics**: WP Admin → FP Multilanguage → Analytics
+- **Glossary**: WP Admin → FP Multilanguage → Glossary
+- **TM Stats**: WP Admin → FP Multilanguage → TM
+- **API Keys**: WP Admin → FP Multilanguage → API Keys
+- **Webhooks**: WP Admin → FP Multilanguage → Webhooks
+- **Debug**: WP Admin → FP Multilanguage → 🐛 Debug (o Ctrl+Shift+D)
+
+### CLI Commands Disponibili
+
+```bash
+wp fpml provider-test          # Testa tutti i provider
+wp fpml cache-stats            # Statistiche cache
+wp fpml tm-stats               # Statistiche TM
+wp fpml rollback --post=X --version=Y  # Rollback
+wp fpml export --format=tmx    # Export TMX/CSV/JSON
+wp fpml clear translation      # Clear cache
+```
+
+### API REST Pubblica
+
+```bash
+POST /wp-json/fpml/v1/public/translate
+Header: X-FPML-API-Key: your-key
+
+# Genera API key da: WP Admin → FP Multilanguage → API Keys
+```
+
+---
+
+## 📈 Funzionalità Suggerite per il Futuro (ARCHIVIO)
 
 ### Alta Priorità 🔴
 1. **Bulk Translation Manager**
@@ -315,7 +365,7 @@ fetch('/wp-json/fpml/v1/preview-translation', {
 
 ## 📝 Checklist Implementazione
 
-### Per Usare le Nuove Funzionalità
+### Per Usare le Nuove Funzionalità (v0.4.1)
 
 - [x] Crittografia API keys automatica al prossimo salvataggio settings
 - [x] Versioning traduzioni attivo automaticamente
@@ -324,6 +374,17 @@ fetch('/wp-json/fpml/v1/preview-translation', {
 - [ ] Migrare API keys esistenti con `migrate_existing_keys()`
 - [ ] Configurare cleanup automatico versioni (cron job)
 - [ ] Documentare endpoint preview per sviluppatori
+
+### Per Usare le Nuove Funzionalità (v0.5.0) ✅ IMPLEMENTATO
+
+- [x] Bulk Translation Manager funzionante e integrato
+- [x] Analytics Dashboard con grafici Chart.js
+- [x] Advanced Glossary con import/export CSV
+- [x] Translation Memory con fuzzy matching attivo
+- [x] API Pubblica con gestione keys da admin
+- [x] Webhook Notifications configurabili per Slack/Discord/Teams
+- [x] CLI Commands estesi disponibili
+- [x] Debug Mode attivabile con FPML_DEBUG constant
 
 ### Prossimi Step Consigliati
 
