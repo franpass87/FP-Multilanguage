@@ -89,8 +89,8 @@ class FPML_Plugin_Core {
 		$this->settings            = FPML_Container::get( 'settings' ) ?: FPML_Settings::instance();
 		$this->queue               = FPML_Container::get( 'queue' ) ?: FPML_Queue::instance();
 		$this->logger              = FPML_Container::get( 'logger' ) ?: FPML_Logger::instance();
-		$this->translation_manager = FPML_Container::get( 'translation_manager' );
-		$this->job_enqueuer        = FPML_Container::get( 'job_enqueuer' );
+		$this->translation_manager = FPML_Container::get( 'translation_manager' ) ?: ( class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null );
+		$this->job_enqueuer        = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
 
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
@@ -369,7 +369,11 @@ class FPML_Plugin_Core {
 			return;
 		}
 
-		if ( ! $this->translation_manager || $this->translation_manager->is_creating_translation() ) {
+		if ( ! $this->translation_manager ) {
+			return;
+		}
+
+		if ( $this->translation_manager->is_creating_translation() ) {
 			return;
 		}
 
@@ -401,7 +405,7 @@ class FPML_Plugin_Core {
 
 		$target_post = $this->translation_manager->ensure_post_translation( $post );
 
-		if ( ! $target_post ) {
+		if ( ! $target_post || ! $this->job_enqueuer ) {
 			return;
 		}
 
@@ -457,6 +461,10 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	protected function sync_term_translation( $term_id, $taxonomy ) {
+		if ( ! $this->translation_manager || ! $this->job_enqueuer ) {
+			return;
+		}
+
 		$taxonomies = get_taxonomies(
 			array(
 				'public' => true,
