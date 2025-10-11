@@ -3,7 +3,7 @@ Contributors: francescopasseri
 Tags: translation, multilanguage, openai, deepl, google translate, seo
 Requires at least: 5.8
 Tested up to: 6.5
-Requires PHP: 7.4
+Requires PHP: 8.0
 Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -23,7 +23,7 @@ FP Multilanguage duplicates English content that stays synced with the original 
 
 = Requirements =
 * WordPress 5.8 or later
-* PHP 7.4 or later (8.x recommended)
+* PHP 8.0 or later (8.2+ recommended)
 * API credentials for at least one translation provider (OpenAI, DeepL, Google, or LibreTranslate)
 
 == Installation ==

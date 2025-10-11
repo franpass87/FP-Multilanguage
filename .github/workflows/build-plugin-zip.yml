@@ -34,14 +34,22 @@ jobs:
             --exclude=.git \
             --exclude=.github \
             --exclude=tests \
+            --exclude=test \
             --exclude=docs \
             --exclude=node_modules \
             --exclude=*.md \
+            --exclude=*.bak \
+            --exclude=*.tmp \
             --exclude=.idea \
             --exclude=.vscode \
             --exclude=build \
+            --exclude=dist \
             --exclude=.gitattributes \
             --exclude=.gitignore \
+            --exclude=phpstan.neon \
+            --exclude=phpunit.xml.dist \
+            --exclude=composer.json \
+            --exclude=composer.lock \
             fp-multilanguage/ build/fp-multilanguage/
 
       - name: Create zip
