@@ -410,61 +410,78 @@ class FPML_Processor {
 
                         $total_jobs = count( $jobs );
 
-                        for ( $index = 0; $index < $total_jobs; $index++ ) {
-                                $job = $jobs[ $index ];
+			for ( $index = 0; $index < $total_jobs; $index++ ) {
+				$job = $jobs[ $index ];
 
-                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                        $this->queue->update_state( $job->id, 'pending' );
-                                        continue;
-                                }
+				if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+					$this->queue->update_state( $job->id, 'pending' );
+					// Free memory for this job
+					unset( $jobs[ $index ] );
+					continue;
+				}
 
-                                $this->current_job_characters = 0;
-                                $result = $this->process_job( $job );
+				$this->current_job_characters = 0;
+				$result = $this->process_job( $job );
 
-                                if ( is_wp_error( $result ) ) {
-                                        $this->queue->update_state( $job->id, 'error', $result->get_error_message() );
-                                        $this->logger->log(
-                                                'error',
-                                                sprintf( 'Errore traduzione %s #%d: %s', $job->object_type, $job->object_id, $result->get_error_message() ),
-                                                array(
-                                                        'job_id'      => (int) $job->id,
-                                                        'object_type' => $job->object_type,
-                                                        'field'       => $job->field,
-                                                )
-                                        );
-                                        $summary['errors']++;
-                                        continue;
-                                }
+				if ( is_wp_error( $result ) ) {
+					$this->queue->update_state( $job->id, 'error', $result->get_error_message() );
+					$this->logger->log(
+						'error',
+						sprintf( 'Errore traduzione %s #%d: %s', $job->object_type, $job->object_id, $result->get_error_message() ),
+						array(
+							'job_id'      => (int) $job->id,
+							'object_type' => $job->object_type,
+							'field'       => $job->field,
+						)
+					);
+					$summary['errors']++;
+					// Free memory for this job
+					unset( $jobs[ $index ] );
+					continue;
+				}
 
-                                if ( 'skipped' === $result ) {
-                                        $this->queue->update_state( $job->id, 'skipped' );
-                                        $summary['skipped']++;
-                                        $this->current_batch_characters += $this->current_job_characters;
+				if ( 'skipped' === $result ) {
+					$this->queue->update_state( $job->id, 'skipped' );
+					$summary['skipped']++;
+					$this->current_batch_characters += $this->current_job_characters;
 
-                                        if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                                for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                                                        $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                                                }
+					// Free memory for this job
+					unset( $jobs[ $index ] );
 
-                                                break;
-                                        }
+					if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+						for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+							$this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+							// Free memory for remaining jobs
+							unset( $jobs[ $j ] );
+						}
 
-                                        continue;
-                                }
+						break;
+					}
 
-                                $this->queue->update_state( $job->id, 'done' );
-                                $summary['processed']++;
+					continue;
+				}
 
-                                $this->current_batch_characters += $this->current_job_characters;
+				$this->queue->update_state( $job->id, 'done' );
+				$summary['processed']++;
 
-                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                        for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                                                $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                                        }
+				$this->current_batch_characters += $this->current_job_characters;
 
-                                        break;
-                                }
-                        }
+				// Free memory for this job
+				unset( $jobs[ $index ] );
+
+				if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+					for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+						$this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+						// Free memory for remaining jobs
+						unset( $jobs[ $j ] );
+					}
+
+					break;
+				}
+			}
+			
+			// Final cleanup: free any remaining jobs in array
+			unset( $jobs );
                 } finally {
                         $duration = microtime( true ) - $start_time;
                         $this->logger->log(

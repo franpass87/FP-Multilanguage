@@ -94,15 +94,15 @@ class FPML_REST_Admin {
                         )
                 );
 
-		register_rest_route(
-			'fpml/v1',
-			'/health',
-			array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'handle_health_check' ),
-				'permission_callback' => '__return_true',
-			)
-		);
+	register_rest_route(
+		'fpml/v1',
+		'/health',
+		array(
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => array( $this, 'handle_health_check' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		)
+	);
 
 		register_rest_route(
 			'fpml/v1',
