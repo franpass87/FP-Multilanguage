@@ -279,13 +279,18 @@ class FPML_Secure_Settings {
 			}
 		}
 
-		if ( $migrated > 0 ) {
-			// Update without triggering our filter (to avoid double encryption)
-			remove_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10 );
+	if ( $migrated > 0 ) {
+		// Update without triggering our filter (to avoid double encryption)
+		remove_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10 );
+		
+		try {
 			update_option( 'fpml_settings', $settings );
+		} finally {
+			// Always re-add filter even if update_option throws
 			add_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10, 2 );
 		}
+	}
 
-		return $migrated;
+	return $migrated;
 	}
 }

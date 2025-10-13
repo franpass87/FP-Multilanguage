@@ -141,7 +141,30 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	public static function deactivate() {
-		wp_clear_scheduled_hook( 'fpml_cleanup_queue' );
+		// Clear all scheduled events
+		$events = array(
+			'fpml_run_queue',
+			'fpml_retry_failed',
+			'fpml_resync_outdated',
+			'fpml_cleanup_queue',
+			'fpml_daily_content_scan',
+			'fpml_health_check',
+		);
+		
+		foreach ( $events as $hook ) {
+			$timestamp = wp_next_scheduled( $hook );
+			while ( false !== $timestamp ) {
+				wp_unschedule_event( $timestamp, $hook );
+				$timestamp = wp_next_scheduled( $hook );
+			}
+		}
+		
+		// Clear single events with args (WordPress 5.1+)
+		if ( function_exists( 'wp_unschedule_hook' ) ) {
+			wp_unschedule_hook( 'fpml_reindex_post_type' );
+			wp_unschedule_hook( 'fpml_reindex_taxonomy' );
+		}
+		
 		flush_rewrite_rules();
 	}
 
