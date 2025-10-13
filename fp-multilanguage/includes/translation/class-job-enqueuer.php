@@ -236,8 +236,15 @@ class FPML_Job_Enqueuer {
 		if ( is_array( $value ) || is_object( $value ) ) {
 			$encoded = wp_json_encode( $value );
 			if ( false === $encoded ) {
-				// JSON encoding failed, use serialize as fallback
-				$value = serialize( $value );
+				// JSON encoding failed, convert to safe string representation
+				// Avoid serialize() due to potential object injection vulnerabilities
+				if ( is_array( $value ) ) {
+					$value = 'array(' . count( $value ) . ')';
+				} elseif ( is_object( $value ) ) {
+					$value = 'object(' . get_class( $value ) . ')';
+				} else {
+					$value = '';
+				}
 			} else {
 				$value = $encoded;
 			}

@@ -670,13 +670,34 @@ class FPML_SEO {
                         $charset = 'UTF-8';
                 }
 
-                $cache_key = $this->get_sitemap_cache_key();
-                $xml       = get_transient( $cache_key );
+		$cache_key = $this->get_sitemap_cache_key();
+		$xml       = get_transient( $cache_key );
 
-                if ( ! is_string( $xml ) || '' === $xml ) {
-                        $xml = $this->build_sitemap_xml();
-                        set_transient( $cache_key, $xml, HOUR_IN_SECONDS );
-                }
+		if ( ! is_string( $xml ) || '' === $xml ) {
+			// Prevent cache stampede: use temporary lock
+			$lock_key = $cache_key . '_lock';
+			$lock     = get_transient( $lock_key );
+			
+			if ( false === $lock ) {
+				// Acquire lock for 30 seconds
+				set_transient( $lock_key, 1, 30 );
+				
+				$xml = $this->build_sitemap_xml();
+				set_transient( $cache_key, $xml, HOUR_IN_SECONDS );
+				
+				// Release lock
+				delete_transient( $lock_key );
+			} else {
+				// Lock exists, wait briefly and retry cache
+				usleep( 100000 ); // 100ms
+				$xml = get_transient( $cache_key );
+				
+				// If still empty, build without lock (failsafe)
+				if ( ! is_string( $xml ) || '' === $xml ) {
+					$xml = $this->build_sitemap_xml();
+				}
+			}
+		}
 
                 nocache_headers();
                 status_header( 200 );
