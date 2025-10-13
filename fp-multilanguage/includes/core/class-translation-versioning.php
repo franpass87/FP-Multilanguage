@@ -261,10 +261,10 @@ class FPML_Translation_Versioning {
 		$sql = "SELECT * FROM {$this->table} 
 				WHERE " . implode( ' AND ', $where ) . "
 				ORDER BY created_at DESC 
-				LIMIT %d";
+				LIMIT " . absint( $limit );
 
 		$results = $wpdb->get_results(
-			$wpdb->prepare( $sql, absint( $limit ) ),
+			$sql,
 			ARRAY_A
 		);
 

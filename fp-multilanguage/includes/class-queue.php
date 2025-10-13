@@ -266,12 +266,18 @@ class FPML_Queue {
                                 $value = '';
                 }
 
-                if ( is_array( $value ) || is_object( $value ) ) {
-                        $value = wp_json_encode( $value );
-                }
+		if ( is_array( $value ) || is_object( $value ) ) {
+			$encoded = wp_json_encode( $value );
+			if ( false === $encoded ) {
+				// JSON encoding failed, use serialize as fallback
+				$value = serialize( $value );
+			} else {
+				$value = $encoded;
+			}
+		}
 
-                $value = (string) $value;
-                $hash  = md5( $value );
+		$value = (string) $value;
+		$hash  = md5( $value );
 
                 $field_identifier = $taxonomy . ':' . $field;
 

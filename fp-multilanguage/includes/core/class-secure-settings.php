@@ -156,7 +156,13 @@ class FPML_Secure_Settings {
 		}
 
 		// Prefix to identify encrypted values
-		return 'ENC:' . base64_encode( $encrypted );
+		$encoded = base64_encode( $encrypted );
+		if ( false === $encoded ) {
+			// Encoding failed, return original
+			return $value;
+		}
+
+		return 'ENC:' . $encoded;
 	}
 
 	/**
@@ -179,7 +185,12 @@ class FPML_Secure_Settings {
 		}
 
 		// Remove prefix
-		$encrypted = base64_decode( substr( $value, 4 ) );
+		$encrypted = base64_decode( substr( $value, 4 ), true );
+
+		if ( false === $encrypted ) {
+			// Decoding failed, return empty to prevent exposure
+			return '';
+		}
 
 		$key = $this->get_encryption_key();
 		$iv  = $this->get_iv( $key );

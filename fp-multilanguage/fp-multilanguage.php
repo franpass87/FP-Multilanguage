@@ -175,39 +175,39 @@ function fpml_register_services() {
 
 	// Translation services.
 	FPML_Container::register( 'translation_manager', function() {
-		return FPML_Translation_Manager::instance();
+		return class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null;
 	} );
 
 	FPML_Container::register( 'job_enqueuer', function() {
-		return FPML_Job_Enqueuer::instance();
+		return class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null;
 	} );
 
 	// Diagnostic services.
 	FPML_Container::register( 'diagnostics', function() {
-		return FPML_Diagnostics::instance();
+		return class_exists( 'FPML_Diagnostics' ) ? FPML_Diagnostics::instance() : null;
 	} );
 
 	FPML_Container::register( 'cost_estimator', function() {
-		return FPML_Cost_Estimator::instance();
+		return class_exists( 'FPML_Cost_Estimator' ) ? FPML_Cost_Estimator::instance() : null;
 	} );
 
 	// Content indexing.
 	FPML_Container::register( 'content_indexer', function() {
-		return FPML_Content_Indexer::instance();
+		return class_exists( 'FPML_Content_Indexer' ) ? FPML_Content_Indexer::instance() : null;
 	} );
 
 	// Translation cache.
 	FPML_Container::register( 'translation_cache', function() {
-		return FPML_Translation_Cache::instance();
+		return class_exists( 'FPML_Translation_Cache' ) ? FPML_Translation_Cache::instance() : null;
 	} );
 
 	// Secure settings.
 	FPML_Container::register( 'secure_settings', function() {
-		return FPML_Secure_Settings::instance();
+		return class_exists( 'FPML_Secure_Settings' ) ? FPML_Secure_Settings::instance() : null;
 	} );
 
 	// Translation versioning.
 	FPML_Container::register( 'translation_versioning', function() {
-		return FPML_Translation_Versioning::instance();
+		return class_exists( 'FPML_Translation_Versioning' ) ? FPML_Translation_Versioning::instance() : null;
 	} );
 }

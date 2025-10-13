@@ -137,13 +137,18 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                         'labels'              => array( 'fpml-domain' => sanitize_key( $domain ) ),
                 );
 
-                $args = array(
-                        'headers' => array(
-                                'Content-Type' => 'application/json',
-                        ),
-                        'timeout' => 45,
-                        'body'    => wp_json_encode( $body ),
-                );
+		$encoded_body = wp_json_encode( $body );
+		if ( false === $encoded_body ) {
+			return new WP_Error( 'fpml_google_encoding_error', __( 'Impossibile codificare il payload JSON per Google Translate.', 'fp-multilanguage' ) );
+		}
+
+		$args = array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+			),
+			'timeout' => 45,
+			'body'    => $encoded_body,
+		);
 
                 $max_attempts = 3;
 
@@ -206,12 +211,17 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                                 return new WP_Error( 'fpml_google_error', sprintf( __( 'Risposta non valida da Google Translate v3 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }
 
-                        $data = json_decode( $body_content, true );
-                        if ( empty( $data['translations'][0]['translatedText'] ) ) {
-                                return new WP_Error( 'fpml_google_empty', __( 'Google Translate v3 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-                        }
+		$data = json_decode( $body_content, true );
 
-                        return (string) $data['translations'][0]['translatedText'];
+		if ( null === $data ) {
+			return new WP_Error( 'fpml_google_invalid_json', __( 'Risposta JSON non valida da Google Translate v3.', 'fp-multilanguage' ) );
+		}
+
+		if ( empty( $data['translations'][0]['translatedText'] ) ) {
+			return new WP_Error( 'fpml_google_empty', __( 'Google Translate v3 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+		}
+
+		return (string) $data['translations'][0]['translatedText'];
                 }
 
                 return new WP_Error( 'fpml_google_unexpected', __( 'Errore imprevisto durante la traduzione con Google Translate v3.', 'fp-multilanguage' ) );

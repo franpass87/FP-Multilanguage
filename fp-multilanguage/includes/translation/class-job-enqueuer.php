@@ -226,7 +226,13 @@ class FPML_Job_Enqueuer {
 	 */
 	protected function hash_value( $value ) {
 		if ( is_array( $value ) || is_object( $value ) ) {
-			$value = wp_json_encode( $value );
+			$encoded = wp_json_encode( $value );
+			if ( false === $encoded ) {
+				// JSON encoding failed, use serialize as fallback
+				$value = serialize( $value );
+			} else {
+				$value = $encoded;
+			}
 		}
 
 		$value = (string) $value;
