@@ -91,26 +91,35 @@ class FPML_Translation_Manager {
 			}
 		}
 
-		$this->creating_translation = true;
+	$this->creating_translation = true;
 
-		$postarr = array(
-			'post_type'      => $post->post_type,
-			'post_status'    => $post->post_status,
-			'post_author'    => $post->post_author,
-			'post_parent'    => $post->post_parent,
-			'menu_order'     => $post->menu_order,
-			'post_password'  => $post->post_password,
-			'comment_status' => $post->comment_status,
-			'ping_status'    => $post->ping_status,
-			'post_title'     => '',
-			'post_content'   => '',
-			'post_excerpt'   => '',
-			'post_name'      => '',
-			'meta_input'     => array(
-				'_fpml_is_translation'  => 1,
-				'_fpml_pair_source_id' => $post->ID,
-			),
-		);
+	// Map parent to its translation if exists
+	$translated_parent = 0;
+	if ( $post->post_parent > 0 ) {
+		$parent_translation_id = get_post_meta( $post->post_parent, '_fpml_pair_id', true );
+		if ( $parent_translation_id ) {
+			$translated_parent = (int) $parent_translation_id;
+		}
+	}
+
+	$postarr = array(
+		'post_type'      => $post->post_type,
+		'post_status'    => $post->post_status,
+		'post_author'    => $post->post_author,
+		'post_parent'    => $translated_parent,
+		'menu_order'     => $post->menu_order,
+		'post_password'  => $post->post_password,
+		'comment_status' => $post->comment_status,
+		'ping_status'    => $post->ping_status,
+		'post_title'     => '',
+		'post_content'   => '',
+		'post_excerpt'   => '',
+		'post_name'      => '',
+		'meta_input'     => array(
+			'_fpml_is_translation'  => 1,
+			'_fpml_pair_source_id' => $post->ID,
+		),
+	);
 
 		$target_id = wp_insert_post( $postarr, true );
 
@@ -204,9 +213,18 @@ class FPML_Translation_Manager {
 	public function create_term_translation( $term ) {
 		$this->creating_term_translation = true;
 
+		// Map parent to its translation if exists
+		$translated_parent = 0;
+		if ( $term->parent > 0 ) {
+			$parent_translation_id = get_term_meta( $term->parent, '_fpml_pair_id', true );
+			if ( $parent_translation_id ) {
+				$translated_parent = (int) $parent_translation_id;
+			}
+		}
+
 		$args = array(
 			'slug'        => $this->generate_translation_slug( $term->slug ),
-			'parent'      => $term->parent,
+			'parent'      => $translated_parent,
 			'description' => '',
 			'meta_input'  => array(
 				'_fpml_is_translation'  => 1,
