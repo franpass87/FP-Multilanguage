@@ -270,17 +270,67 @@ class FPML_Processor {
          *
          * @return bool
          */
-        protected function acquire_lock() {
-                $ttl = (int) apply_filters( 'fpml_processor_lock_ttl', $this->lock_ttl );
+	protected function acquire_lock() {
+		global $wpdb;
 
-                if ( get_transient( $this->lock_key ) ) {
-                        return false;
-                }
+		$ttl = (int) apply_filters( 'fpml_processor_lock_ttl', $this->lock_ttl );
 
-                set_transient( $this->lock_key, gmdate( 'Y-m-d H:i:s' ), $ttl );
+		// Use atomic INSERT IGNORE to prevent race conditions
+		$option_name = '_transient_' . $this->lock_key;
+		$timeout_name = '_transient_timeout_' . $this->lock_key;
+		$lock_value = gmdate( 'Y-m-d H:i:s' );
+		$expiration = time() + $ttl;
 
-                return true;
-        }
+		// Try to insert the lock atomically
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')",
+				$option_name,
+				$lock_value
+			)
+		);
+
+		if ( $result ) {
+			// Successfully acquired lock, set timeout
+			$wpdb->query(
+				$wpdb->prepare(
+					"INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %d, 'no') ON DUPLICATE KEY UPDATE option_value = %d",
+					$timeout_name,
+					$expiration,
+					$expiration
+				)
+			);
+			return true;
+		}
+
+		// Lock already exists, check if it's expired
+		$existing_timeout = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+				$timeout_name
+			)
+		);
+
+		if ( $existing_timeout && $existing_timeout < time() ) {
+			// Lock expired, try to delete and re-acquire
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name IN (%s, %s)",
+					$option_name,
+					$timeout_name
+				)
+			);
+
+			// Recursive call to re-acquire (only once)
+			static $retry_count = 0;
+			if ( $retry_count < 1 ) {
+				$retry_count++;
+				return $this->acquire_lock();
+			}
+		}
+
+		return false;
+	}
 
         /**
          * Release the processor lock.

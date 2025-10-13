@@ -272,12 +272,14 @@ class FPML_Translation_Manager {
 		$slug = sanitize_title( $slug );
 
 		if ( '' === $slug ) {
-			$slug = uniqid( 'fpml-en-' );
+			$slug = uniqid( 'fpml-en-', true );
 		}
 
-		if ( '-en' !== substr( $slug, -3 ) ) {
-			$slug .= '-en';
-		}
+		// Remove existing -en suffix to avoid duplicates
+		$slug = preg_replace( '/-en$/', '', $slug );
+		
+		// Add -en suffix
+		$slug .= '-en';
 
 		return $slug;
 	}
