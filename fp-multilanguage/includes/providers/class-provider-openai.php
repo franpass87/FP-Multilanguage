@@ -189,15 +189,15 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 
 			$data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( null === $data ) {
-				return new WP_Error( 'fpml_openai_invalid_json', __( 'Risposta JSON non valida da OpenAI.', 'fp-multilanguage' ) );
-			}
+		if ( null === $data ) {
+			return new WP_Error( 'fpml_openai_invalid_json', __( 'Risposta JSON non valida da OpenAI.', 'fp-multilanguage' ) );
+		}
 
-			if ( empty( $data['choices'][0]['message']['content'] ) ) {
-				return new WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-			}
+		if ( ! isset( $data['choices'][0]['message']['content'] ) || empty( $data['choices'][0]['message']['content'] ) ) {
+			return new WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+		}
 
-			return (string) $data['choices'][0]['message']['content'];
+		return (string) $data['choices'][0]['message']['content'];
                 }
 
                 return new WP_Error( 'fpml_openai_unexpected', __( 'Errore imprevisto durante la traduzione con OpenAI.', 'fp-multilanguage' ) );

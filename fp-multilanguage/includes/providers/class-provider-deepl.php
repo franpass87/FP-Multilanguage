@@ -180,15 +180,15 @@ class FPML_Provider_DeepL extends FPML_Base_Provider {
 
 			$data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( null === $data ) {
-				return new WP_Error( 'fpml_deepl_invalid_json', __( 'Risposta JSON non valida da DeepL.', 'fp-multilanguage' ) );
-			}
+		if ( null === $data ) {
+			return new WP_Error( 'fpml_deepl_invalid_json', __( 'Risposta JSON non valida da DeepL.', 'fp-multilanguage' ) );
+		}
 
-			if ( empty( $data['translations'][0]['text'] ) ) {
-				return new WP_Error( 'fpml_deepl_empty', __( 'DeepL non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-			}
+		if ( ! isset( $data['translations'][0]['text'] ) || empty( $data['translations'][0]['text'] ) ) {
+			return new WP_Error( 'fpml_deepl_empty', __( 'DeepL non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+		}
 
-			return (string) $data['translations'][0]['text'];
+		return (string) $data['translations'][0]['text'];
                 }
 
                 return new WP_Error( 'fpml_deepl_unexpected', __( 'Errore imprevisto durante la traduzione con DeepL.', 'fp-multilanguage' ) );

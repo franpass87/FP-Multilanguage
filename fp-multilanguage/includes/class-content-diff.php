@@ -186,15 +186,19 @@ class FPML_Content_Diff {
                                         return $matches[0];
                                 }
 
-                                $index       = count( $map );
-                                $hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
-                                $placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
+				$index       = count( $map );
+				$hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
+				$placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
 
-                                while ( isset( $map[ $placeholder ] ) ) {
-                                        $index++;
-                                        $hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
-                                        $placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
-                                }
+				$max_attempts = 1000;
+				$attempts     = 0;
+
+				while ( isset( $map[ $placeholder ] ) && $attempts < $max_attempts ) {
+					$index++;
+					$hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
+					$placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
+					$attempts++;
+				}
 
                                 $map[ $placeholder ] = $matches[0];
 

@@ -213,15 +213,15 @@ class FPML_Provider_Google extends FPML_Base_Provider {
 
 		$data = json_decode( $body_content, true );
 
-		if ( null === $data ) {
-			return new WP_Error( 'fpml_google_invalid_json', __( 'Risposta JSON non valida da Google Translate v3.', 'fp-multilanguage' ) );
-		}
+	if ( null === $data ) {
+		return new WP_Error( 'fpml_google_invalid_json', __( 'Risposta JSON non valida da Google Translate v3.', 'fp-multilanguage' ) );
+	}
 
-		if ( empty( $data['translations'][0]['translatedText'] ) ) {
-			return new WP_Error( 'fpml_google_empty', __( 'Google Translate v3 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-		}
+	if ( ! isset( $data['translations'][0]['translatedText'] ) || empty( $data['translations'][0]['translatedText'] ) ) {
+		return new WP_Error( 'fpml_google_empty', __( 'Google Translate v3 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+	}
 
-		return (string) $data['translations'][0]['translatedText'];
+	return (string) $data['translations'][0]['translatedText'];
                 }
 
                 return new WP_Error( 'fpml_google_unexpected', __( 'Errore imprevisto durante la traduzione con Google Translate v3.', 'fp-multilanguage' ) );
@@ -310,12 +310,17 @@ class FPML_Provider_Google extends FPML_Base_Provider {
                                 return new WP_Error( 'fpml_google_error', sprintf( __( 'Risposta non valida da Google Translate v2 (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }
 
-                        $data = json_decode( $body_content, true );
-                        if ( empty( $data['data']['translations'][0]['translatedText'] ) ) {
-                                return new WP_Error( 'fpml_google_empty', __( 'Google Translate v2 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-                        }
+			$data = json_decode( $body_content, true );
 
-                        return (string) $data['data']['translations'][0]['translatedText'];
+			if ( null === $data ) {
+				return new WP_Error( 'fpml_google_invalid_json', __( 'Risposta JSON non valida da Google Translate v2.', 'fp-multilanguage' ) );
+			}
+
+			if ( ! isset( $data['data']['translations'][0]['translatedText'] ) || empty( $data['data']['translations'][0]['translatedText'] ) ) {
+				return new WP_Error( 'fpml_google_empty', __( 'Google Translate v2 non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+			}
+
+			return (string) $data['data']['translations'][0]['translatedText'];
                 }
 
                 return new WP_Error( 'fpml_google_unexpected', __( 'Errore imprevisto durante la traduzione con Google Translate v2.', 'fp-multilanguage' ) );
