@@ -174,19 +174,27 @@ class FPML_Job_Enqueuer {
 			return array();
 		}
 
-		$parts = preg_split( '/[\n,]+/', $raw );
-		$parts = array_map( 'trim', $parts );
-		$parts = array_filter( $parts );
+	$parts = preg_split( '/[\n,]+/', $raw );
+	if ( false === $parts ) {
+		$parts = array( $raw );
+	}
+	$parts = array_map( 'trim', $parts );
+	$parts = array_filter( $parts );
 
-		$sanitized = array();
+	$sanitized = array();
 
-		foreach ( $parts as $key ) {
-			$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
-
-			if ( '' !== $key ) {
-				$sanitized[] = $key;
-			}
+	foreach ( $parts as $key ) {
+		$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
+		
+		// Handle PCRE error
+		if ( null === $key || false === $key ) {
+			continue;
 		}
+
+		if ( '' !== $key ) {
+			$sanitized[] = $key;
+		}
+	}
 
 		/**
 		 * Allow other components to extend the meta whitelist.

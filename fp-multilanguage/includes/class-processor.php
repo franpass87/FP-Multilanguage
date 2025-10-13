@@ -1117,11 +1117,18 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                 $source_preview     = $this->stringify_value_for_preview( $source_meta );
                                 $translated_preview = $this->stringify_value_for_preview( $translated_value );
                                 $payload_text       = $source_preview;
-                                $characters         = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
-                                $plain_text         = wp_strip_all_tags( $translated_preview );
-                                $plain_text         = preg_replace( '/\s+/u', ' ', $plain_text );
-                                $plain_text         = trim( $plain_text );
-                                $word_count         = '' === $plain_text ? 0 : count( preg_split( '/\s+/u', $plain_text ) );
+				$characters         = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
+				$plain_text         = wp_strip_all_tags( $translated_preview );
+				$plain_text         = preg_replace( '/\s+/u', ' ', $plain_text );
+				
+				// Handle PCRE errors
+				if ( null === $plain_text ) {
+					$plain_text = wp_strip_all_tags( $translated_preview );
+				}
+				
+				$plain_text         = trim( $plain_text );
+				$words              = preg_split( '/\s+/u', $plain_text );
+				$word_count         = ( '' === $plain_text || false === $words ) ? 0 : count( $words );
                                 $provider           = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->get_slug() : '';
                                 $cost               = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->estimate_cost( $payload_text ) : 0.0;
 
@@ -1200,11 +1207,18 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 
                 if ( $this->settings && $this->settings->get( 'sandbox_mode', false ) ) {
                         $payload_text = implode( "\n\n", array_map( 'strval', $chunks ) );
-                        $characters   = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
-                        $plain_text   = wp_strip_all_tags( $new_value );
-                        $plain_text   = preg_replace( '/\s+/u', ' ', $plain_text );
-                        $plain_text   = trim( $plain_text );
-                        $word_count   = '' === $plain_text ? 0 : count( preg_split( '/\s+/u', $plain_text ) );
+			$characters   = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
+			$plain_text   = wp_strip_all_tags( $new_value );
+			$plain_text   = preg_replace( '/\s+/u', ' ', $plain_text );
+			
+			// Handle PCRE errors
+			if ( null === $plain_text ) {
+				$plain_text = wp_strip_all_tags( $new_value );
+			}
+			
+			$plain_text   = trim( $plain_text );
+			$words        = preg_split( '/\s+/u', $plain_text );
+			$word_count   = ( '' === $plain_text || false === $words ) ? 0 : count( $words );
                         $provider     = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->get_slug() : '';
                         $cost         = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->estimate_cost( $payload_text ) : 0.0;
 

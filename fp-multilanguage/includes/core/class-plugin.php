@@ -305,11 +305,13 @@ class FPML_Plugin_Core {
 			new FPML_Admin();
 		}
 
-		if ( ! $this->assisted_mode ) {
-			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
-			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
-			add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
-		}
+	if ( ! $this->assisted_mode ) {
+		add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
+		add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
+		add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
+		add_action( 'before_delete_post', array( $this, 'handle_delete_post' ), 10, 1 );
+		add_action( 'delete_term', array( $this, 'handle_delete_term' ), 10, 3 );
+	}
 	}
 
 	/**
@@ -694,6 +696,75 @@ class FPML_Plugin_Core {
 			$diagnostics = FPML_Diagnostics::instance();
 		}
 
-		return $diagnostics->get_queue_age_summary();
+	return $diagnostics->get_queue_age_summary();
+}
+
+/**
+ * Clean up orphaned pair references when a post is deleted.
+ *
+ * @since 0.4.1
+ *
+ * @param int $post_id Post ID being deleted.
+ *
+ * @return void
+ */
+public function handle_delete_post( $post_id ) {
+	if ( $this->is_assisted_mode() ) {
+		return;
 	}
+
+	// If this is a translation, remove pair_id from source
+	$source_id = get_post_meta( $post_id, '_fpml_pair_source_id', true );
+	if ( $source_id ) {
+		delete_post_meta( $source_id, '_fpml_pair_id' );
+	}
+
+	// If this is a source, optionally delete translation too
+	$translation_id = get_post_meta( $post_id, '_fpml_pair_id', true );
+	if ( $translation_id ) {
+		// Remove pair reference from translation
+		delete_post_meta( $translation_id, '_fpml_pair_source_id' );
+		
+		// Optionally trash the translation (configurable)
+		$auto_delete = apply_filters( 'fpml_auto_delete_translation_on_source_delete', false );
+		if ( $auto_delete ) {
+			wp_trash_post( $translation_id );
+		}
+	}
+}
+
+/**
+ * Clean up orphaned pair references when a term is deleted.
+ *
+ * @since 0.4.1
+ *
+ * @param int    $term_id  Term ID being deleted.
+ * @param int    $tt_id    Term taxonomy ID.
+ * @param string $taxonomy Taxonomy slug.
+ *
+ * @return void
+ */
+public function handle_delete_term( $term_id, $tt_id, $taxonomy ) {
+	if ( $this->is_assisted_mode() ) {
+		return;
+	}
+
+	// If this is a translation, remove pair_id from source
+	$source_id = get_term_meta( $term_id, '_fpml_pair_source_id', true );
+	if ( $source_id ) {
+		delete_term_meta( $source_id, '_fpml_pair_id' );
+	}
+
+	// If this is a source, remove pair reference from translation
+	$translation_id = get_term_meta( $term_id, '_fpml_pair_id', true );
+	if ( $translation_id ) {
+		delete_term_meta( $translation_id, '_fpml_pair_source_id' );
+		
+		// Optionally delete the translation term
+		$auto_delete = apply_filters( 'fpml_auto_delete_translation_term_on_source_delete', false );
+		if ( $auto_delete ) {
+			wp_delete_term( $translation_id, $taxonomy );
+		}
+	}
+}
 }

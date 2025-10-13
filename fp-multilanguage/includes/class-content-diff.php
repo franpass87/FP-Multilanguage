@@ -427,10 +427,15 @@ class FPML_Content_Diff {
          * @return string
          */
         protected function normalize_for_diff( $text ) {
-                $text = is_string( $text ) ? $text : '';
-                $text = wp_strip_all_tags( $text );
-                $text = preg_replace( '/\s+/u', ' ', $text );
+		$text = is_string( $text ) ? $text : '';
+		$text = wp_strip_all_tags( $text );
+		$text = preg_replace( '/\s+/u', ' ', $text );
+		
+		// Handle PCRE error
+		if ( null === $text ) {
+			$text = wp_strip_all_tags( is_string( $text ) ? $text : '' );
+		}
 
-                return trim( $text );
+		return trim( $text );
         }
 }
