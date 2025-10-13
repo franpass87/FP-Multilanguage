@@ -392,10 +392,11 @@ class FPML_Processor {
                         'errors'    => 0,
                 );
 
-                $start_time          = microtime( true );
-                $batch_size          = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
-                $max_chars_per_batch = $this->settings ? (int) $this->settings->get( 'max_chars_per_batch', 20000 ) : 20000;
-                $max_chars_per_batch = max( 0, $max_chars_per_batch );
+		$start_time          = microtime( true );
+		$batch_size          = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
+		$batch_size          = max( 1, min( 100, $batch_size ) ); // Limit 1-100
+		$max_chars_per_batch = $this->settings ? (int) $this->settings->get( 'max_chars_per_batch', 20000 ) : 20000;
+		$max_chars_per_batch = max( 0, min( 1000000, $max_chars_per_batch ) ); // Limit 0-1M
 
                 try {
                         $jobs = $this->queue->claim_batch( $batch_size );

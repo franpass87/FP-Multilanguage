@@ -66,7 +66,70 @@ class FPML_Translation_Cache {
 	 * Constructor.
 	 */
 	protected function __construct() {
-		// Nothing to initialize
+		// Hook to clear cache when content changes
+		add_action( 'save_post', array( $this, 'maybe_invalidate_on_post_save' ), 10, 1 );
+		add_action( 'deleted_post', array( $this, 'maybe_invalidate_on_post_delete' ), 10, 1 );
+		add_action( 'edited_term', array( $this, 'maybe_invalidate_on_term_edit' ), 10, 3 );
+		add_action( 'delete_term', array( $this, 'maybe_invalidate_on_term_delete' ), 10, 3 );
+	}
+
+	/**
+	 * Maybe invalidate cache when post is saved.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return void
+	 */
+	public function maybe_invalidate_on_post_save( $post_id ) {
+		// If this is a translation being updated, we might want to invalidate related cache
+		// For now, we keep cache as translations are immutable once created
+		// This is intentionally left as a hook point for future needs
+	}
+
+	/**
+	 * Maybe invalidate cache when post is deleted.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return void
+	 */
+	public function maybe_invalidate_on_post_delete( $post_id ) {
+		// Cache invalidation on delete - translations are text-based, not post-based
+		// So no action needed here
+	}
+
+	/**
+	 * Maybe invalidate cache when term is edited.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param int    $term_id  Term ID.
+	 * @param int    $tt_id    Term taxonomy ID.
+	 * @param string $taxonomy Taxonomy slug.
+	 *
+	 * @return void
+	 */
+	public function maybe_invalidate_on_term_edit( $term_id, $tt_id, $taxonomy ) {
+		// Similar to posts - text-based cache, not entity-based
+	}
+
+	/**
+	 * Maybe invalidate cache when term is deleted.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @param int    $term_id  Term ID.
+	 * @param int    $tt_id    Term taxonomy ID.
+	 * @param string $taxonomy Taxonomy slug.
+	 *
+	 * @return void
+	 */
+	public function maybe_invalidate_on_term_delete( $term_id, $tt_id, $taxonomy ) {
+		// No action needed - cache is text-based
 	}
 
 	/**
