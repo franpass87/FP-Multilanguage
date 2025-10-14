@@ -127,12 +127,6 @@ function fpml_scan_php_files( $directory ) {
  * @return void
  */
 function fpml_load_files() {
-	// Load Composer autoloader
-	$autoload = FPML_PLUGIN_DIR . 'vendor/autoload.php';
-	if ( is_readable( $autoload ) ) {
-		require $autoload;
-	}
-
 	// Load core classes FIRST
 	$core_classes = array(
 		'includes/core/class-container.php',
