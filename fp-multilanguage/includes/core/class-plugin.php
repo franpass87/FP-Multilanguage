@@ -311,10 +311,9 @@ class FPML_Plugin_Core {
 		}
 
 		// VERSIONE MINIMALE PER AUTO_TRANSLATE
-		// Carico SOLO Processor (fixato) e Auto_Translate (fixato)
 		
 		if ( ! $this->assisted_mode ) {
-			// Solo Processor (dipendenza di Auto_Translate)
+			// Processor (dipendenza di Auto_Translate)
 			FPML_Processor::instance();
 		}
 		
@@ -323,7 +322,24 @@ class FPML_Plugin_Core {
 			FPML_Auto_Translate::instance();
 		}
 		
-		// STOP - nient'altro per ora
+		// REST API
+		if ( class_exists( 'FPML_REST_Admin' ) ) {
+			FPML_REST_Admin::instance();
+		}
+
+		// ADMIN - Necessario per avere il menu!
+		if ( is_admin() ) {
+			new FPML_Admin();
+		}
+
+		// Hook per save_post (necessario per auto-translate)
+		if ( ! $this->assisted_mode ) {
+			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
+			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
+			add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
+			add_action( 'before_delete_post', array( $this, 'handle_delete_post' ), 10, 1 );
+			add_action( 'delete_term', array( $this, 'handle_delete_term' ), 10, 3 );
+		}
 	}
 
 	/**
