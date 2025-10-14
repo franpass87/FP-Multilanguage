@@ -97,8 +97,10 @@ class FPML_Plugin_Core {
 		}
 
 		$this->maybe_disable_autoloaded_options();
-		$this->maybe_run_setup();
 		$this->define_hooks();
+		
+		// Run setup on admin_init (safe, after everything is loaded)
+		add_action( 'admin_init', array( $this, 'maybe_run_setup' ), 1 );
 	}
 
 	/**
@@ -123,7 +125,7 @@ class FPML_Plugin_Core {
 	 *
 	 * @return void
 	 */
-	protected function maybe_run_setup() {
+	public function maybe_run_setup() {
 		// Check if setup is needed
 		if ( ! get_option( 'fpml_needs_setup' ) ) {
 			return;
