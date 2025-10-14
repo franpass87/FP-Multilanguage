@@ -4,7 +4,7 @@ Tags: translation, multilanguage, openai, deepl, google translate, seo
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 8.0
-Stable tag: 0.3.1
+Stable tag: 0.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Plugin Homepage: https://francescopasseri.com
@@ -76,6 +76,34 @@ Open GitHub issues at https://github.com/francescopasseri/FP-Multilanguage/issue
 == Changelog ==
 For the complete history see [CHANGELOG.md](https://github.com/francescopasseri/FP-Multilanguage/blob/main/CHANGELOG.md).
 
+= 0.4.1 - 2025-10-13 =
+**MAJOR SECURITY AND STABILITY UPDATE** - 36 bug fixes including 11 critical vulnerabilities.
+
+**Critical Security Fixes:**
+* Fixed race condition in translation creation preventing duplicate content
+* Fixed race condition in lock mechanism with atomic SQL operations
+* Fixed multisite uninstall leaving data on other sites
+* Fixed orphan references cleanup on post/term deletion
+* Fixed REST API health endpoint accessible without authentication
+* Fixed unsafe serialization with potential object injection
+* Fixed service registration fatal errors
+
+**Bug Fixes:**
+* Fixed memory leak in batch processing (70-90% memory reduction)
+* Fixed cache stampede in sitemap generation
+* Fixed PCRE errors in 6 locations
+* Fixed JSON encoding/decoding errors across all providers
+* Fixed hardcoded LIMIT in cleanup queries for large datasets
+* Fixed post/term parent mapping in hierarchical content
+* Fixed incomplete cron cleanup on deactivation
+
+**Performance:**
+* Optimized large dataset handling with batch processing
+* Improved memory management with explicit cleanup
+* Added cache stampede prevention mechanisms
+
+See CHANGELOG.md for complete details.
+
 = 0.3.1 - 2025-10-01 =
 * Added automatic queue cleanup with retention controls and REST/WP-CLI actions.
 * Improved diagnostics with job age summaries, consent cookie sanitization, and additional helpers.
@@ -91,5 +119,5 @@ For the complete history see [CHANGELOG.md](https://github.com/francescopasseri/
 * Initial development release with Diagnostics dashboard, queue processor, and WP-Cron helpers.
 
 == Upgrade Notice ==
-= 0.3.1 =
-Review the new cleanup retention options and configure retention days to keep the queue size under control.
+= 0.4.1 =
+**CRITICAL UPDATE**: This version fixes 11 critical security vulnerabilities and 25 high/medium priority bugs. Backup your database before upgrading. Test in staging environment first for multisite installations.
