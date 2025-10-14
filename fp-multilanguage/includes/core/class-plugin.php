@@ -80,18 +80,27 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - TEST 4: + logger, translation_manager, job_enqueuer.
+	 * Plugin constructor - COMPLETO.
 	 */
 	protected function __construct() {
 		$this->detect_assisted_mode();
 		
 		$this->settings = FPML_Container::get( 'settings' ) ?: FPML_Settings::instance();
 		$this->queue = FPML_Container::get( 'queue' ) ?: FPML_Queue::instance();
-		
-		// TEST 4: Aggiungi logger, translation_manager, job_enqueuer
-		$this->logger              = FPML_Container::get( 'logger' ) ?: FPML_Logger::instance();
+		$this->logger = FPML_Container::get( 'logger' ) ?: FPML_Logger::instance();
 		$this->translation_manager = FPML_Container::get( 'translation_manager' ) ?: ( class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null );
-		$this->job_enqueuer        = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
+		$this->job_enqueuer = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
+		
+		// TEST 5 FINALE: Aggiungi tutto il resto
+		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
+			$this->queue->maybe_upgrade();
+		}
+		
+		$this->maybe_disable_autoloaded_options();
+		$this->define_hooks();
+		
+		// Run setup on admin_init (safe)
+		add_action( 'admin_init', array( $this, 'maybe_run_setup' ), 1 );
 	}
 
 	/**
