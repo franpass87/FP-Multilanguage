@@ -18,6 +18,10 @@ e questo progetto aderisce al [Versionamento Semantico](https://semver.org/lang/
 - **Nuovo CSS frontend** (`assets/frontend.css`) per selettore di lingua professionale
 - **Nuovo Widget WordPress** "Selettore Lingua FP" con interfaccia drag & drop
 - **Supporto bandierine** 🇮🇹 🇬🇧 per cambio lingua visuale
+- **🎯 INTEGRAZIONE AUTOMATICA MENU** - Il plugin rileva automaticamente il tema e aggiunge le bandierine al menu principale
+- **Temi supportati:** Salient, Astra, GeneratePress, OceanWP, Kadence, Neve, Blocksy, Hello Elementor, Storefront, Divi, Avada, Enfold, Flatsome, The7, Bridge, TwentyTwenty*
+- **Configurazione zero-code:** Attiva dalle impostazioni, scegli stile e posizione
+- **CSS specifico per ogni tema:** Allineamento perfetto con il design del tema
 - **Due stili disponibili:**
   - Inline: link affiancati con separatore
   - Dropdown: menu a tendina compatto
@@ -34,10 +38,15 @@ e questo progetto aderisce al [Versionamento Semantico](https://semver.org/lang/
 
 ### 🔧 Modifiche Tecniche
 
+- **Nuovo file:** `class-theme-compatibility.php` - Sistema di auto-detection e integrazione temi
 - `class-language.php`: Aggiunto metodo `enqueue_frontend_assets()` per caricamento CSS
+- `class-settings.php`: Aggiunte 4 nuove impostazioni per integrazione menu
+- `settings-general.php`: Nuova sezione admin "Integrazione automatica menu" con detection tema
+- `class-plugin.php`: Inizializzazione `FPML_Theme_Compatibility` nel bootstrap
 - `README.md`: Aggiunta sezione "Selettore Lingua (Language Switcher)"
 - Widget registrato automaticamente in `widgets_init`
 - CSS con cache busting tramite `filemtime()`
+- Bandierina cambiata da 🇺🇸 a 🇬🇧 (UK invece di USA)
 
 ### ✨ Miglioramenti
 

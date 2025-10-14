@@ -324,6 +324,11 @@ class FPML_Plugin_Core {
 			FPML_SEO::instance();
 		}
 		
+		// Theme compatibility for language switcher (always loaded)
+		if ( class_exists( 'FPML_Theme_Compatibility' ) ) {
+			FPML_Theme_Compatibility::instance();
+		}
+		
 		// Fase 2: Features che dipendono dalle classi core
 		if ( class_exists( 'FPML_Auto_Translate' ) ) {
 			FPML_Auto_Translate::instance();  // Fixato - lazy loading Processor

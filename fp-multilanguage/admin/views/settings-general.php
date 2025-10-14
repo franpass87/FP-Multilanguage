@@ -225,6 +225,71 @@ $options = isset( $options ) ? $options : array();
 </td>
 </tr>
 <tr>
+<th scope="row"><?php esc_html_e( 'Integrazione automatica menu', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[auto_integrate_menu_switcher]" value="1" <?php checked( $options['auto_integrate_menu_switcher'], true ); ?> />
+<?php esc_html_e( 'Aggiungi automaticamente il selettore lingua al menu principale del tema.', 'fp-multilanguage' ); ?>
+</label>
+<p class="fpml-field-description">
+<?php
+$theme_compat = FPML_Theme_Compatibility::instance();
+$theme_info = $theme_compat->get_theme_info();
+if ( $theme_info['supported'] ) {
+    printf(
+        /* translators: %s: theme name */
+        esc_html__( '✅ Tema rilevato: %s (supportato). Il selettore verrà integrato automaticamente nel menu.', 'fp-multilanguage' ),
+        '<strong>' . esc_html( $theme_info['name'] ) . '</strong>'
+    );
+} else {
+    printf(
+        /* translators: %s: theme name */
+        esc_html__( 'ℹ️ Tema rilevato: %s. Verrà applicato uno stile generico. Per risultati migliori, usa il Widget o lo shortcode.', 'fp-multilanguage' ),
+        '<strong>' . esc_html( $theme_info['name'] ) . '</strong>'
+    );
+}
+?>
+</p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Stile selettore nel menu', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="radio" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[menu_switcher_style]" value="inline" <?php checked( $options['menu_switcher_style'], 'inline' ); ?> />
+<?php esc_html_e( 'Inline (link affiancati)', 'fp-multilanguage' ); ?>
+</label>
+<br />
+<label>
+<input type="radio" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[menu_switcher_style]" value="dropdown" <?php checked( $options['menu_switcher_style'], 'dropdown' ); ?> />
+<?php esc_html_e( 'Dropdown (menu a tendina)', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Bandierine nel menu', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[menu_switcher_show_flags]" value="1" <?php checked( $options['menu_switcher_show_flags'], true ); ?> />
+<?php esc_html_e( 'Mostra bandierine 🇮🇹 🇬🇧 nel selettore del menu.', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Posizione nel menu', 'fp-multilanguage' ); ?></th>
+<td>
+<label>
+<input type="radio" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[menu_switcher_position]" value="end" <?php checked( $options['menu_switcher_position'], 'end' ); ?> />
+<?php esc_html_e( 'Alla fine (dopo tutti i link)', 'fp-multilanguage' ); ?>
+</label>
+<br />
+<label>
+<input type="radio" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[menu_switcher_position]" value="start" <?php checked( $options['menu_switcher_position'], 'start' ); ?> />
+<?php esc_html_e( 'All\'inizio (prima di tutti i link)', 'fp-multilanguage' ); ?>
+</label>
+</td>
+</tr>
+<tr>
 <th scope="row"><?php esc_html_e( 'Elimina dati alla disinstallazione', 'fp-multilanguage' ); ?></th>
 <td>
 <label>
