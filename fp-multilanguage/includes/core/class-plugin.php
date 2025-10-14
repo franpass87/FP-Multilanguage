@@ -80,7 +80,7 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - TEST 5A: + maybe_upgrade.
+	 * Plugin constructor - TEST 5B: + maybe_disable_autoloaded_options.
 	 */
 	protected function __construct() {
 		$this->detect_assisted_mode();
@@ -91,10 +91,12 @@ class FPML_Plugin_Core {
 		$this->translation_manager = FPML_Container::get( 'translation_manager' ) ?: ( class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null );
 		$this->job_enqueuer = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
 		
-		// TEST 5A: Solo maybe_upgrade
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
 		}
+		
+		// TEST 5B: Aggiungi maybe_disable_autoloaded_options
+		$this->maybe_disable_autoloaded_options();
 	}
 
 	/**
