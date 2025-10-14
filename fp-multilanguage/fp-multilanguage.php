@@ -82,14 +82,30 @@ function autoload_fpml_files() {
                 $files = fpml_scan_php_files( $includes_dir );
         }
 
-        if ( ! empty( $files ) ) {
-                $files = array_unique( $files );
-                sort( $files );
-        }
+	if ( ! empty( $files ) ) {
+		$files = array_unique( $files );
+		
+		// Separate core files from other files
+		$core_files = array();
+		$other_files = array();
+		
+		foreach ( $files as $file ) {
+			if ( strpos( $file, DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR ) !== false ) {
+				$core_files[] = $file;
+			} else {
+				$other_files[] = $file;
+			}
+		}
+		
+		// Sort each group separately and load core files first
+		sort( $core_files );
+		sort( $other_files );
+		$files = array_merge( $core_files, $other_files );
+	}
 
-        foreach ( $files as $path ) {
-                require_once $path;
-        }
+	foreach ( $files as $path ) {
+		require_once $path;
+	}
 }
 
 /**
