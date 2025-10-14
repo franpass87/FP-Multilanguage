@@ -109,8 +109,33 @@ class FPML_Language {
         add_action( 'parse_query', array( $this, 'determine_language' ) );
         add_action( 'template_redirect', array( $this, 'maybe_redirect_browser_language' ), 0 );
         add_action( 'template_redirect', array( $this, 'persist_language_cookie' ), 1 );
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
         add_shortcode( 'fp_lang_switcher', array( $this, 'render_switcher' ) );
         add_filter( 'locale', array( $this, 'filter_locale' ) );
+    }
+
+    /**
+     * Enqueue frontend assets for language switcher.
+     *
+     * @since 0.4.2
+     *
+     * @return void
+     */
+    public function enqueue_frontend_assets() {
+        if ( is_admin() ) {
+            return;
+        }
+
+        $css_file = FPML_PLUGIN_DIR . '/assets/frontend.css';
+
+        if ( file_exists( $css_file ) ) {
+            wp_enqueue_style(
+                'fpml-frontend',
+                FPML_PLUGIN_URL . '/assets/frontend.css',
+                array(),
+                filemtime( $css_file )
+            );
+        }
     }
 
     /**

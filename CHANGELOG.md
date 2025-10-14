@@ -10,6 +10,42 @@ e questo progetto aderisce al [Versionamento Semantico](https://semver.org/lang/
 - Dashboard analitica con tracciamento costi e metriche prestazioni
 - Glossario avanzato con termini contestuali e parole vietate
 
+## [0.4.2] - 2025-10-14
+
+### 🌐 Nuove Funzionalità
+
+#### Language Switcher Frontend con Bandierine
+- **Nuovo CSS frontend** (`assets/frontend.css`) per selettore di lingua professionale
+- **Nuovo Widget WordPress** "Selettore Lingua FP" con interfaccia drag & drop
+- **Supporto bandierine** 🇮🇹 🇺🇸 per cambio lingua visuale
+- **Due stili disponibili:**
+  - Inline: link affiancati con separatore
+  - Dropdown: menu a tendina compatto
+- **Design responsive** con font-size adattivo per mobile
+- **Dark mode automatico** che segue le preferenze del sistema
+- **Accessibilità completa** (WCAG 2.1): navigazione tastiera, screen reader, ARIA
+- **Varianti CSS opzionali:** compatto e pills (bordi arrotondati)
+
+#### Documentazione Language Switcher
+- **Guida completa** (`docs/LANGUAGE-SWITCHER-GUIDE.md`) con 3 metodi di utilizzo
+- **Demo HTML interattiva** (`docs/examples/language-switcher-demo.html`)
+- **Esempi pratici** per widget, shortcode e codice PHP
+- **Sezione dedicata nel README** con quick start
+
+### 🔧 Modifiche Tecniche
+
+- `class-language.php`: Aggiunto metodo `enqueue_frontend_assets()` per caricamento CSS
+- `README.md`: Aggiunta sezione "Selettore Lingua (Language Switcher)"
+- Widget registrato automaticamente in `widgets_init`
+- CSS con cache busting tramite `filemtime()`
+
+### ✨ Miglioramenti
+
+- Lo shortcode `[fp_lang_switcher]` (già esistente) ora ha stile CSS professionale
+- Widget dedicato per facilità d'uso senza modificare codice
+- 3 metodi di utilizzo: Widget, Shortcode `[fp_lang_switcher]`, Funzione PHP
+- Supporto SEO: link con `rel="nofollow"` per non sprecare crawl budget
+
 ## [0.4.1] - 2025-10-13
 
 ### 🔐 Correzioni Sicurezza

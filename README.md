@@ -233,6 +233,34 @@ Accedi a **Diagnostici** via **Impostazioni → FP Multilanguage → Diagnostici
 - 📝 Log attività recenti
 - ⚡ Metriche performance
 
+### 🌐 Selettore Lingua (Language Switcher)
+
+Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 🇺🇸 per il frontend.
+
+**3 modi per aggiungerlo al tuo sito:**
+
+1. **Widget WordPress** (più semplice)
+   - Vai in **Aspetto → Widget**
+   - Aggiungi il widget **"Selettore Lingua FP"**
+   - Configura stile e bandierine
+
+2. **Shortcode** (ovunque nel contenuto)
+   ```php
+   [fp_lang_switcher style="inline" show_flags="1"]
+   [fp_lang_switcher style="dropdown" show_flags="1"]
+   ```
+
+3. **Codice PHP** (nei template)
+   ```php
+   <?php echo do_shortcode('[fp_lang_switcher style="inline" show_flags="1"]'); ?>
+   ```
+
+**Opzioni:**
+- `style`: `inline` (link affiancati) o `dropdown` (menu a tendina)
+- `show_flags`: `1` per mostrare bandierine 🇮🇹 🇺🇸
+
+**Vedi**: [`fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md`](fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md) per guida completa.
+
 ---
 
 ## 🖥️ Comandi WP-CLI
