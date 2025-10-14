@@ -164,15 +164,45 @@ function fpml_load_files() {
 }
 
 /**
+ * Bootstrap - Load all files when WordPress is ready.
+ *
+ * @since 0.4.1
+ * @return void
+ */
+function fpml_bootstrap() {
+	fpml_load_files();
+}
+
+/**
+ * Process deferred activation.
+ *
+ * @since 0.4.1
+ * @return void
+ */
+function fpml_do_activation() {
+	if ( get_option( 'fpml_needs_activation' ) ) {
+		delete_option( 'fpml_needs_activation' );
+		
+		if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'activate' ) ) {
+			try {
+				FPML_Plugin::activate();
+			} catch ( Exception $e ) {
+				// Log error but don't crash
+				if ( function_exists( 'error_log' ) ) {
+					error_log( 'FPML Activation Error: ' . $e->getMessage() );
+				}
+			}
+		}
+	}
+}
+
+/**
  * Initialize the plugin.
  *
  * @since 0.2.0
  * @return void
  */
 function fpml_run_plugin() {
-	// Load files first
-	fpml_load_files();
-	
 	if ( ! class_exists( 'FPML_Plugin' ) ) {
 		return;
 	}
@@ -180,29 +210,42 @@ function fpml_run_plugin() {
 	FPML_Plugin::instance();
 }
 
-// Load and initialize on plugins_loaded
-add_action( 'plugins_loaded', 'fpml_run_plugin' );
+// Load files first (priority 1)
+add_action( 'plugins_loaded', 'fpml_bootstrap', 1 );
+
+// Process deferred activation (priority 5)
+add_action( 'plugins_loaded', 'fpml_do_activation', 5 );
+
+// Initialize plugin (priority 10)
+add_action( 'plugins_loaded', 'fpml_run_plugin', 10 );
 
 /**
- * Activation hook.
+ * Activation hook - only sets a flag, no complex code.
+ *
+ * @since 0.4.1
+ * @return void
  */
 function fpml_activate() {
-	// Load files if not loaded
-	if ( ! class_exists( 'FPML_Plugin' ) ) {
-		fpml_load_files();
-	}
-	
-	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'activate' ) ) {
-		FPML_Plugin::activate();
-	}
+	// Only set a flag - safe operation that never fails
+	update_option( 'fpml_needs_activation', '1', false );
 }
 
 /**
  * Deactivation hook.
+ *
+ * @since 0.4.1
+ * @return void
  */
 function fpml_deactivate() {
 	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'deactivate' ) ) {
-		FPML_Plugin::deactivate();
+		try {
+			FPML_Plugin::deactivate();
+		} catch ( Exception $e ) {
+			// Log error but don't crash
+			if ( function_exists( 'error_log' ) ) {
+				error_log( 'FPML Deactivation Error: ' . $e->getMessage() );
+			}
+		}
 	}
 }
 
