@@ -80,10 +80,10 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - SVUOTATO per debug.
+	 * Plugin constructor - TEST 1: detect_assisted_mode.
 	 */
 	protected function __construct() {
-		// COMPLETAMENTE VUOTO - per test
+		$this->detect_assisted_mode();
 	}
 
 	/**
