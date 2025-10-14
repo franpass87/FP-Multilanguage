@@ -1,6 +1,6 @@
 {
   "name": "fp-multilanguage",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "description": "Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.",
   "author": "Francesco Passeri <info@francescopasseri.com> (https://francescopasseri.com)",
   "homepage": "https://francescopasseri.com",
