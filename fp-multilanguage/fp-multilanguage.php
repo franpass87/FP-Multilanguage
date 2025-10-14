@@ -120,45 +120,53 @@ function fpml_scan_php_files( $directory ) {
         return $php_files;
 }
 
-// Load Composer autoloader
-$autoload = __DIR__ . '/vendor/autoload.php';
-if ( is_readable( $autoload ) ) {
-	require $autoload;
-}
-
-// Load core classes FIRST
-$core_classes = array(
-	'includes/core/class-container.php',
-	'includes/core/class-plugin.php',
-	'includes/core/class-secure-settings.php',
-	'includes/core/class-translation-cache.php',
-	'includes/core/class-translation-versioning.php',
-);
-
-foreach ( $core_classes as $core_class ) {
-	$file = FPML_PLUGIN_DIR . $core_class;
-	if ( file_exists( $file ) && is_readable( $file ) ) {
-		require_once $file;
+/**
+ * Bootstrap the plugin - load all files.
+ *
+ * @since 0.4.1
+ * @return void
+ */
+function fpml_load_files() {
+	// Load Composer autoloader
+	$autoload = FPML_PLUGIN_DIR . 'vendor/autoload.php';
+	if ( is_readable( $autoload ) ) {
+		require $autoload;
 	}
-}
 
-// Load all other includes
-autoload_fpml_files();
+	// Load core classes FIRST
+	$core_classes = array(
+		'includes/core/class-container.php',
+		'includes/core/class-plugin.php',
+		'includes/core/class-secure-settings.php',
+		'includes/core/class-translation-cache.php',
+		'includes/core/class-translation-versioning.php',
+	);
 
-// Register services
-fpml_register_services();
+	foreach ( $core_classes as $core_class ) {
+		$file = FPML_PLUGIN_DIR . $core_class;
+		if ( file_exists( $file ) && is_readable( $file ) ) {
+			require_once $file;
+		}
+	}
 
-// Load admin, REST, CLI
-if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
-}
+	// Load all other includes
+	autoload_fpml_files();
 
-if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
-}
+	// Register services
+	fpml_register_services();
 
-if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
+	// Load admin, REST, CLI
+	if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
+	}
+
+	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
+	}
+
+	if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
+	}
 }
 
 /**
@@ -168,6 +176,9 @@ if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-
  * @return void
  */
 function fpml_run_plugin() {
+	// Load files first
+	fpml_load_files();
+	
 	if ( ! class_exists( 'FPML_Plugin' ) ) {
 		return;
 	}
@@ -175,10 +186,34 @@ function fpml_run_plugin() {
 	FPML_Plugin::instance();
 }
 
+// Load and initialize on plugins_loaded
 add_action( 'plugins_loaded', 'fpml_run_plugin' );
 
-register_activation_hook( __FILE__, array( 'FPML_Plugin', 'activate' ) );
-register_deactivation_hook( __FILE__, array( 'FPML_Plugin', 'deactivate' ) );
+/**
+ * Activation hook.
+ */
+function fpml_activate() {
+	// Load files if not loaded
+	if ( ! class_exists( 'FPML_Plugin' ) ) {
+		fpml_load_files();
+	}
+	
+	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'activate' ) ) {
+		FPML_Plugin::activate();
+	}
+}
+
+/**
+ * Deactivation hook.
+ */
+function fpml_deactivate() {
+	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'deactivate' ) ) {
+		FPML_Plugin::deactivate();
+	}
+}
+
+register_activation_hook( __FILE__, 'fpml_activate' );
+register_deactivation_hook( __FILE__, 'fpml_deactivate' );
 
 /**
  * Register services in the dependency container.
