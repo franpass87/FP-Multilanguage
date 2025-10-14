@@ -80,7 +80,7 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - TEST 5B: + maybe_disable_autoloaded_options.
+	 * Plugin constructor - TEST 5C: + define_hooks [CRITICO].
 	 */
 	protected function __construct() {
 		$this->detect_assisted_mode();
@@ -95,8 +95,10 @@ class FPML_Plugin_Core {
 			$this->queue->maybe_upgrade();
 		}
 		
-		// TEST 5B: Aggiungi maybe_disable_autoloaded_options
 		$this->maybe_disable_autoloaded_options();
+		
+		// TEST 5C: Aggiungi define_hooks - QUESTA È SOSPETTA!
+		$this->define_hooks();
 	}
 
 	/**
