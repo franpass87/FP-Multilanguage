@@ -120,6 +120,47 @@ function fpml_scan_php_files( $directory ) {
         return $php_files;
 }
 
+// Load Composer autoloader
+$autoload = __DIR__ . '/vendor/autoload.php';
+if ( is_readable( $autoload ) ) {
+	require $autoload;
+}
+
+// Load core classes FIRST
+$core_classes = array(
+	'includes/core/class-container.php',
+	'includes/core/class-plugin.php',
+	'includes/core/class-secure-settings.php',
+	'includes/core/class-translation-cache.php',
+	'includes/core/class-translation-versioning.php',
+);
+
+foreach ( $core_classes as $core_class ) {
+	$file = FPML_PLUGIN_DIR . $core_class;
+	if ( file_exists( $file ) && is_readable( $file ) ) {
+		require_once $file;
+	}
+}
+
+// Load all other includes
+autoload_fpml_files();
+
+// Register services
+fpml_register_services();
+
+// Load admin, REST, CLI
+if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
+}
+
+if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
+}
+
+if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
+}
+
 /**
  * Initialize the plugin.
  *
@@ -134,63 +175,10 @@ function fpml_run_plugin() {
 	FPML_Plugin::instance();
 }
 
-// Plugin initialization happens after bootstrap
-add_action( 'plugins_loaded', 'fpml_run_plugin', 10 );
+add_action( 'plugins_loaded', 'fpml_run_plugin' );
 
-register_activation_hook( __FILE__, 'fpml_activate_plugin' );
-register_deactivation_hook( __FILE__, 'fpml_deactivate_plugin' );
-
-/**
- * Plugin activation callback.
- *
- * @since 0.4.1
- * @return void
- */
-function fpml_activate_plugin() {
-	// Set a flag for activation - the actual work will be done on plugins_loaded
-	update_option( 'fpml_needs_activation', '1', false );
-}
-
-/**
- * Perform actual activation tasks after WordPress is loaded.
- *
- * @since 0.4.1
- * @return void
- */
-function fpml_do_activation() {
-	// Check if activation is needed
-	if ( ! get_option( 'fpml_needs_activation' ) ) {
-		return;
-	}
-
-	// Delete the flag
-	delete_option( 'fpml_needs_activation' );
-
-	// Now we can safely use WordPress functions and our classes
-	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'activate' ) ) {
-		FPML_Plugin::activate();
-	} elseif ( class_exists( 'FPML_Plugin_Core' ) && method_exists( 'FPML_Plugin_Core', 'activate' ) ) {
-		FPML_Plugin_Core::activate();
-	}
-}
-
-// Run activation tasks after everything is loaded
-add_action( 'plugins_loaded', 'fpml_do_activation', 5 );
-
-/**
- * Plugin deactivation callback.
- *
- * @since 0.4.1
- * @return void
- */
-function fpml_deactivate_plugin() {
-	// Call deactivation method if available
-	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'deactivate' ) ) {
-		FPML_Plugin::deactivate();
-	} elseif ( class_exists( 'FPML_Plugin_Core' ) && method_exists( 'FPML_Plugin_Core', 'deactivate' ) ) {
-		FPML_Plugin_Core::deactivate();
-	}
-}
+register_activation_hook( __FILE__, array( 'FPML_Plugin', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'FPML_Plugin', 'deactivate' ) );
 
 /**
  * Register services in the dependency container.
@@ -254,68 +242,3 @@ function fpml_register_services() {
 		return class_exists( 'FPML_Translation_Versioning' ) ? FPML_Translation_Versioning::instance() : null;
 	} );
 }
-
-// ============================================================================
-// BOOTSTRAP: Load plugin files and initialize
-// ============================================================================
-
-/**
- * Main bootstrap function - called after WordPress is fully loaded.
- *
- * @since 0.4.1
- * @return void
- */
-function fpml_bootstrap() {
-	// Load Composer autoloader
-	$autoload = FPML_PLUGIN_DIR . 'vendor/autoload.php';
-	if ( is_readable( $autoload ) ) {
-		require $autoload;
-	}
-
-	// Load core classes first (required for proper inheritance)
-	$core_classes = array(
-		'includes/core/class-container.php',
-		'includes/core/class-plugin.php',
-		'includes/core/class-secure-settings.php',
-		'includes/core/class-translation-cache.php',
-		'includes/core/class-translation-versioning.php',
-	);
-
-	foreach ( $core_classes as $core_class ) {
-		$file = FPML_PLUGIN_DIR . $core_class;
-		if ( file_exists( $file ) && is_readable( $file ) ) {
-			require_once $file;
-		}
-	}
-
-	// Load all other includes
-	try {
-		autoload_fpml_files();
-	} catch ( Exception $e ) {
-		// Log error but don't break the site
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'FP Multilanguage autoload error: ' . $e->getMessage() );
-		}
-		return; // Stop initialization on error
-	}
-
-	// Register services
-	fpml_register_services();
-
-	// Load admin, REST API, and CLI components
-	if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
-		require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
-	}
-
-	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
-		require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
-	}
-
-	if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
-		require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
-	}
-}
-
-// CRITICAL: Only load after WordPress is fully initialized
-// This prevents errors during activation when WP functions aren't available yet
-add_action( 'plugins_loaded', 'fpml_bootstrap', 1 );
