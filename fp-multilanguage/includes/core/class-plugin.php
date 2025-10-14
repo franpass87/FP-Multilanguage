@@ -123,13 +123,35 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	public static function activate() {
-		$reason = self::detect_external_multilingual();
-
-		if ( ! $reason ) {
-			FPML_Rewrites::instance()->register_rewrites();
+		// Check if we're in a valid WordPress environment
+		if ( ! function_exists( 'flush_rewrite_rules' ) ) {
+			return;
 		}
 
-		FPML_Queue::instance()->install();
+		$reason = self::detect_external_multilingual();
+
+		// Register rewrites if not in assisted mode
+		if ( ! $reason && class_exists( 'FPML_Rewrites' ) ) {
+			try {
+				FPML_Rewrites::instance()->register_rewrites();
+			} catch ( Exception $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'FPML activation - rewrites error: ' . $e->getMessage() );
+				}
+			}
+		}
+
+		// Install queue tables
+		if ( class_exists( 'FPML_Queue' ) ) {
+			try {
+				FPML_Queue::instance()->install();
+			} catch ( Exception $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'FPML activation - queue error: ' . $e->getMessage() );
+				}
+			}
+		}
+
 		flush_rewrite_rules();
 	}
 

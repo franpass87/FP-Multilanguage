@@ -19,52 +19,6 @@ define( 'FPML_PLUGIN_FILE', __FILE__ );
 define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-$autoload = __DIR__ . '/vendor/autoload.php';
-
-if ( is_readable( $autoload ) ) {
-        require $autoload;
-}
-
-// Load core classes first (required for proper inheritance)
-$core_classes = array(
-	'includes/core/class-container.php',
-	'includes/core/class-plugin.php',
-	'includes/core/class-secure-settings.php',
-	'includes/core/class-translation-cache.php',
-	'includes/core/class-translation-versioning.php',
-);
-
-foreach ( $core_classes as $core_class ) {
-	$file = FPML_PLUGIN_DIR . $core_class;
-	if ( file_exists( $file ) ) {
-		require_once $file;
-	}
-}
-
-// Then load all other includes
-try {
-	autoload_fpml_files();
-} catch ( Exception $e ) {
-	// Log error but don't break the site
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( 'FP Multilanguage autoload error: ' . $e->getMessage() );
-	}
-}
-
-fpml_register_services();
-
-if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
-}
-
-if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
-}
-
-if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
-	require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
-}
-
 /**
  * Require plugin includes.
  *
@@ -192,15 +146,27 @@ register_deactivation_hook( __FILE__, 'fpml_deactivate_plugin' );
  * @return void
  */
 function fpml_activate_plugin() {
-	// Ensure all classes are loaded.
-	if ( ! class_exists( 'FPML_Plugin' ) && ! class_exists( 'FPML_Plugin_Core' ) ) {
-		return;
+	// Load core classes if not already loaded
+	$core_files = array(
+		FPML_PLUGIN_DIR . 'includes/core/class-container.php',
+		FPML_PLUGIN_DIR . 'includes/core/class-plugin.php',
+		FPML_PLUGIN_DIR . 'includes/class-plugin.php',
+		FPML_PLUGIN_DIR . 'includes/class-settings.php',
+		FPML_PLUGIN_DIR . 'includes/class-queue.php',
+		FPML_PLUGIN_DIR . 'includes/class-rewrites.php',
+	);
+
+	foreach ( $core_files as $file ) {
+		if ( file_exists( $file ) ) {
+			require_once $file;
+		}
 	}
 
-	$class = class_exists( 'FPML_Plugin' ) ? 'FPML_Plugin' : 'FPML_Plugin_Core';
-	
-	if ( method_exists( $class, 'activate' ) ) {
-		call_user_func( array( $class, 'activate' ) );
+	// Call activation method
+	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'activate' ) ) {
+		FPML_Plugin::activate();
+	} elseif ( class_exists( 'FPML_Plugin_Core' ) && method_exists( 'FPML_Plugin_Core', 'activate' ) ) {
+		FPML_Plugin_Core::activate();
 	}
 }
 
@@ -211,15 +177,11 @@ function fpml_activate_plugin() {
  * @return void
  */
 function fpml_deactivate_plugin() {
-	// Ensure all classes are loaded.
-	if ( ! class_exists( 'FPML_Plugin' ) && ! class_exists( 'FPML_Plugin_Core' ) ) {
-		return;
-	}
-
-	$class = class_exists( 'FPML_Plugin' ) ? 'FPML_Plugin' : 'FPML_Plugin_Core';
-	
-	if ( method_exists( $class, 'deactivate' ) ) {
-		call_user_func( array( $class, 'deactivate' ) );
+	// Call deactivation method if available
+	if ( class_exists( 'FPML_Plugin' ) && method_exists( 'FPML_Plugin', 'deactivate' ) ) {
+		FPML_Plugin::deactivate();
+	} elseif ( class_exists( 'FPML_Plugin_Core' ) && method_exists( 'FPML_Plugin_Core', 'deactivate' ) ) {
+		FPML_Plugin_Core::deactivate();
 	}
 }
 
@@ -284,4 +246,57 @@ function fpml_register_services() {
 	FPML_Container::register( 'translation_versioning', function() {
 		return class_exists( 'FPML_Translation_Versioning' ) ? FPML_Translation_Versioning::instance() : null;
 	} );
+}
+
+// ============================================================================
+// BOOTSTRAP: Load plugin files and initialize
+// ============================================================================
+
+// Load Composer autoloader
+$autoload = __DIR__ . '/vendor/autoload.php';
+if ( is_readable( $autoload ) ) {
+	require $autoload;
+}
+
+// Load core classes first (required for proper inheritance)
+$core_classes = array(
+	'includes/core/class-container.php',
+	'includes/core/class-plugin.php',
+	'includes/core/class-secure-settings.php',
+	'includes/core/class-translation-cache.php',
+	'includes/core/class-translation-versioning.php',
+);
+
+foreach ( $core_classes as $core_class ) {
+	$file = FPML_PLUGIN_DIR . $core_class;
+	if ( file_exists( $file ) && is_readable( $file ) ) {
+		require_once $file;
+	}
+}
+
+// Load all other includes
+try {
+	autoload_fpml_files();
+} catch ( Exception $e ) {
+	// Log error but don't break the site
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( 'FP Multilanguage autoload error: ' . $e->getMessage() );
+	}
+	return; // Stop initialization on error
+}
+
+// Register services
+fpml_register_services();
+
+// Load admin, REST API, and CLI components
+if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
+}
+
+if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
+}
+
+if ( defined( 'WP_CLI' ) && WP_CLI && file_exists( FPML_PLUGIN_DIR . 'cli/class-cli.php' ) ) {
+	require_once FPML_PLUGIN_DIR . 'cli/class-cli.php';
 }

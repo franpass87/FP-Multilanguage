@@ -55,10 +55,19 @@ return self::$instance;
  * Constructor.
  */
 protected function __construct() {
-$this->settings = wp_parse_args( get_option( self::OPTION_KEY, array() ), $this->get_defaults() );
-        add_action( 'admin_init', array( $this, 'register_settings' ) );
-        add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
-        add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
+	$saved_settings = get_option( self::OPTION_KEY, array() );
+	$defaults = $this->get_defaults();
+	
+	// Use wp_parse_args if available, otherwise manual merge
+	if ( function_exists( 'wp_parse_args' ) ) {
+		$this->settings = wp_parse_args( $saved_settings, $defaults );
+	} else {
+		$this->settings = is_array( $saved_settings ) ? array_merge( $defaults, $saved_settings ) : $defaults;
+	}
+	
+	add_action( 'admin_init', array( $this, 'register_settings' ) );
+	add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
+	add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
 /**

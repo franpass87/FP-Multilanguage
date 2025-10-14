@@ -102,9 +102,19 @@ class FPML_Queue {
         public function install() {
                 global $wpdb;
 
-                require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+                // Check if upgrade.php exists before requiring it
+                $upgrade_file = ABSPATH . 'wp-admin/includes/upgrade.php';
+                if ( file_exists( $upgrade_file ) ) {
+                        require_once $upgrade_file;
+                }
 
-                $charset_collate = $wpdb->get_charset_collate();
+                // Check if dbDelta function is available
+                if ( ! function_exists( 'dbDelta' ) ) {
+                        // Cannot create table without dbDelta
+                        return;
+                }
+
+                $charset_collate = method_exists( $wpdb, 'get_charset_collate' ) ? $wpdb->get_charset_collate() : '';
                 $table           = $this->get_table();
 
                 $sql = "CREATE TABLE {$table} (

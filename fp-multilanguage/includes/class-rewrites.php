@@ -56,6 +56,11 @@ class FPML_Rewrites {
      * @return void
      */
     public function register_rewrites() {
+        // Check if rewrite functions are available
+        if ( ! function_exists( 'add_rewrite_rule' ) || ! function_exists( 'add_rewrite_tag' ) ) {
+            return;
+        }
+
         $settings = FPML_Settings::instance();
 
         if ( $settings->get( 'sitemap_en', true ) ) {
