@@ -128,6 +128,11 @@ public function get_defaults() {
 			'enable_acf_support'        => true,
 			'setup_completed'           => false,
 			'enable_email_notifications' => false,
+			// Menu language switcher integration (0.4.2+).
+			'auto_integrate_menu_switcher' => true,
+			'menu_switcher_style'          => 'inline',
+			'menu_switcher_show_flags'     => true,
+			'menu_switcher_position'       => 'end',
 		);
 }
 

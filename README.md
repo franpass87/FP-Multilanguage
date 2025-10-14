@@ -233,6 +233,40 @@ Accedi a **Diagnostici** via **Impostazioni → FP Multilanguage → Diagnostici
 - 📝 Log attività recenti
 - ⚡ Metriche performance
 
+### 🌐 Selettore Lingua (Language Switcher)
+
+Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 🇬🇧 per il frontend.
+
+#### ⚡ Integrazione Automatica Menu (NUOVO!)
+
+Il plugin **rileva automaticamente** il tuo tema e aggiunge le bandierine al menu principale!
+
+**Temi supportati:** Salient, Astra, GeneratePress, OceanWP, Kadence, Neve, Divi, Avada, Enfold, e altri.
+
+**Configurazione:**
+1. Vai in **Impostazioni → FP Multilanguage → General**
+2. Attiva **"Integrazione automatica menu"**
+3. Scegli stile (inline/dropdown), bandierine, e posizione
+4. **Fatto!** Le bandierine appaiono automaticamente nel menu
+
+#### Altri Metodi di Integrazione:
+
+1. **Widget WordPress**
+   - Vai in **Aspetto → Widget**
+   - Aggiungi il widget **"Selettore Lingua FP"**
+
+2. **Shortcode**
+   ```php
+   [fp_lang_switcher style="inline" show_flags="1"]
+   ```
+
+3. **Codice PHP**
+   ```php
+   <?php echo do_shortcode('[fp_lang_switcher style="inline" show_flags="1"]'); ?>
+   ```
+
+**Vedi**: [`fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md`](fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md) per guida completa.
+
 ---
 
 ## 🖥️ Comandi WP-CLI
