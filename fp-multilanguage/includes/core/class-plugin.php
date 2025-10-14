@@ -80,13 +80,15 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - TEST 2: + settings.
+	 * Plugin constructor - TEST 3: + queue.
 	 */
 	protected function __construct() {
 		$this->detect_assisted_mode();
 		
-		// TEST 2: Aggiungi settings
 		$this->settings = FPML_Container::get( 'settings' ) ?: FPML_Settings::instance();
+		
+		// TEST 3: Aggiungi queue
+		$this->queue = FPML_Container::get( 'queue' ) ?: FPML_Queue::instance();
 	}
 
 	/**
