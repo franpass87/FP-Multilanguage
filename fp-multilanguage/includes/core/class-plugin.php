@@ -310,29 +310,74 @@ class FPML_Plugin_Core {
 			FPML_Webhooks::instance();
 		}
 
-		// VERSIONE MINIMALE PER AUTO_TRANSLATE
+		// === REFACTORING COMPLETO ===
+		// Ordine caricamento ottimizzato per evitare dipendenze circolari
 		
+		// Fase 1: Classi core (PRIMA di tutto)
 		if ( ! $this->assisted_mode ) {
-			// Processor (dipendenza di Auto_Translate)
-			FPML_Processor::instance();
+			FPML_Rewrites::instance();
+			FPML_Language::instance();
+			FPML_Content_Diff::instance();
+			FPML_Processor::instance();  // Fixato - no dipendenza circolare
+			FPML_Menu_Sync::instance();
+			FPML_Media_Front::instance();
+			FPML_SEO::instance();
 		}
 		
-		// Auto_Translate (fixato con lazy loading)
+		// Fase 2: Features che dipendono dalle classi core
 		if ( class_exists( 'FPML_Auto_Translate' ) ) {
-			FPML_Auto_Translate::instance();
+			FPML_Auto_Translate::instance();  // Fixato - lazy loading Processor
 		}
 		
-		// REST API
+		if ( class_exists( 'FPML_Auto_Detection' ) ) {
+			FPML_Auto_Detection::instance();
+			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
+			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
+		}
+
+		// Fase 3: Features opzionali
+		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
+			FPML_SEO_Optimizer::instance();
+		}
+
+		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
+			FPML_Setup_Wizard::instance();
+		}
+
+		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
+			FPML_Provider_Fallback::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Relink' ) ) {
+			FPML_Auto_Relink::instance();
+		}
+
+		if ( class_exists( 'FPML_Dashboard_Widget' ) ) {
+			FPML_Dashboard_Widget::instance();
+		}
+
+		if ( class_exists( 'FPML_Rush_Mode' ) ) {
+			FPML_Rush_Mode::instance();
+		}
+
+		if ( class_exists( 'FPML_Featured_Image_Sync' ) ) {
+			FPML_Featured_Image_Sync::instance();
+		}
+
+		if ( class_exists( 'FPML_ACF_Support' ) ) {
+			FPML_ACF_Support::instance();
+		}
+
+		// Fase 4: REST API e Admin
 		if ( class_exists( 'FPML_REST_Admin' ) ) {
 			FPML_REST_Admin::instance();
 		}
 
-		// ADMIN - Necessario per avere il menu!
 		if ( is_admin() ) {
 			new FPML_Admin();
 		}
 
-		// Hook per save_post (necessario per auto-translate)
+		// Fase 5: Hook per gestione contenuti
 		if ( ! $this->assisted_mode ) {
 			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
 			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );

@@ -79,7 +79,7 @@ class FPML_Auto_Detection {
 	 */
 	protected function __construct() {
 		$this->logger = FPML_Logger::instance();
-		$this->plugin = FPML_Plugin::instance();
+		// Rimossa dipendenza da FPML_Plugin::instance() - non utilizzata
 
 		// Hook su registrazione post types e tassonomie.
 		add_action( 'registered_post_type', array( $this, 'on_post_type_registered' ), 10, 2 );

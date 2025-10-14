@@ -157,12 +157,14 @@ class FPML_Auto_Translate {
 	 * @return void
 	 */
 	protected function translate_immediately( $post ) {
-		// Crea/ottieni il post tradotto.
-		$plugin      = FPML_Plugin::instance();
+		// Crea/ottieni il post tradotto - senza dipendenza da FPML_Plugin
 		$target_post = null;
-
-		if ( method_exists( $plugin, 'ensure_post_translation' ) ) {
-			$target_post = $plugin->ensure_post_translation( $post );
+		
+		if ( class_exists( 'FPML_Translation_Manager' ) ) {
+			$translation_manager = FPML_Translation_Manager::instance();
+			if ( method_exists( $translation_manager, 'ensure_post_translation' ) ) {
+				$target_post = $translation_manager->ensure_post_translation( $post );
+			}
 		}
 
 		if ( ! $target_post ) {

@@ -80,7 +80,8 @@ const MENU_SLUG = 'fpml-settings';
                 $this->overrides = FPML_Strings_Override::instance();
                 $this->glossary  = FPML_Glossary::instance();
                 $this->exporter  = FPML_Export_Import::instance();
-                $this->plugin    = FPML_Plugin::instance();
+                // Rimossa dipendenza circolare - lazy loading
+                $this->plugin    = null;
 
                 add_action( 'admin_menu', array( $this, 'register_menu' ) );
                 add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
@@ -104,6 +105,18 @@ const MENU_SLUG = 'fpml-settings';
                 add_action( 'pre_get_posts', array( $this, 'handle_language_filter_query' ) );
                 add_filter( 'the_title', array( $this, 'maybe_add_translation_badge' ), 10, 2 );
     }
+
+	/**
+	 * Get plugin instance (lazy loading).
+	 *
+	 * @return FPML_Plugin|null
+	 */
+	protected function get_plugin() {
+		if ( null === $this->plugin && class_exists( 'FPML_Plugin' ) ) {
+			$this->plugin = FPML_Plugin::instance();
+		}
+		return $this->plugin;
+	}
 
 /**
  * Register admin menu.
@@ -168,7 +181,7 @@ public function render_settings_page() {
         $overrides = $this->overrides;
         $glossary  = $this->glossary;
         $exporter  = $this->exporter;
-        $plugin    = $this->plugin instanceof FPML_Plugin ? $this->plugin : FPML_Plugin::instance();
+        $plugin    = $this->get_plugin();
         $diagnostics_snapshot = array();
 
         if ( 'diagnostics' === $current_tab ) {
@@ -1008,7 +1021,8 @@ protected function get_tabs() {
             return;
         }
 
-        if ( $this->plugin instanceof FPML_Plugin && $this->plugin->is_assisted_mode() ) {
+        $plugin = $this->get_plugin();
+        if ( $plugin && method_exists( $plugin, 'is_assisted_mode' ) && $plugin->is_assisted_mode() ) {
             return;
         }
 

@@ -122,9 +122,7 @@ class FPML_Processor {
          * Constructor.
          */
         protected function __construct() {
-                // NON chiamare FPML_Plugin::instance() qui - causa dipendenza circolare!
-                // $this->plugin verrà impostato on-demand quando serve
-                $this->plugin = null;
+                // Nessuna dipendenza da FPML_Plugin - refactoring completato
                 $this->assisted_mode = false;
 
                 $this->queue    = FPML_Queue::instance();
@@ -657,11 +655,10 @@ class FPML_Processor {
                         return;
                 }
 
-                $states = array();
-
-                if ( $this->plugin && method_exists( $this->plugin, 'get_queue_cleanup_states' ) ) {
-                        $states = $this->plugin->get_queue_cleanup_states();
-                }
+                // Ottieni cleanup states - senza dipendenza da $this->plugin
+                $states = apply_filters( 'fpml_queue_cleanup_states', array( 'done', 'skipped', 'error' ) );
+                $states = array_filter( array_map( 'sanitize_key', (array) $states ) );
+                $states = array_values( array_unique( $states ) );
 
                 if ( empty( $states ) ) {
                         return;
