@@ -289,7 +289,7 @@ class FPML_Plugin_Core {
 	}
 
 	/**
-	 * Define hooks and bootstrap classes - TEST 5C-2: Prime 3 classi.
+	 * Define hooks and bootstrap classes.
 	 *
 	 * @since 0.2.0
 	 *
@@ -304,26 +304,16 @@ class FPML_Plugin_Core {
 		FPML_Strings_Override::instance();
 		FPML_Strings_Scanner::instance();
 		FPML_Export_Import::instance();
-		
-		if ( class_exists( 'FPML_Webhooks' ) ) {
-			FPML_Webhooks::instance();
-		}
-		
-		// TEST 5C-10: Aggiungi Health_Check
-		if ( class_exists( 'FPML_Health_Check' ) ) {
-			FPML_Health_Check::instance();
-		}
-		
-		// STOP - test Webhooks + Health_Check
-		return;
 
 		if ( class_exists( 'FPML_Webhooks' ) ) {
 			FPML_Webhooks::instance();
 		}
 
-		if ( class_exists( 'FPML_Health_Check' ) ) {
-			FPML_Health_Check::instance();
-		}
+		// SKIP Health_Check - Causa errore 500 (dipende da Processor non ancora caricato)
+		// Verrà caricato dopo, quando Processor è disponibile
+		// if ( class_exists( 'FPML_Health_Check' ) ) {
+		// 	FPML_Health_Check::instance();
+		// }
 
 		if ( class_exists( 'FPML_Auto_Detection' ) ) {
 			FPML_Auto_Detection::instance();
