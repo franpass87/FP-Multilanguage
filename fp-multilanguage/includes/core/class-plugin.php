@@ -301,9 +301,10 @@ class FPML_Plugin_Core {
 		FPML_Settings::instance();
 		FPML_Logger::instance();
 		FPML_Glossary::instance();
-		
-		// TEST 5C-3: Aggiungi Strings_Override
 		FPML_Strings_Override::instance();
+		
+		// TEST 5C-4: Aggiungi Strings_Scanner
+		FPML_Strings_Scanner::instance();
 		
 		// STOP QUI per test
 		return;
