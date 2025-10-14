@@ -302,9 +302,10 @@ class FPML_Plugin_Core {
 		FPML_Logger::instance();
 		FPML_Glossary::instance();
 		FPML_Strings_Override::instance();
-		
-		// TEST 5C-4: Aggiungi Strings_Scanner
 		FPML_Strings_Scanner::instance();
+		
+		// TEST 5C-5: Aggiungi Export_Import [SOSPETTO!]
+		FPML_Export_Import::instance();
 		
 		// STOP QUI per test
 		return;
