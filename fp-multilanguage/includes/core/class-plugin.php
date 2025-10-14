@@ -97,6 +97,7 @@ class FPML_Plugin_Core {
 		}
 
 		$this->maybe_disable_autoloaded_options();
+		$this->maybe_run_setup();
 		$this->define_hooks();
 	}
 
@@ -116,6 +117,55 @@ class FPML_Plugin_Core {
 	}
 
 	/**
+	 * Run setup tasks if needed (safe - called after everything is loaded).
+	 *
+	 * @since 0.4.1
+	 *
+	 * @return void
+	 */
+	protected function maybe_run_setup() {
+		// Check if setup is needed
+		if ( ! get_option( 'fpml_needs_setup' ) ) {
+			return;
+		}
+
+		// Check if already completed
+		if ( get_option( 'fpml_setup_completed' ) ) {
+			delete_option( 'fpml_needs_setup' );
+			return;
+		}
+
+		// Now it's safe to run setup tasks
+		try {
+			$reason = self::detect_external_multilingual();
+
+			// Register rewrites if not in assisted mode
+			if ( ! $reason && class_exists( 'FPML_Rewrites' ) ) {
+				FPML_Rewrites::instance()->register_rewrites();
+			}
+
+			// Install queue tables
+			if ( $this->queue && method_exists( $this->queue, 'install' ) ) {
+				$this->queue->install();
+			}
+
+			// Flush rewrite rules
+			if ( function_exists( 'flush_rewrite_rules' ) ) {
+				flush_rewrite_rules();
+			}
+
+			// Mark as completed
+			update_option( 'fpml_setup_completed', '1', false );
+			delete_option( 'fpml_needs_setup' );
+		} catch ( Exception $e ) {
+			// Log error but don't break the site
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'FPML setup error: ' . $e->getMessage() );
+			}
+		}
+	}
+
+	/**
 	 * Plugin activation callback.
 	 *
 	 * @since 0.2.0
@@ -123,36 +173,9 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	public static function activate() {
-		// Check if we're in a valid WordPress environment
-		if ( ! function_exists( 'flush_rewrite_rules' ) ) {
-			return;
-		}
-
-		$reason = self::detect_external_multilingual();
-
-		// Register rewrites if not in assisted mode
-		if ( ! $reason && class_exists( 'FPML_Rewrites' ) ) {
-			try {
-				FPML_Rewrites::instance()->register_rewrites();
-			} catch ( Exception $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'FPML activation - rewrites error: ' . $e->getMessage() );
-				}
-			}
-		}
-
-		// Install queue tables
-		if ( class_exists( 'FPML_Queue' ) ) {
-			try {
-				FPML_Queue::instance()->install();
-			} catch ( Exception $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'FPML activation - queue error: ' . $e->getMessage() );
-				}
-			}
-		}
-
-		flush_rewrite_rules();
+		// SAFE ACTIVATION: Just set a flag, do nothing else
+		// Actual setup will happen on first use
+		update_option( 'fpml_needs_setup', '1', false );
 	}
 
 	/**
