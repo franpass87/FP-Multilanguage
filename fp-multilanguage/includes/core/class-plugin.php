@@ -310,37 +310,9 @@ class FPML_Plugin_Core {
 			FPML_Webhooks::instance();
 		}
 
-		// SKIP Health_Check - Causa errore 500
-		// SKIP tutte le altre classi opzionali per ora
+		// SKIP Health_Check - Causa errore 500 (dipendenza circolare con Processor)
 		
-		// Carica solo le classi essenziali NON in assisted mode
-		if ( ! $this->assisted_mode ) {
-			FPML_Rewrites::instance();
-			FPML_Language::instance();
-			FPML_Content_Diff::instance();
-			FPML_Processor::instance();
-			FPML_Menu_Sync::instance();
-			FPML_Media_Front::instance();
-			FPML_SEO::instance();
-		}
-
-		if ( class_exists( 'FPML_REST_Admin' ) ) {
-			FPML_REST_Admin::instance();
-		}
-
-		if ( is_admin() ) {
-			new FPML_Admin();
-		}
-		
-		// Hook per save_post, ecc.
-		if ( ! $this->assisted_mode ) {
-			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
-			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
-			add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
-			add_action( 'before_delete_post', array( $this, 'handle_delete_post' ), 10, 1 );
-			add_action( 'delete_term', array( $this, 'handle_delete_term' ), 10, 3 );
-		}
-
+		// STOP QUI per test - solo classi verificate funzionanti
 	}
 
 	/**
