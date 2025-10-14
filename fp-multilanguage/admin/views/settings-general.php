@@ -20,19 +20,47 @@ $options = isset( $options ) ? $options : array();
 <td>
 <select name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[provider]">
 <option value="">&mdash; <?php esc_html_e( 'Seleziona', 'fp-multilanguage' ); ?> &mdash;</option>
-<option value="openai" <?php selected( $options['provider'], 'openai' ); ?>><?php esc_html_e( 'OpenAI', 'fp-multilanguage' ); ?></option>
-<option value="deepl" <?php selected( $options['provider'], 'deepl' ); ?>><?php esc_html_e( 'DeepL', 'fp-multilanguage' ); ?></option>
-<option value="google" <?php selected( $options['provider'], 'google' ); ?>><?php esc_html_e( 'Google Cloud Translation', 'fp-multilanguage' ); ?></option>
-<option value="libretranslate" <?php selected( $options['provider'], 'libretranslate' ); ?>><?php esc_html_e( 'LibreTranslate', 'fp-multilanguage' ); ?></option>
+<option value="openai" <?php selected( $options['provider'], 'openai' ); ?>>OpenAI (GPT-4o-mini) - <?php esc_html_e( 'Qualità alta, ~$0.15/1000 car.', 'fp-multilanguage' ); ?></option>
+<option value="deepl" <?php selected( $options['provider'], 'deepl' ); ?>>DeepL - <?php esc_html_e( 'Ottima qualità, 500k car./mese gratis', 'fp-multilanguage' ); ?></option>
+<option value="google" <?php selected( $options['provider'], 'google' ); ?>>Google Cloud - <?php esc_html_e( 'Affidabile, $20/milione car.', 'fp-multilanguage' ); ?></option>
+<option value="libretranslate" <?php selected( $options['provider'], 'libretranslate' ); ?>>LibreTranslate - <?php esc_html_e( 'Open source, privacy, gratuito', 'fp-multilanguage' ); ?></option>
 </select>
-<p class="fpml-field-description"><?php esc_html_e( 'Seleziona il provider di traduzione principale. La traduzione viene bloccata se la chiave manca.', 'fp-multilanguage' ); ?></p>
+<p class="fpml-field-description">
+<?php esc_html_e( 'Seleziona il provider di traduzione principale. La traduzione viene bloccata se la chiave manca.', 'fp-multilanguage' ); ?>
+<br />
+<strong><?php esc_html_e( '💡 Suggerimento:', 'fp-multilanguage' ); ?></strong>
+<?php esc_html_e( 'DeepL offre il miglior rapporto qualità/prezzo per iniziare (500.000 caratteri gratis al mese). OpenAI è ottimo per contenuti tecnici. LibreTranslate è ideale per massima privacy.', 'fp-multilanguage' ); ?>
+</p>
 </td>
 </tr>
 <tr>
 <th scope="row"><?php esc_html_e( 'Chiave OpenAI', 'fp-multilanguage' ); ?></th>
 <td>
 <input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_api_key]" value="<?php echo esc_attr( $options['openai_api_key'] ); ?>" autocomplete="off" />
-<p class="fpml-field-description"><?php esc_html_e( 'Richiesto per usare l\'API OpenAI (modello gpt-4o-mini o successivi).', 'fp-multilanguage' ); ?></p>
+<p class="fpml-field-description">
+<?php esc_html_e( 'Richiesto per usare l\'API OpenAI (modello gpt-4o-mini o successivi).', 'fp-multilanguage' ); ?>
+<br />
+<strong><?php esc_html_e( 'Come ottenere la chiave:', 'fp-multilanguage' ); ?></strong>
+<?php
+printf(
+	/* translators: %s: URL to OpenAI API keys page */
+	esc_html__( '1. Vai su %s', 'fp-multilanguage' ),
+	'<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys ↗</a>'
+);
+?>
+<br />
+<?php esc_html_e( '2. Crea un nuovo progetto o selezionane uno esistente', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '3. Clicca "Create new secret key" e copia la chiave (formato: sk-...)', 'fp-multilanguage' ); ?>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to OpenAI pricing page */
+	esc_html__( '💰 Costi: ~$0.15 per 1000 caratteri con gpt-4o-mini. %s', 'fp-multilanguage' ),
+	'<a href="https://openai.com/api/pricing/" target="_blank" rel="noopener">' . esc_html__( 'Vedi prezzi completi ↗', 'fp-multilanguage' ) . '</a>'
+);
+?>
+</p>
 </td>
 </tr>
 <tr>
@@ -46,28 +74,100 @@ $options = isset( $options ) ? $options : array();
 <th scope="row"><?php esc_html_e( 'Chiave DeepL', 'fp-multilanguage' ); ?></th>
 <td>
 <input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[deepl_api_key]" value="<?php echo esc_attr( $options['deepl_api_key'] ); ?>" autocomplete="off" />
+<br />
 <label>
 <input type="checkbox" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[deepl_use_free]" value="1" <?php checked( $options['deepl_use_free'], true ); ?> />
 <?php esc_html_e( 'Uso account DeepL Free', 'fp-multilanguage' ); ?>
 </label>
+<p class="fpml-field-description">
+<strong><?php esc_html_e( 'Come ottenere la chiave:', 'fp-multilanguage' ); ?></strong>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to DeepL signup page */
+	esc_html__( '1. Registrati su %s (piano Free o Pro)', 'fp-multilanguage' ),
+	'<a href="https://www.deepl.com/pro#developer" target="_blank" rel="noopener">deepl.com/pro ↗</a>'
+);
+?>
+<br />
+<?php esc_html_e( '2. Accedi alla tua area account', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '3. Vai su "Account" → "API Keys" e copia la chiave', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '⚠️ IMPORTANTE: Spunta la casella "Uso account DeepL Free" se usi il piano gratuito (endpoint API diverso)', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '💰 Piano Free: 500.000 caratteri/mese gratis. Piano Pro: da €5.49/mese.', 'fp-multilanguage' ); ?>
+</p>
 </td>
 </tr>
 <tr>
 <th scope="row"><?php esc_html_e( 'Google Cloud Translation', 'fp-multilanguage' ); ?></th>
 <td>
-<input type="text" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[google_project_id]" value="<?php echo esc_attr( $options['google_project_id'] ); ?>" placeholder="<?php esc_attr_e( 'Project ID', 'fp-multilanguage' ); ?>" />
+<input type="text" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[google_project_id]" value="<?php echo esc_attr( $options['google_project_id'] ); ?>" placeholder="<?php esc_attr_e( 'Project ID (es: my-project-123)', 'fp-multilanguage' ); ?>" />
 <br />
 <input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[google_api_key]" value="<?php echo esc_attr( $options['google_api_key'] ); ?>" placeholder="<?php esc_attr_e( 'API Key', 'fp-multilanguage' ); ?>" autocomplete="off" />
-<p class="fpml-field-description"><?php esc_html_e( 'Supporto glossario se configurato nel progetto Google.', 'fp-multilanguage' ); ?></p>
+<p class="fpml-field-description">
+<?php esc_html_e( 'Supporto glossario se configurato nel progetto Google.', 'fp-multilanguage' ); ?>
+<br />
+<strong><?php esc_html_e( 'Come ottenere le credenziali:', 'fp-multilanguage' ); ?></strong>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to Google Cloud Console */
+	esc_html__( '1. Vai su %s', 'fp-multilanguage' ),
+	'<a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com ↗</a>'
+);
+?>
+<br />
+<?php esc_html_e( '2. Crea un nuovo progetto o selezionane uno esistente (annota il Project ID)', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '3. Abilita "Cloud Translation API" nella sezione "API e servizi"', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '4. Vai su "Credenziali" → "Crea credenziali" → "Chiave API"', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '5. (Consigliato) Limita la chiave all\'API "Cloud Translation"', 'fp-multilanguage' ); ?>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to Google Cloud pricing page */
+	esc_html__( '💰 Costi: $20 per milione di caratteri. Primi $10/mese gratis con Free Tier. %s', 'fp-multilanguage' ),
+	'<a href="https://cloud.google.com/translate/pricing" target="_blank" rel="noopener">' . esc_html__( 'Vedi prezzi ↗', 'fp-multilanguage' ) . '</a>'
+);
+?>
+</p>
 </td>
 </tr>
 <tr>
 <th scope="row"><?php esc_html_e( 'LibreTranslate', 'fp-multilanguage' ); ?></th>
 <td>
-<input type="url" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[libretranslate_api_url]" value="<?php echo esc_attr( $options['libretranslate_api_url'] ); ?>" placeholder="https://" />
+<input type="url" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[libretranslate_api_url]" value="<?php echo esc_attr( $options['libretranslate_api_url'] ); ?>" placeholder="https://libretranslate.com" />
 <br />
-<input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[libretranslate_api_key]" value="<?php echo esc_attr( $options['libretranslate_api_key'] ); ?>" autocomplete="off" />
-<p class="fpml-field-description"><?php esc_html_e( 'Inserisci endpoint self-hosted per garantire performance e privacy.', 'fp-multilanguage' ); ?></p>
+<input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[libretranslate_api_key]" value="<?php echo esc_attr( $options['libretranslate_api_key'] ); ?>" placeholder="<?php esc_attr_e( 'API Key (opzionale per istanze pubbliche)', 'fp-multilanguage' ); ?>" autocomplete="off" />
+<p class="fpml-field-description">
+<?php esc_html_e( 'Inserisci endpoint self-hosted per garantire performance e privacy.', 'fp-multilanguage' ); ?>
+<br />
+<strong><?php esc_html_e( 'Opzioni disponibili:', 'fp-multilanguage' ); ?></strong>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to LibreTranslate official site */
+	esc_html__( '🌐 Istanza pubblica: %s (gratuita, può richiedere chiave API)', 'fp-multilanguage' ),
+	'<a href="https://libretranslate.com" target="_blank" rel="noopener">libretranslate.com ↗</a>'
+);
+?>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to LibreTranslate GitHub */
+	esc_html__( '🖥️ Self-hosted: Installa sul tuo server seguendo le istruzioni su %s', 'fp-multilanguage' ),
+	'<a href="https://github.com/LibreTranslate/LibreTranslate" target="_blank" rel="noopener">GitHub ↗</a>'
+);
+?>
+<br />
+<?php esc_html_e( '💰 Costi: Gratuito (istanza pubblica con limiti) o costi hosting (self-hosted).', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( '⚡ Consigliato per: Privacy, controllo completo, costi prevedibili.', 'fp-multilanguage' ); ?>
+</p>
 </td>
 </tr>
 <tr>
