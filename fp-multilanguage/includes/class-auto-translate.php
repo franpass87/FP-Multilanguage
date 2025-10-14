@@ -74,13 +74,26 @@ class FPML_Auto_Translate {
 	}
 
 	/**
+	 * Get Processor instance (lazy loading).
+	 *
+	 * @return FPML_Processor|null
+	 */
+	protected function get_processor() {
+		if ( null === $this->processor && class_exists( 'FPML_Processor' ) ) {
+			$this->processor = FPML_Processor::instance();
+		}
+		return $this->processor;
+	}
+
+	/**
 	 * Constructor.
 	 */
 	protected function __construct() {
 		$this->settings  = FPML_Settings::instance();
 		$this->logger    = FPML_Logger::instance();
 		$this->queue     = FPML_Queue::instance();
-		$this->processor = FPML_Processor::instance();
+		// NON chiamare Processor::instance() qui - causa dipendenza circolare!
+		$this->processor = null;
 
 		// Hook su transizione di stato.
 		add_action( 'transition_post_status', array( $this, 'on_post_published' ), 10, 3 );
@@ -196,7 +209,8 @@ class FPML_Auto_Translate {
 		$processed  = 0;
 
 		while ( ( time() - $start_time ) < $timeout_seconds ) {
-			$result = $this->processor->run_queue();
+			$processor = $this->get_processor();
+			$result = $processor ? $processor->run_queue() : null;
 
 			if ( is_wp_error( $result ) ) {
 				break;

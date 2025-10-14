@@ -122,12 +122,10 @@ class FPML_Processor {
          * Constructor.
          */
         protected function __construct() {
-                $plugin       = class_exists( 'FPML_Plugin' ) ? FPML_Plugin::instance() : null;
-                $this->plugin = $plugin;
-
-                if ( $plugin && method_exists( $plugin, 'is_assisted_mode' ) ) {
-                        $this->assisted_mode = $plugin->is_assisted_mode();
-                }
+                // NON chiamare FPML_Plugin::instance() qui - causa dipendenza circolare!
+                // $this->plugin verrà impostato on-demand quando serve
+                $this->plugin = null;
+                $this->assisted_mode = false;
 
                 $this->queue    = FPML_Queue::instance();
                 $this->settings = FPML_Settings::instance();
