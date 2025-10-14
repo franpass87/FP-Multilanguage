@@ -298,10 +298,12 @@ class FPML_Plugin_Core {
 	protected function define_hooks() {
 		load_plugin_textdomain( 'fp-multilanguage', false, dirname( plugin_basename( FPML_PLUGIN_FILE ) ) . '/languages' );
 
-		// TEST: Solo prime 3 classi
 		FPML_Settings::instance();
 		FPML_Logger::instance();
 		FPML_Glossary::instance();
+		
+		// TEST 5C-3: Aggiungi Strings_Override
+		FPML_Strings_Override::instance();
 		
 		// STOP QUI per test
 		return;
