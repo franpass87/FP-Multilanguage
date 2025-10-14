@@ -305,12 +305,16 @@ class FPML_Plugin_Core {
 		FPML_Strings_Scanner::instance();
 		FPML_Export_Import::instance();
 		
-		// TEST 5C-9: Solo Webhooks
 		if ( class_exists( 'FPML_Webhooks' ) ) {
 			FPML_Webhooks::instance();
 		}
 		
-		// STOP - test solo Webhooks
+		// TEST 5C-10: Aggiungi Health_Check
+		if ( class_exists( 'FPML_Health_Check' ) ) {
+			FPML_Health_Check::instance();
+		}
+		
+		// STOP - test Webhooks + Health_Check
 		return;
 
 		if ( class_exists( 'FPML_Webhooks' ) ) {
