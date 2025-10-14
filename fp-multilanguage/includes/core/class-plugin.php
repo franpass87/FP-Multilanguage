@@ -305,22 +305,12 @@ class FPML_Plugin_Core {
 		FPML_Strings_Scanner::instance();
 		FPML_Export_Import::instance();
 		
-		// TEST 5C-8: Solo prime 3 classi opzionali
+		// TEST 5C-9: Solo Webhooks
 		if ( class_exists( 'FPML_Webhooks' ) ) {
 			FPML_Webhooks::instance();
 		}
-
-		if ( class_exists( 'FPML_Health_Check' ) ) {
-			FPML_Health_Check::instance();
-		}
-
-		if ( class_exists( 'FPML_Auto_Detection' ) ) {
-			FPML_Auto_Detection::instance();
-			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
-			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
-		}
 		
-		// STOP - teste solo queste 3
+		// STOP - test solo Webhooks
 		return;
 
 		if ( class_exists( 'FPML_Webhooks' ) ) {
