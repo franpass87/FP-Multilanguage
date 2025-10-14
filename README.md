@@ -235,7 +235,7 @@ Accedi a **Diagnostici** via **Impostazioni → FP Multilanguage → Diagnostici
 
 ### 🌐 Selettore Lingua (Language Switcher)
 
-Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 🇺🇸 per il frontend.
+Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 🇬🇧 per il frontend.
 
 **3 modi per aggiungerlo al tuo sito:**
 
@@ -257,7 +257,7 @@ Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 �
 
 **Opzioni:**
 - `style`: `inline` (link affiancati) o `dropdown` (menu a tendina)
-- `show_flags`: `1` per mostrare bandierine 🇮🇹 🇺🇸
+- `show_flags`: `1` per mostrare bandierine 🇮🇹 🇬🇧
 
 **Vedi**: [`fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md`](fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md) per guida completa.
 

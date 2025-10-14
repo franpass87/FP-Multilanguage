@@ -8,7 +8,7 @@
 
 ## 🎯 Obiettivo
 
-Implementare un sistema completo di **selettore di lingua con bandierine** 🇮🇹 🇺🇸 per permettere agli utenti di cambiare facilmente tra italiano e inglese nel frontend.
+Implementare un sistema completo di **selettore di lingua con bandierine** 🇮🇹 🇬🇧 per permettere agli utenti di cambiare facilmente tra italiano e inglese nel frontend.
 
 ---
 

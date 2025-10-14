@@ -498,7 +498,7 @@ class FPML_Language {
     protected function maybe_prefix_flag( $code ) {
         $flags = array(
             self::SOURCE => '🇮🇹',
-            self::TARGET => '🇺🇸',
+            self::TARGET => '🇬🇧',
         );
 
         if ( ! isset( $flags[ $code ] ) ) {

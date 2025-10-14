@@ -1,4 +1,4 @@
-# 🇮🇹 🇺🇸 Guida al Selettore di Lingua (Language Switcher)
+# 🇮🇹 🇬🇧 Guida al Selettore di Lingua (Language Switcher)
 
 Il plugin **FP Multilanguage** include un selettore di lingua completamente funzionale con supporto per le bandierine.
 
@@ -16,7 +16,7 @@ Il modo più semplice per aggiungere il selettore di lingua al tuo sito:
 4. Configura le opzioni:
    - **Titolo**: (opzionale) es. "Lingua / Language"
    - **Stile**: Scegli tra `Inline` o `Dropdown`
-   - **Mostra bandierine**: Attiva per vedere 🇮🇹 🇺🇸
+   - **Mostra bandierine**: Attiva per vedere 🇮🇹 🇬🇧
 
 **Screenshot impostazioni widget:**
 ```
@@ -25,7 +25,7 @@ Il modo più semplice per aggiungere il selettore di lingua al tuo sito:
 │                                 │
 │ Stile: ▼ Inline                 │
 │                                 │
-│ ☑ Mostra bandierine 🇮🇹 🇺🇸      │
+│ ☑ Mostra bandierine 🇮🇹 🇬🇧      │
 └─────────────────────────────────┘
 ```
 
@@ -82,7 +82,7 @@ if ( function_exists( 'FPML_Language' ) ) {
 Mostra le lingue una accanto all'altra:
 
 ```
-🇮🇹 Italiano  /  🇺🇸 English
+🇮🇹 Italiano  /  🇬🇧 English
 ```
 
 **Caratteristiche:**
@@ -260,11 +260,11 @@ Le bandierine sono definite nel file `includes/class-language.php`:
 ```php
 $flags = array(
     self::SOURCE => '🇮🇹',  // Italia
-    self::TARGET => '🇺🇸',  // Stati Uniti
+    self::TARGET => '🇬🇧',  // Regno Unito
 );
 ```
 
-Puoi cambiarle con altre emoji (es. 🇬🇧 per Regno Unito).
+Puoi cambiarle con altre emoji (es. 🇺🇸 per Stati Uniti, 🇦🇺 per Australia, 🇨🇦 per Canada).
 
 ### Posso aggiungere altre lingue?
 Attualmente il plugin supporta solo italiano ↔ inglese. Per più lingue, dovresti estendere il codice.

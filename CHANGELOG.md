@@ -17,7 +17,7 @@ e questo progetto aderisce al [Versionamento Semantico](https://semver.org/lang/
 #### Language Switcher Frontend con Bandierine
 - **Nuovo CSS frontend** (`assets/frontend.css`) per selettore di lingua professionale
 - **Nuovo Widget WordPress** "Selettore Lingua FP" con interfaccia drag & drop
-- **Supporto bandierine** 🇮🇹 🇺🇸 per cambio lingua visuale
+- **Supporto bandierine** 🇮🇹 🇬🇧 per cambio lingua visuale
 - **Due stili disponibili:**
   - Inline: link affiancati con separatore
   - Dropdown: menu a tendina compatto

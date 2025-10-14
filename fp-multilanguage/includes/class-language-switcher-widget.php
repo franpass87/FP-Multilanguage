@@ -107,7 +107,7 @@ class FPML_Language_Switcher_Widget extends WP_Widget {
                     value="1"
                     <?php checked( $show_flags, true ); ?>
                 />
-                <?php esc_html_e( 'Mostra bandierine 🇮🇹 🇺🇸', 'fp-multilanguage' ); ?>
+                <?php esc_html_e( 'Mostra bandierine 🇮🇹 🇬🇧', 'fp-multilanguage' ); ?>
             </label>
         </p>
         <?php
