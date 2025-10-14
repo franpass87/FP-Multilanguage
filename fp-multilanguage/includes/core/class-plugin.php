@@ -310,9 +310,46 @@ class FPML_Plugin_Core {
 			FPML_Webhooks::instance();
 		}
 
-		// SKIP Health_Check - Causa errore 500 (dipendenza circolare con Processor)
+		// SKIP Health_Check - Causa errore 500
 		
-		// STOP QUI per test - solo classi verificate funzionanti
+		// AGGIUNGO Auto_Detection e Auto_Translate - ESSENZIALI!
+		if ( class_exists( 'FPML_Auto_Detection' ) ) {
+			FPML_Auto_Detection::instance();
+			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
+			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
+		}
+
+		if ( class_exists( 'FPML_Auto_Translate' ) ) {
+			FPML_Auto_Translate::instance();
+		}
+		
+		// Classi CORE per funzionamento base (non in assisted mode)
+		if ( ! $this->assisted_mode ) {
+			FPML_Rewrites::instance();
+			FPML_Language::instance();
+			FPML_Content_Diff::instance();
+			FPML_Processor::instance();
+			FPML_Menu_Sync::instance();
+			FPML_Media_Front::instance();
+			FPML_SEO::instance();
+		}
+
+		if ( class_exists( 'FPML_REST_Admin' ) ) {
+			FPML_REST_Admin::instance();
+		}
+
+		if ( is_admin() ) {
+			new FPML_Admin();
+		}
+
+		// Hook per gestione save_post, ecc.
+		if ( ! $this->assisted_mode ) {
+			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
+			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
+			add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
+			add_action( 'before_delete_post', array( $this, 'handle_delete_post' ), 10, 1 );
+			add_action( 'delete_term', array( $this, 'handle_delete_term' ), 10, 3 );
+		}
 	}
 
 	/**
