@@ -827,7 +827,7 @@ protected function get_tabs() {
 
         $label = $is_translation ? esc_html__( 'EN', 'fp-multilanguage' ) : esc_html__( 'IT', 'fp-multilanguage' );
 
-        echo $label;
+        echo esc_html( $label );
     }
 
     /**
@@ -1118,7 +1118,7 @@ protected function get_tabs() {
             <ul style="margin: 0; padding: 0; list-style: none;">
                 <li style="margin-bottom: 8px; display: flex; justify-content: space-between;">
                     <strong><?php esc_html_e( 'In coda:', 'fp-multilanguage' ); ?></strong>
-                    <span style="<?php echo $pending > 100 ? 'color: #d63638;' : ''; ?>">
+                    <span style="<?php echo esc_attr( $pending > 100 ? 'color: #d63638;' : '' ); ?>">
                         <?php echo esc_html( number_format_i18n( $pending ) ); ?>
                     </span>
                 </li>
@@ -1140,6 +1140,7 @@ protected function get_tabs() {
                     <strong><?php esc_html_e( 'Processore:', 'fp-multilanguage' ); ?></strong>
                     <span>
                         <?php
+                        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Safe inline HTML with escaped strings
                         echo $processor->is_locked() 
                             ? '<span style="color: #d63638;">●</span> ' . esc_html__( 'Occupato', 'fp-multilanguage' )
                             : '<span style="color: #00a32a;">●</span> ' . esc_html__( 'Libero', 'fp-multilanguage' );

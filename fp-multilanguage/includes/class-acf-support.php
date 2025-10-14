@@ -395,14 +395,14 @@ class FPML_ACF_Support {
 				continue;
 			}
 
-			// Trova layout config.
-			$layout_config = null;
-			foreach ( $field['layouts'] as $l ) {
-				if ( $l['name'] === $layout ) {
-					$layout_config = $l;
-					break;
-				}
+		// Trova layout config.
+		$layout_config = null;
+		foreach ( $field['layouts'] as $l ) {
+			if ( isset( $l['name'] ) && $l['name'] === $layout ) {
+				$layout_config = $l;
+				break;
 			}
+		}
 
 			if ( ! $layout_config || empty( $layout_config['sub_fields'] ) ) {
 				continue;
