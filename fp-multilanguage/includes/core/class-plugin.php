@@ -310,77 +310,20 @@ class FPML_Plugin_Core {
 			FPML_Webhooks::instance();
 		}
 
-		// SKIP Health_Check - Causa errore 500 (dipendenza circolare)
-
-		if ( class_exists( 'FPML_Auto_Detection' ) ) {
-			FPML_Auto_Detection::instance();
-			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
-			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
-		}
-
-		// Carica classi core SENZA assisted_mode
+		// VERSIONE MINIMALE PER AUTO_TRANSLATE
+		// Carico SOLO Processor (fixato) e Auto_Translate (fixato)
+		
 		if ( ! $this->assisted_mode ) {
-			FPML_Rewrites::instance();
-			FPML_Language::instance();
-			FPML_Content_Diff::instance();
-			FPML_Processor::instance();  // Ora fixato - no dipendenza circolare
-			FPML_Menu_Sync::instance();
-			FPML_Media_Front::instance();
-			FPML_SEO::instance();
+			// Solo Processor (dipendenza di Auto_Translate)
+			FPML_Processor::instance();
 		}
 		
-		// Auto_Translate (ora che Processor è caricato)
+		// Auto_Translate (fixato con lazy loading)
 		if ( class_exists( 'FPML_Auto_Translate' ) ) {
 			FPML_Auto_Translate::instance();
 		}
-
-		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
-			FPML_SEO_Optimizer::instance();
-		}
-
-		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
-			FPML_Setup_Wizard::instance();
-		}
-
-		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
-			FPML_Provider_Fallback::instance();
-		}
-
-		if ( class_exists( 'FPML_Auto_Relink' ) ) {
-			FPML_Auto_Relink::instance();
-		}
-
-		if ( class_exists( 'FPML_Dashboard_Widget' ) ) {
-			FPML_Dashboard_Widget::instance();
-		}
-
-		if ( class_exists( 'FPML_Rush_Mode' ) ) {
-			FPML_Rush_Mode::instance();
-		}
-
-		if ( class_exists( 'FPML_Featured_Image_Sync' ) ) {
-			FPML_Featured_Image_Sync::instance();
-		}
-
-		if ( class_exists( 'FPML_ACF_Support' ) ) {
-			FPML_ACF_Support::instance();
-		}
-
-		if ( class_exists( 'FPML_REST_Admin' ) ) {
-			FPML_REST_Admin::instance();
-		}
-
-		if ( is_admin() ) {
-			new FPML_Admin();
-		}
-
-		if ( ! $this->assisted_mode ) {
-			add_action( 'save_post', array( $this, 'handle_save_post' ), 20, 3 );
-			add_action( 'created_term', array( $this, 'handle_created_term' ), 10, 3 );
-			add_action( 'edited_term', array( $this, 'handle_edited_term' ), 10, 3 );
-			add_action( 'before_delete_post', array( $this, 'handle_delete_post' ), 10, 1 );
-			add_action( 'delete_term', array( $this, 'handle_delete_term' ), 10, 3 );
-		}
+		
+		// STOP - nient'altro per ora
 	}
 
 	/**
