@@ -200,14 +200,30 @@ class FPML_Logger {
 
                 $threshold = date( 'Y-m-d H:i:s', strtotime( '-' . absint( $days ) . ' days' ) );
 
-                $deleted = $wpdb->query(
-                        $wpdb->prepare(
-                                "DELETE FROM {$this->table} WHERE timestamp < %s LIMIT 1000",
-                                $threshold
-                        )
-                );
+                // Delete in batches to handle large log tables
+                $batch_size = 1000;
+                $total_deleted = 0;
+                
+                do {
+                        $deleted = $wpdb->query(
+                                $wpdb->prepare(
+                                        "DELETE FROM {$this->table} WHERE timestamp < %s LIMIT %d",
+                                        $threshold,
+                                        $batch_size
+                                )
+                        );
+                        
+                        if ( false !== $deleted ) {
+                                $total_deleted += $deleted;
+                        }
+                        
+                        // Prevent infinite loop
+                        if ( false === $deleted ) {
+                                break;
+                        }
+                } while ( $deleted === $batch_size );
 
-                return $deleted ? (int) $deleted : 0;
+                return $total_deleted;
         }
 
         /**

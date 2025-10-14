@@ -174,19 +174,27 @@ class FPML_Job_Enqueuer {
 			return array();
 		}
 
-		$parts = preg_split( '/[\n,]+/', $raw );
-		$parts = array_map( 'trim', $parts );
-		$parts = array_filter( $parts );
+	$parts = preg_split( '/[\n,]+/', $raw );
+	if ( false === $parts ) {
+		$parts = array( $raw );
+	}
+	$parts = array_map( 'trim', $parts );
+	$parts = array_filter( $parts );
 
-		$sanitized = array();
+	$sanitized = array();
 
-		foreach ( $parts as $key ) {
-			$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
-
-			if ( '' !== $key ) {
-				$sanitized[] = $key;
-			}
+	foreach ( $parts as $key ) {
+		$key = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $key );
+		
+		// Handle PCRE error
+		if ( null === $key || false === $key ) {
+			continue;
 		}
+
+		if ( '' !== $key ) {
+			$sanitized[] = $key;
+		}
+	}
 
 		/**
 		 * Allow other components to extend the meta whitelist.
@@ -226,7 +234,20 @@ class FPML_Job_Enqueuer {
 	 */
 	protected function hash_value( $value ) {
 		if ( is_array( $value ) || is_object( $value ) ) {
-			$value = wp_json_encode( $value );
+			$encoded = wp_json_encode( $value );
+			if ( false === $encoded ) {
+				// JSON encoding failed, convert to safe string representation
+				// Avoid serialize() due to potential object injection vulnerabilities
+				if ( is_array( $value ) ) {
+					$value = 'array(' . count( $value ) . ')';
+				} elseif ( is_object( $value ) ) {
+					$value = 'object(' . get_class( $value ) . ')';
+				} else {
+					$value = '';
+				}
+			} else {
+				$value = $encoded;
+			}
 		}
 
 		$value = (string) $value;

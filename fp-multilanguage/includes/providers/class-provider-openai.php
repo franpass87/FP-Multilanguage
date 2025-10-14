@@ -115,14 +115,19 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                         ),
                 );
 
-                $args = array(
-                        'headers' => array(
-                                'Authorization' => 'Bearer ' . $this->get_option( 'openai_api_key' ),
-                                'Content-Type'  => 'application/json',
-                        ),
-                        'body'    => wp_json_encode( $payload ),
-                        'timeout' => 45,
-                );
+		$body = wp_json_encode( $payload );
+		if ( false === $body ) {
+			return new WP_Error( 'fpml_openai_encoding_error', __( 'Impossibile codificare il payload JSON per OpenAI.', 'fp-multilanguage' ) );
+		}
+
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $this->get_option( 'openai_api_key' ),
+				'Content-Type'  => 'application/json',
+			),
+			'body'    => $body,
+			'timeout' => 45,
+		);
 
                 $max_attempts = 3;
 
@@ -182,13 +187,17 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                                 return new WP_Error( 'fpml_openai_error', sprintf( __( 'Risposta non valida da OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body ) ) );
                         }
 
-                        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+			$data = json_decode( wp_remote_retrieve_body( $response ), true );
 
-                        if ( empty( $data['choices'][0]['message']['content'] ) ) {
-                                return new WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
-                        }
+		if ( null === $data ) {
+			return new WP_Error( 'fpml_openai_invalid_json', __( 'Risposta JSON non valida da OpenAI.', 'fp-multilanguage' ) );
+		}
 
-                        return (string) $data['choices'][0]['message']['content'];
+		if ( ! isset( $data['choices'][0]['message']['content'] ) || empty( $data['choices'][0]['message']['content'] ) ) {
+			return new WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+		}
+
+		return (string) $data['choices'][0]['message']['content'];
                 }
 
                 return new WP_Error( 'fpml_openai_unexpected', __( 'Errore imprevisto durante la traduzione con OpenAI.', 'fp-multilanguage' ) );

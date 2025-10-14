@@ -91,44 +91,55 @@ class FPML_Translation_Manager {
 			}
 		}
 
-		$this->creating_translation = true;
+	$this->creating_translation = true;
 
-		$postarr = array(
-			'post_type'      => $post->post_type,
-			'post_status'    => $post->post_status,
-			'post_author'    => $post->post_author,
-			'post_parent'    => $post->post_parent,
-			'menu_order'     => $post->menu_order,
-			'post_password'  => $post->post_password,
-			'comment_status' => $post->comment_status,
-			'ping_status'    => $post->ping_status,
-			'post_title'     => '',
-			'post_content'   => '',
-			'post_excerpt'   => '',
-			'post_name'      => '',
-			'meta_input'     => array(
-				'_fpml_is_translation'  => 1,
-				'_fpml_pair_source_id' => $post->ID,
-			),
+	// Map parent to its translation if exists
+	$translated_parent = 0;
+	if ( $post->post_parent > 0 ) {
+		$parent_translation_id = get_post_meta( $post->post_parent, '_fpml_pair_id', true );
+		if ( $parent_translation_id ) {
+			$translated_parent = (int) $parent_translation_id;
+		}
+	}
+
+	$postarr = array(
+		'post_type'      => $post->post_type,
+		'post_status'    => $post->post_status,
+		'post_author'    => $post->post_author,
+		'post_parent'    => $translated_parent,
+		'menu_order'     => $post->menu_order,
+		'post_password'  => $post->post_password,
+		'comment_status' => $post->comment_status,
+		'ping_status'    => $post->ping_status,
+		'post_title'     => '',
+		'post_content'   => '',
+		'post_excerpt'   => '',
+		'post_name'      => '',
+		'meta_input'     => array(
+			'_fpml_is_translation'  => 1,
+			'_fpml_pair_source_id' => $post->ID,
+		),
+	);
+
+	$target_id = wp_insert_post( $postarr, true );
+
+	if ( is_wp_error( $target_id ) ) {
+		$this->creating_translation = false;
+		$this->logger->log(
+			'error',
+			sprintf( 'Impossibile creare la traduzione per il post #%d: %s', $post->ID, $target_id->get_error_message() ),
+			array(
+				'post_id' => $post->ID,
+			)
 		);
 
-		$target_id = wp_insert_post( $postarr, true );
+		return false;
+	}
 
-		$this->creating_translation = false;
+	// Update source post meta BEFORE releasing lock to prevent race condition
+	update_post_meta( $post->ID, '_fpml_pair_id', $target_id );
 
-		if ( is_wp_error( $target_id ) ) {
-			$this->logger->log(
-				'error',
-				sprintf( 'Impossibile creare la traduzione per il post #%d: %s', $post->ID, $target_id->get_error_message() ),
-				array(
-					'post_id' => $post->ID,
-				)
-			);
-
-			return false;
-		}
-
-		update_post_meta( $post->ID, '_fpml_pair_id', $target_id );
+	$this->creating_translation = false;
 
 		$target_post = get_post( $target_id );
 
@@ -204,9 +215,18 @@ class FPML_Translation_Manager {
 	public function create_term_translation( $term ) {
 		$this->creating_term_translation = true;
 
+		// Map parent to its translation if exists
+		$translated_parent = 0;
+		if ( $term->parent > 0 ) {
+			$parent_translation_id = get_term_meta( $term->parent, '_fpml_pair_id', true );
+			if ( $parent_translation_id ) {
+				$translated_parent = (int) $parent_translation_id;
+			}
+		}
+
 		$args = array(
 			'slug'        => $this->generate_translation_slug( $term->slug ),
-			'parent'      => $term->parent,
+			'parent'      => $translated_parent,
 			'description' => '',
 			'meta_input'  => array(
 				'_fpml_is_translation'  => 1,
@@ -214,29 +234,31 @@ class FPML_Translation_Manager {
 			),
 		);
 
-		$result = wp_insert_term( $term->name, $term->taxonomy, $args );
+	$result = wp_insert_term( $term->name, $term->taxonomy, $args );
 
+	if ( is_wp_error( $result ) ) {
 		$this->creating_term_translation = false;
+		$this->logger->log(
+			'error',
+			sprintf( 'Impossibile creare la traduzione del termine #%d: %s', $term->term_id, $result->get_error_message() ),
+			array(
+				'term_id'  => $term->term_id,
+				'taxonomy' => $term->taxonomy,
+			)
+		);
 
-		if ( is_wp_error( $result ) ) {
-			$this->logger->log(
-				'error',
-				sprintf( 'Impossibile creare la traduzione del termine #%d: %s', $term->term_id, $result->get_error_message() ),
-				array(
-					'term_id'  => $term->term_id,
-					'taxonomy' => $term->taxonomy,
-				)
-			);
+		return false;
+	}
 
-			return false;
-		}
+	if ( empty( $result['term_id'] ) ) {
+		$this->creating_term_translation = false;
+		return false;
+	}
 
-		if ( empty( $result['term_id'] ) ) {
-			return false;
-		}
+	update_term_meta( $result['term_id'], '_fpml_pair_source_id', $term->term_id );
+	update_term_meta( $result['term_id'], '_fpml_is_translation', 1 );
 
-		update_term_meta( $result['term_id'], '_fpml_pair_source_id', $term->term_id );
-		update_term_meta( $result['term_id'], '_fpml_is_translation', 1 );
+	$this->creating_term_translation = false;
 
 		return get_term( (int) $result['term_id'], $term->taxonomy );
 	}
@@ -254,12 +276,14 @@ class FPML_Translation_Manager {
 		$slug = sanitize_title( $slug );
 
 		if ( '' === $slug ) {
-			$slug = uniqid( 'fpml-en-' );
+			$slug = uniqid( 'fpml-en-', true );
 		}
 
-		if ( '-en' !== substr( $slug, -3 ) ) {
-			$slug .= '-en';
-		}
+		// Remove existing -en suffix to avoid duplicates
+		$slug = preg_replace( '/-en$/', '', $slug );
+		
+		// Add -en suffix
+		$slug .= '-en';
 
 		return $slug;
 	}

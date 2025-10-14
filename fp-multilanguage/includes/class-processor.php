@@ -270,17 +270,67 @@ class FPML_Processor {
          *
          * @return bool
          */
-        protected function acquire_lock() {
-                $ttl = (int) apply_filters( 'fpml_processor_lock_ttl', $this->lock_ttl );
+	protected function acquire_lock() {
+		global $wpdb;
 
-                if ( get_transient( $this->lock_key ) ) {
-                        return false;
-                }
+		$ttl = (int) apply_filters( 'fpml_processor_lock_ttl', $this->lock_ttl );
 
-                set_transient( $this->lock_key, gmdate( 'Y-m-d H:i:s' ), $ttl );
+		// Use atomic INSERT IGNORE to prevent race conditions
+		$option_name = '_transient_' . $this->lock_key;
+		$timeout_name = '_transient_timeout_' . $this->lock_key;
+		$lock_value = gmdate( 'Y-m-d H:i:s' );
+		$expiration = time() + $ttl;
 
-                return true;
-        }
+		// Try to insert the lock atomically
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')",
+				$option_name,
+				$lock_value
+			)
+		);
+
+		if ( $result ) {
+			// Successfully acquired lock, set timeout
+			$wpdb->query(
+				$wpdb->prepare(
+					"INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %d, 'no') ON DUPLICATE KEY UPDATE option_value = %d",
+					$timeout_name,
+					$expiration,
+					$expiration
+				)
+			);
+			return true;
+		}
+
+		// Lock already exists, check if it's expired
+		$existing_timeout = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+				$timeout_name
+			)
+		);
+
+		if ( $existing_timeout && $existing_timeout < time() ) {
+			// Lock expired, try to delete and re-acquire
+			$wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM {$wpdb->options} WHERE option_name IN (%s, %s)",
+					$option_name,
+					$timeout_name
+				)
+			);
+
+			// Recursive call to re-acquire (only once)
+			static $retry_count = 0;
+			if ( $retry_count < 1 ) {
+				$retry_count++;
+				return $this->acquire_lock();
+			}
+		}
+
+		return false;
+	}
 
         /**
          * Release the processor lock.
@@ -342,10 +392,11 @@ class FPML_Processor {
                         'errors'    => 0,
                 );
 
-                $start_time          = microtime( true );
-                $batch_size          = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
-                $max_chars_per_batch = $this->settings ? (int) $this->settings->get( 'max_chars_per_batch', 20000 ) : 20000;
-                $max_chars_per_batch = max( 0, $max_chars_per_batch );
+		$start_time          = microtime( true );
+		$batch_size          = $this->settings ? (int) $this->settings->get( 'batch_size', 5 ) : 5;
+		$batch_size          = max( 1, min( 100, $batch_size ) ); // Limit 1-100
+		$max_chars_per_batch = $this->settings ? (int) $this->settings->get( 'max_chars_per_batch', 20000 ) : 20000;
+		$max_chars_per_batch = max( 0, min( 1000000, $max_chars_per_batch ) ); // Limit 0-1M
 
                 try {
                         $jobs = $this->queue->claim_batch( $batch_size );
@@ -359,61 +410,78 @@ class FPML_Processor {
 
                         $total_jobs = count( $jobs );
 
-                        for ( $index = 0; $index < $total_jobs; $index++ ) {
-                                $job = $jobs[ $index ];
+			for ( $index = 0; $index < $total_jobs; $index++ ) {
+				$job = $jobs[ $index ];
 
-                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                        $this->queue->update_state( $job->id, 'pending' );
-                                        continue;
-                                }
+				if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+					$this->queue->update_state( $job->id, 'pending' );
+					// Free memory for this job
+					unset( $jobs[ $index ] );
+					continue;
+				}
 
-                                $this->current_job_characters = 0;
-                                $result = $this->process_job( $job );
+				$this->current_job_characters = 0;
+				$result = $this->process_job( $job );
 
-                                if ( is_wp_error( $result ) ) {
-                                        $this->queue->update_state( $job->id, 'error', $result->get_error_message() );
-                                        $this->logger->log(
-                                                'error',
-                                                sprintf( 'Errore traduzione %s #%d: %s', $job->object_type, $job->object_id, $result->get_error_message() ),
-                                                array(
-                                                        'job_id'      => (int) $job->id,
-                                                        'object_type' => $job->object_type,
-                                                        'field'       => $job->field,
-                                                )
-                                        );
-                                        $summary['errors']++;
-                                        continue;
-                                }
+				if ( is_wp_error( $result ) ) {
+					$this->queue->update_state( $job->id, 'error', $result->get_error_message() );
+					$this->logger->log(
+						'error',
+						sprintf( 'Errore traduzione %s #%d: %s', $job->object_type, $job->object_id, $result->get_error_message() ),
+						array(
+							'job_id'      => (int) $job->id,
+							'object_type' => $job->object_type,
+							'field'       => $job->field,
+						)
+					);
+					$summary['errors']++;
+					// Free memory for this job
+					unset( $jobs[ $index ] );
+					continue;
+				}
 
-                                if ( 'skipped' === $result ) {
-                                        $this->queue->update_state( $job->id, 'skipped' );
-                                        $summary['skipped']++;
-                                        $this->current_batch_characters += $this->current_job_characters;
+				if ( 'skipped' === $result ) {
+					$this->queue->update_state( $job->id, 'skipped' );
+					$summary['skipped']++;
+					$this->current_batch_characters += $this->current_job_characters;
 
-                                        if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                                for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                                                        $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                                                }
+					// Free memory for this job
+					unset( $jobs[ $index ] );
 
-                                                break;
-                                        }
+					if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+						for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+							$this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+							// Free memory for remaining jobs
+							unset( $jobs[ $j ] );
+						}
 
-                                        continue;
-                                }
+						break;
+					}
 
-                                $this->queue->update_state( $job->id, 'done' );
-                                $summary['processed']++;
+					continue;
+				}
 
-                                $this->current_batch_characters += $this->current_job_characters;
+				$this->queue->update_state( $job->id, 'done' );
+				$summary['processed']++;
 
-                                if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
-                                        for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                                                $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                                        }
+				$this->current_batch_characters += $this->current_job_characters;
 
-                                        break;
-                                }
-                        }
+				// Free memory for this job
+				unset( $jobs[ $index ] );
+
+				if ( $max_chars_per_batch > 0 && $this->current_batch_characters >= $max_chars_per_batch ) {
+					for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
+						$this->queue->update_state( $jobs[ $j ]->id, 'pending' );
+						// Free memory for remaining jobs
+						unset( $jobs[ $j ] );
+					}
+
+					break;
+				}
+			}
+			
+			// Final cleanup: free any remaining jobs in array
+			unset( $jobs );
                 } finally {
                         $duration = microtime( true ) - $start_time;
                         $this->logger->log(
@@ -1066,11 +1134,18 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                 $source_preview     = $this->stringify_value_for_preview( $source_meta );
                                 $translated_preview = $this->stringify_value_for_preview( $translated_value );
                                 $payload_text       = $source_preview;
-                                $characters         = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
-                                $plain_text         = wp_strip_all_tags( $translated_preview );
-                                $plain_text         = preg_replace( '/\s+/u', ' ', $plain_text );
-                                $plain_text         = trim( $plain_text );
-                                $word_count         = '' === $plain_text ? 0 : count( preg_split( '/\s+/u', $plain_text ) );
+				$characters         = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
+				$plain_text         = wp_strip_all_tags( $translated_preview );
+				$plain_text         = preg_replace( '/\s+/u', ' ', $plain_text );
+				
+				// Handle PCRE errors
+				if ( null === $plain_text ) {
+					$plain_text = wp_strip_all_tags( $translated_preview );
+				}
+				
+				$plain_text         = trim( $plain_text );
+				$words              = preg_split( '/\s+/u', $plain_text );
+				$word_count         = ( '' === $plain_text || false === $words ) ? 0 : count( $words );
                                 $provider           = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->get_slug() : '';
                                 $cost               = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->estimate_cost( $payload_text ) : 0.0;
 
@@ -1149,11 +1224,18 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 
                 if ( $this->settings && $this->settings->get( 'sandbox_mode', false ) ) {
                         $payload_text = implode( "\n\n", array_map( 'strval', $chunks ) );
-                        $characters   = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
-                        $plain_text   = wp_strip_all_tags( $new_value );
-                        $plain_text   = preg_replace( '/\s+/u', ' ', $plain_text );
-                        $plain_text   = trim( $plain_text );
-                        $word_count   = '' === $plain_text ? 0 : count( preg_split( '/\s+/u', $plain_text ) );
+			$characters   = function_exists( 'mb_strlen' ) ? mb_strlen( $payload_text, 'UTF-8' ) : strlen( $payload_text );
+			$plain_text   = wp_strip_all_tags( $new_value );
+			$plain_text   = preg_replace( '/\s+/u', ' ', $plain_text );
+			
+			// Handle PCRE errors
+			if ( null === $plain_text ) {
+				$plain_text = wp_strip_all_tags( $new_value );
+			}
+			
+			$plain_text   = trim( $plain_text );
+			$words        = preg_split( '/\s+/u', $plain_text );
+			$word_count   = ( '' === $plain_text || false === $words ) ? 0 : count( $words );
                         $provider     = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->get_slug() : '';
                         $cost         = $this->translator instanceof FPML_TranslatorInterface ? $this->translator->estimate_cost( $payload_text ) : 0.0;
 

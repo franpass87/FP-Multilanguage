@@ -261,10 +261,10 @@ class FPML_Translation_Versioning {
 		$sql = "SELECT * FROM {$this->table} 
 				WHERE " . implode( ' AND ', $where ) . "
 				ORDER BY created_at DESC 
-				LIMIT %d";
+				LIMIT " . absint( $limit );
 
 		$results = $wpdb->get_results(
-			$wpdb->prepare( $sql, absint( $limit ) ),
+			$sql,
 			ARRAY_A
 		);
 
@@ -399,24 +399,39 @@ class FPML_Translation_Versioning {
 
 		$threshold = date( 'Y-m-d H:i:s', strtotime( '-' . absint( $days ) . ' days' ) );
 
-		// Delete old versions but keep minimum per object+field
-		$sql = "DELETE v1 FROM {$this->table} v1
-				WHERE v1.created_at < %s
-				AND (
-					SELECT COUNT(*)
-					FROM {$this->table} v2
-					WHERE v2.object_type = v1.object_type
-					AND v2.object_id = v1.object_id
-					AND v2.field = v1.field
-					AND v2.created_at >= v1.created_at
-				) > %d
-				LIMIT 1000";
+		// Delete in batches to handle large version tables
+		$batch_size = 1000;
+		$total_deleted = 0;
+		
+		do {
+			// Delete old versions but keep minimum per object+field
+			$sql = "DELETE v1 FROM {$this->table} v1
+					WHERE v1.created_at < %s
+					AND (
+						SELECT COUNT(*)
+						FROM {$this->table} v2
+						WHERE v2.object_type = v1.object_type
+						AND v2.object_id = v1.object_id
+						AND v2.field = v1.field
+						AND v2.created_at >= v1.created_at
+					) > %d
+					LIMIT %d";
 
-		$deleted = $wpdb->query(
-			$wpdb->prepare( $sql, $threshold, absint( $keep_per_field ) )
-		);
+			$deleted = $wpdb->query(
+				$wpdb->prepare( $sql, $threshold, absint( $keep_per_field ), $batch_size )
+			);
+			
+			if ( false !== $deleted ) {
+				$total_deleted += $deleted;
+			}
+			
+			// Prevent infinite loop
+			if ( false === $deleted ) {
+				break;
+			}
+		} while ( $deleted === $batch_size );
 
-		return $deleted ? (int) $deleted : 0;
+		return $total_deleted;
 	}
 
 	/**

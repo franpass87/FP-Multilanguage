@@ -118,8 +118,12 @@ class FPML_Provider_LibreTranslate extends FPML_Base_Provider {
                                 'Accept'       => 'application/json',
                                 'Content-Type' => 'application/json',
                         ),
-                        'body'    => wp_json_encode( $body ),
-                );
+		'body'    => wp_json_encode( $body ),
+	);
+
+	if ( false === $args['body'] ) {
+		return new WP_Error( 'fpml_libretranslate_encoding_error', __( 'Impossibile codificare il payload JSON per LibreTranslate.', 'fp-multilanguage' ) );
+	}
 
                 $max_attempts = 3;
 
@@ -179,16 +183,21 @@ class FPML_Provider_LibreTranslate extends FPML_Base_Provider {
                                 return new WP_Error( 'fpml_libretranslate_error', sprintf( __( 'Risposta non valida da LibreTranslate (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body_content ) ) );
                         }
 
-                        $data = json_decode( $body_content, true );
-                        if ( isset( $data['translatedText'] ) ) {
-                                return (string) $data['translatedText'];
-                        }
+		$data = json_decode( $body_content, true );
 
-                        if ( isset( $data['error'] ) ) {
-                                return new WP_Error( 'fpml_libretranslate_error', sprintf( __( 'LibreTranslate ha restituito un errore: %s', 'fp-multilanguage' ), wp_kses_post( $data['error'] ) ) );
-                        }
+		if ( null === $data ) {
+			return new WP_Error( 'fpml_libretranslate_invalid_json', __( 'Risposta JSON non valida da LibreTranslate.', 'fp-multilanguage' ) );
+		}
 
-                        return new WP_Error( 'fpml_libretranslate_empty', __( 'LibreTranslate non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+		if ( isset( $data['translatedText'] ) ) {
+			return (string) $data['translatedText'];
+		}
+
+		if ( isset( $data['error'] ) ) {
+			return new WP_Error( 'fpml_libretranslate_error', sprintf( __( 'LibreTranslate ha restituito un errore: %s', 'fp-multilanguage' ), wp_kses_post( $data['error'] ) ) );
+		}
+
+		return new WP_Error( 'fpml_libretranslate_empty', __( 'LibreTranslate non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
                 }
 
                 return new WP_Error( 'fpml_libretranslate_unexpected', __( 'Errore imprevisto durante la traduzione con LibreTranslate.', 'fp-multilanguage' ) );
