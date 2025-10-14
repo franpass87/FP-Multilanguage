@@ -289,7 +289,7 @@ class FPML_Plugin_Core {
 	}
 
 	/**
-	 * Define hooks and bootstrap classes.
+	 * Define hooks and bootstrap classes - TEST 5C-2: Prime 3 classi.
 	 *
 	 * @since 0.2.0
 	 *
@@ -298,12 +298,13 @@ class FPML_Plugin_Core {
 	protected function define_hooks() {
 		load_plugin_textdomain( 'fp-multilanguage', false, dirname( plugin_basename( FPML_PLUGIN_FILE ) ) . '/languages' );
 
+		// TEST: Solo prime 3 classi
 		FPML_Settings::instance();
 		FPML_Logger::instance();
 		FPML_Glossary::instance();
-		FPML_Strings_Override::instance();
-		FPML_Strings_Scanner::instance();
-		FPML_Export_Import::instance();
+		
+		// STOP QUI per test
+		return;
 
 		if ( class_exists( 'FPML_Webhooks' ) ) {
 			FPML_Webhooks::instance();
