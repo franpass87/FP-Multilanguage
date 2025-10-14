@@ -305,7 +305,7 @@ class FPML_Plugin_Core {
 		FPML_Strings_Scanner::instance();
 		FPML_Export_Import::instance();
 		
-		// TEST 5C-7: Solo prime 5 classi opzionali
+		// TEST 5C-8: Solo prime 3 classi opzionali
 		if ( class_exists( 'FPML_Webhooks' ) ) {
 			FPML_Webhooks::instance();
 		}
@@ -319,16 +319,8 @@ class FPML_Plugin_Core {
 			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
 			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
 		}
-
-		if ( class_exists( 'FPML_Auto_Translate' ) ) {
-			FPML_Auto_Translate::instance();
-		}
-
-		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
-			FPML_SEO_Optimizer::instance();
-		}
 		
-		// STOP - teste solo queste 5
+		// STOP - teste solo queste 3
 		return;
 
 		if ( class_exists( 'FPML_Webhooks' ) ) {
