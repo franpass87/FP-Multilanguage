@@ -80,15 +80,18 @@ class FPML_Plugin_Core {
 	protected $assisted_reason = '';
 
 	/**
-	 * Plugin constructor - TEST 3: + queue.
+	 * Plugin constructor - TEST 4: + logger, translation_manager, job_enqueuer.
 	 */
 	protected function __construct() {
 		$this->detect_assisted_mode();
 		
 		$this->settings = FPML_Container::get( 'settings' ) ?: FPML_Settings::instance();
-		
-		// TEST 3: Aggiungi queue
 		$this->queue = FPML_Container::get( 'queue' ) ?: FPML_Queue::instance();
+		
+		// TEST 4: Aggiungi logger, translation_manager, job_enqueuer
+		$this->logger              = FPML_Container::get( 'logger' ) ?: FPML_Logger::instance();
+		$this->translation_manager = FPML_Container::get( 'translation_manager' ) ?: ( class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null );
+		$this->job_enqueuer        = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
 	}
 
 	/**
