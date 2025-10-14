@@ -303,9 +303,50 @@ class FPML_Plugin_Core {
 		FPML_Glossary::instance();
 		FPML_Strings_Override::instance();
 		FPML_Strings_Scanner::instance();
-		
-		// TEST 5C-5: Aggiungi Export_Import [SOSPETTO!]
 		FPML_Export_Import::instance();
+		
+		// TEST 5C-6: Aggiungi classi opzionali
+		if ( class_exists( 'FPML_Webhooks' ) ) {
+			FPML_Webhooks::instance();
+		}
+
+		if ( class_exists( 'FPML_Health_Check' ) ) {
+			FPML_Health_Check::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Detection' ) ) {
+			FPML_Auto_Detection::instance();
+			add_action( 'fpml_reindex_post_type', array( $this, 'reindex_post_type' ), 10, 1 );
+			add_action( 'fpml_reindex_taxonomy', array( $this, 'reindex_taxonomy' ), 10, 1 );
+		}
+
+		if ( class_exists( 'FPML_Auto_Translate' ) ) {
+			FPML_Auto_Translate::instance();
+		}
+
+		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
+			FPML_SEO_Optimizer::instance();
+		}
+
+		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
+			FPML_Setup_Wizard::instance();
+		}
+
+		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
+			FPML_Provider_Fallback::instance();
+		}
+
+		if ( class_exists( 'FPML_Auto_Relink' ) ) {
+			FPML_Auto_Relink::instance();
+		}
+
+		if ( class_exists( 'FPML_Dashboard_Widget' ) ) {
+			FPML_Dashboard_Widget::instance();
+		}
+
+		if ( class_exists( 'FPML_Rush_Mode' ) ) {
+			FPML_Rush_Mode::instance();
+		}
 		
 		// STOP QUI per test
 		return;
