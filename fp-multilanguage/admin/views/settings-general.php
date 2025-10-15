@@ -36,7 +36,17 @@ $options = isset( $options ) ? $options : array();
 <tr>
 <th scope="row"><?php esc_html_e( 'Chiave OpenAI', 'fp-multilanguage' ); ?></th>
 <td>
-<input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_api_key]" value="<?php echo esc_attr( $options['openai_api_key'] ); ?>" autocomplete="off" />
+<input type="password" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_api_key]" value="<?php echo esc_attr( $options['openai_api_key'] ); ?>" autocomplete="off" id="fpml-openai-api-key" />
+<button 
+	type="button" 
+	class="button button-secondary" 
+	id="fpml-check-openai-billing" 
+	data-endpoint="<?php echo esc_url( rest_url( 'fpml/v1/check-billing' ) ); ?>"
+	data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
+	style="margin-left: 10px;">
+	<?php esc_html_e( 'Verifica Billing', 'fp-multilanguage' ); ?>
+</button>
+<div id="fpml-billing-status" style="margin-top: 10px;"></div>
 <p class="fpml-field-description">
 <?php esc_html_e( 'Richiesto per usare l\'API OpenAI (modello gpt-4o-mini o successivi).', 'fp-multilanguage' ); ?>
 <br />
@@ -52,6 +62,24 @@ printf(
 <?php esc_html_e( '2. Crea un nuovo progetto o selezionane uno esistente', 'fp-multilanguage' ); ?>
 <br />
 <?php esc_html_e( '3. Clicca "Create new secret key" e copia la chiave (formato: sk-...)', 'fp-multilanguage' ); ?>
+<br />
+<br />
+<strong style="color: #d63638;"><?php esc_html_e( '⚠️ IMPORTANTE - Configurazione billing richiesta:', 'fp-multilanguage' ); ?></strong>
+<br />
+<?php esc_html_e( 'OpenAI NON offre più crediti gratuiti. Prima di usare l\'API devi:', 'fp-multilanguage' ); ?>
+<br />
+<?php
+printf(
+	/* translators: %s: URL to OpenAI billing page */
+	esc_html__( '• Configurare un metodo di pagamento su %s', 'fp-multilanguage' ),
+	'<a href="https://platform.openai.com/account/billing/overview" target="_blank" rel="noopener"><strong>Billing OpenAI ↗</strong></a>'
+);
+?>
+<br />
+<?php esc_html_e( '• Caricare crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ); ?>
+<br />
+<?php esc_html_e( 'Altrimenti riceverai un errore "quota exceeded" anche senza aver mai usato il servizio!', 'fp-multilanguage' ); ?>
+<br />
 <br />
 <?php
 printf(

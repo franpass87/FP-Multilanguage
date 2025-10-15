@@ -6,6 +6,45 @@ Il formato è basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/)
 e questo progetto aderisce al [Versionamento Semantico](https://semver.org/lang/it/).
 
 ## [Non Rilasciato]
+
+### 🔧 Miglioramenti OpenAI Billing
+
+#### Gestione Errore Quota Migliorata
+- **Messaggi di errore dettagliati** per errore "quota exceeded" di OpenAI
+- **Istruzioni passo-passo** per configurare il billing e caricare crediti
+- **Rilevamento automatico** errori di quota/billing con parsing JSON response
+- **Suggerimenti alternativi** (DeepL, LibreTranslate) quando quota esaurita
+
+#### Nuovo Endpoint Verifica Billing
+- **Endpoint REST** `/fpml/v1/check-billing` per controllo stato billing OpenAI
+- **Metodo `verify_billing_status()`** nella classe `FPML_Provider_OpenAI`
+- **Pulsante "Verifica Billing"** nella pagina Impostazioni → Generali
+- **Feedback in tempo reale** sullo stato del billing con colori e icone
+- **Test minimo** (5 token) per verificare quota senza sprecare crediti
+
+#### Avvisi Preventivi
+- **Avviso prominente** nella configurazione chiave OpenAI
+- **Informazione billing richiesto** visibile PRIMA di configurare la chiave
+- **Link diretti** a billing e API keys di OpenAI
+- **Confronto costi** e alternative gratuite nella UI
+
+#### Documentazione
+- **Nuova sezione** in `docs/troubleshooting.md`: "OpenAI: Errore Billing"
+- **Spiegazione dettagliata** del problema billing OpenAI 2024+
+- **Guide passo-passo** per configurare billing e caricare crediti
+- **Confronto provider** con costi reali e piani gratuiti
+- **File riepilogo** `SOLUZIONE_ERRORE_QUOTA_OPENAI.md` per quick reference
+
+### 📝 Modifiche Tecniche
+- `class-provider-openai.php`: Gestione errore quota migliorata (linee 170-217)
+- `class-provider-openai.php`: Aggiunto metodo `verify_billing_status()` (linee 287-368)
+- `class-rest-admin.php`: Nuovo endpoint `/check-billing` (linee 140-150)
+- `class-rest-admin.php`: Handler `handle_check_billing()` (linee 504-546)
+- `settings-general.php`: Avviso billing e pulsante verifica (linee 39-68)
+- `admin.js`: Logica JavaScript per verifica billing (linee 264-301)
+- `troubleshooting.md`: Sezione dedicata errore quota OpenAI
+
+### Roadmap
 - Manager per traduzione massiva di contenuti in blocco
 - Dashboard analitica con tracciamento costi e metriche prestazioni
 - Glossario avanzato con termini contestuali e parole vietate

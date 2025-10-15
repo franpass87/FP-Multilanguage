@@ -137,6 +137,23 @@ class FPML_REST_Admin {
 				),
 			)
 		);
+
+		register_rest_route(
+			'fpml/v1',
+			'/check-billing',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_check_billing' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+				'args'                => array(
+					'provider' => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
 	}
 
         /**
@@ -497,6 +514,62 @@ class FPML_REST_Admin {
 				'elapsed'        => round( $elapsed, 4 ),
 				'characters'     => mb_strlen( $text, 'UTF-8' ),
 				'estimated_cost' => $cost,
+			)
+		);
+	}
+
+	/**
+	 * Check billing status for OpenAI provider.
+	 *
+	 * @since 0.4.2
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_check_billing( $request ) {
+		$provider = $request->get_param( 'provider' );
+		
+		if ( empty( $provider ) ) {
+			$settings = FPML_Settings::instance();
+			$provider = $settings->get( 'provider', '' );
+		}
+
+		if ( 'openai' !== $provider ) {
+			return new WP_Error(
+				'fpml_unsupported_provider',
+				__( 'Il controllo billing è disponibile solo per OpenAI al momento.', 'fp-multilanguage' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$translator = $this->get_translator_by_slug( $provider );
+
+		if ( is_wp_error( $translator ) ) {
+			$translator->add_data( array( 'status' => 400 ), $translator->get_error_code() );
+			return $translator;
+		}
+
+		if ( ! method_exists( $translator, 'verify_billing_status' ) ) {
+			return new WP_Error(
+				'fpml_method_not_supported',
+				__( 'Il provider selezionato non supporta il controllo billing.', 'fp-multilanguage' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$result = $translator->verify_billing_status();
+
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 400 ), $result->get_error_code() );
+			return $result;
+		}
+
+		return rest_ensure_response(
+			array(
+				'success'  => true,
+				'provider' => $provider,
+				'billing'  => $result,
 			)
 		);
 	}
