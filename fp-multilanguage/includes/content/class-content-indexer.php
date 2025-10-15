@@ -72,6 +72,9 @@ class FPML_Content_Indexer {
 	 * @return array Summary data.
 	 */
 	public function reindex_content( $post_types = array() ) {
+		// Previeni timeout su grandi dataset - estende il tempo di esecuzione periodicamente
+		$start_time = time();
+		
 		$summary = array(
 			'posts_scanned'        => 0,
 			'posts_enqueued'       => 0,
@@ -85,6 +88,9 @@ class FPML_Content_Indexer {
 		}
 
 		foreach ( $post_types as $post_type ) {
+			// Estendi il timeout ogni post type per evitare scadenze
+			$this->maybe_extend_timeout( $start_time );
+			
 			$result = $this->reindex_post_type( $post_type );
 			$summary['posts_scanned']        += $result['posts_scanned'];
 			$summary['posts_enqueued']       += $result['posts_enqueued'];
@@ -101,9 +107,15 @@ class FPML_Content_Indexer {
 		$taxonomies = apply_filters( 'fpml_translatable_taxonomies', $taxonomies );
 
 		foreach ( $taxonomies as $taxonomy ) {
+			// Estendi il timeout ogni tassonomia
+			$this->maybe_extend_timeout( $start_time );
+			
 			$result = $this->reindex_taxonomy( $taxonomy );
 			$summary['terms_scanned'] += $result['terms_scanned'];
 		}
+
+		// Estendi il timeout prima della sincronizzazione menu
+		$this->maybe_extend_timeout( $start_time );
 
 		$menu_sync = FPML_Menu_Sync::instance();
 
@@ -119,6 +131,40 @@ class FPML_Content_Indexer {
 		 * @param array $summary Summary data.
 		 */
 		return apply_filters( 'fpml_reindex_summary', $summary );
+	}
+
+	/**
+	 * Estende il timeout di esecuzione PHP se necessario.
+	 *
+	 * Controlla se siamo vicini al limite di tempo di esecuzione e lo estende
+	 * per evitare che il reindex vada in timeout su grandi dataset.
+	 *
+	 * @since 0.4.3
+	 *
+	 * @param int $start_time Timestamp di inizio dell'operazione.
+	 *
+	 * @return void
+	 */
+	protected function maybe_extend_timeout( $start_time ) {
+		// Verifica se set_time_limit è disponibile
+		if ( ! function_exists( 'set_time_limit' ) || false !== strpos( ini_get( 'disable_functions' ), 'set_time_limit' ) ) {
+			return;
+		}
+
+		$max_execution_time = (int) ini_get( 'max_execution_time' );
+		
+		// Se il timeout è 0 (illimitato), non serve fare nulla
+		if ( 0 === $max_execution_time ) {
+			return;
+		}
+
+		$elapsed_time = time() - $start_time;
+		$remaining_time = $max_execution_time - $elapsed_time;
+
+		// Se rimangono meno di 60 secondi, estendi il timeout di altri 5 minuti
+		if ( $remaining_time < 60 ) {
+			@set_time_limit( 300 );
+		}
 	}
 
 	/**
@@ -138,8 +184,14 @@ class FPML_Content_Indexer {
 		);
 
 		$paged = 1;
+		$start_time = time();
 
 		do {
+			// Estendi il timeout ogni 5 pagine per evitare scadenze su grandi dataset
+			if ( 0 === ( $paged % 5 ) ) {
+				$this->maybe_extend_timeout( $start_time );
+			}
+
 			$query = new WP_Query(
 				array(
 					'post_type'      => $post_type,

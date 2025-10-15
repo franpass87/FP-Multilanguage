@@ -201,6 +201,7 @@ $refresh_endpoint  = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
                                 data-fpml-action="reindex"
                                 data-endpoint="<?php echo esc_url( $reindex_endpoint ); ?>"
                                 data-nonce="<?php echo esc_attr( $rest_nonce ); ?>"
+                                data-working-message="<?php echo esc_attr__( 'Reindex in corso... Potrebbe richiedere alcuni minuti. Attendere.', 'fp-multilanguage' ); ?>"
                                 data-success-message="<?php echo esc_attr__( 'Reindex completato. Controlla la coda per nuovi job.', 'fp-multilanguage' ); ?>"
                                 data-success-template="<?php echo esc_attr( $reindex_success_template ); ?>"
                         ><?php esc_html_e( 'Forza reindex', 'fp-multilanguage' ); ?></button>

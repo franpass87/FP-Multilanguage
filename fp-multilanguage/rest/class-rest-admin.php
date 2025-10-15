@@ -305,41 +305,47 @@ class FPML_REST_Admin {
                 );
         }
 
-        /**
-         * Trigger a full reindex via REST.
-         *
-         * @since 0.2.0
-         *
-         * @param WP_REST_Request $request Request instance.
-         *
-         * @return WP_REST_Response
-         */
-        public function handle_reindex( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-                $plugin = FPML_Plugin::instance();
+	/**
+	 * Trigger a full reindex via REST.
+	 *
+	 * @since 0.2.0
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function handle_reindex( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		// Aumenta il timeout per il reindex - può richiedere diversi minuti
+		// se ci sono molti contenuti da processare
+		if ( function_exists( 'set_time_limit' ) && false === strpos( ini_get( 'disable_functions' ), 'set_time_limit' ) ) {
+			@set_time_limit( 300 ); // 5 minuti
+		}
 
-                if ( $plugin->is_assisted_mode() ) {
-                        return new WP_Error(
-                                'fpml_assisted_mode',
-                                __( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ),
-                                array( 'status' => 409 )
-                        );
-                }
+		$plugin = FPML_Plugin::instance();
 
-                $summary = $plugin->reindex_content();
+		if ( $plugin->is_assisted_mode() ) {
+			return new WP_Error(
+				'fpml_assisted_mode',
+				__( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ),
+				array( 'status' => 409 )
+			);
+		}
 
-                if ( is_wp_error( $summary ) ) {
-                        $summary->add_data( array( 'status' => 409 ), $summary->get_error_code() );
+		$summary = $plugin->reindex_content();
 
-                        return $summary;
-                }
+		if ( is_wp_error( $summary ) ) {
+			$summary->add_data( array( 'status' => 409 ), $summary->get_error_code() );
 
-                return rest_ensure_response(
-                        array(
-                                'success' => true,
-                                'summary' => $summary,
-                        )
-                );
-        }
+			return $summary;
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'summary' => $summary,
+			)
+		);
+	}
 
         /**
          * Execute a manual cleanup using the configured retention settings.
