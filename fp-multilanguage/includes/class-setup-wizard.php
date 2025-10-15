@@ -383,7 +383,7 @@ class FPML_Setup_Wizard {
 
 			$('#fpml-wizard-step-2').on('submit', function(e) {
 				e.preventDefault();
-				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=2';
+				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=2&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
 				$.post(ajaxurl, data, function(response) {
 					if (response.success) {
 						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=3' ) ); ?>';
@@ -457,10 +457,12 @@ class FPML_Setup_Wizard {
 		jQuery(document).ready(function($) {
 			$('#fpml-wizard-step-3').on('submit', function(e) {
 				e.preventDefault();
-				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=3';
+				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=3&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
 				$.post(ajaxurl, data, function(response) {
 					if (response.success) {
 						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=4' ) ); ?>';
+					} else {
+						alert(response.data.message);
 					}
 				});
 			});
@@ -532,10 +534,12 @@ class FPML_Setup_Wizard {
 		jQuery(document).ready(function($) {
 			$('#fpml-wizard-step-4').on('submit', function(e) {
 				e.preventDefault();
-				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=4';
+				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=4&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
 				$.post(ajaxurl, data, function(response) {
 					if (response.success) {
 						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=5' ) ); ?>';
+					} else {
+						alert(response.data.message);
 					}
 				});
 			});
