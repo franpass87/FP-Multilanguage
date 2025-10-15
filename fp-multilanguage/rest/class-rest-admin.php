@@ -179,7 +179,7 @@ class FPML_REST_Admin {
 			array(
 				'methods'             => \WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'handle_refresh_nonce' ),
-				'permission_callback' => array( $this, 'check_admin_permissions' ),
+				'permission_callback' => array( $this, 'check_refresh_nonce_permissions' ),
 			)
 		);
 	}
@@ -231,6 +231,30 @@ class FPML_REST_Admin {
          */
         public function check_admin_permissions( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
                 if ( ! current_user_can( 'manage_options' ) ) {
+                        return new WP_Error(
+                                'fpml_rest_forbidden',
+                                __( 'Permessi insufficienti.', 'fp-multilanguage' ),
+                                array( 'status' => rest_authorization_required_code() )
+                        );
+                }
+
+                return true;
+        }
+
+        /**
+         * Check permissions for refresh nonce endpoint.
+         * This endpoint should be accessible without nonce validation to allow nonce refresh.
+         *
+         * @since 0.4.3
+         *
+         * @param WP_REST_Request $request Request instance.
+         *
+         * @return bool|WP_Error
+         */
+        public function check_refresh_nonce_permissions( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                // Only require user to be logged in and have manage_options capability
+                // Do NOT require nonce validation since this endpoint is used to refresh nonces
+                if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
                         return new WP_Error(
                                 'fpml_rest_forbidden',
                                 __( 'Permessi insufficienti.', 'fp-multilanguage' ),

@@ -122,6 +122,13 @@ $refresh_endpoint       = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
 
 <div id="fpml-diagnostics-feedback" class="fpml-diagnostics-feedback" role="status" aria-live="polite" data-refresh-endpoint="<?php echo esc_url( $refresh_endpoint ); ?>"></div>
 
+<script type="text/javascript">
+// Assicurati che ajaxurl sia disponibile per il refresh del nonce
+if (typeof ajaxurl === 'undefined') {
+    var ajaxurl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
+}
+</script>
+
 <div class="fpml-diagnostics-grid">
         <div class="fpml-diagnostics-card">
                 <h2><?php esc_html_e( 'Stato della coda', 'fp-multilanguage' ); ?></h2>

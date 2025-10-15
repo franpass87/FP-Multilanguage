@@ -101,6 +101,7 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'admin_post_fpml_import_logs', array( $this, 'handle_import_logs' ) );
         add_action( 'admin_post_fpml_clear_sandbox', array( $this, 'handle_clear_sandbox' ) );
 		add_action( 'wp_ajax_fpml_trigger_detection', array( $this, 'handle_trigger_detection' ) );
+		add_action( 'wp_ajax_fpml_refresh_nonce', array( $this, 'handle_refresh_nonce' ) );
 		add_action( 'current_screen', array( $this, 'setup_post_list_hooks' ) );
                 add_action( 'restrict_manage_posts', array( $this, 'render_language_filter' ), 20, 1 );
                 add_action( 'pre_get_posts', array( $this, 'handle_language_filter_query' ) );
@@ -1221,5 +1222,27 @@ protected function get_tabs() {
         );
 
         return absint( $count );
+    }
+
+    /**
+     * AJAX handler for nonce refresh.
+     * 
+     * This provides a more reliable way to refresh nonces than the REST endpoint,
+     * as it uses WordPress AJAX which doesn't require nonce validation.
+     *
+     * @since 0.4.3
+     *
+     * @return void
+     */
+    public function handle_refresh_nonce() {
+        // Check user permissions (no nonce check needed for this action)
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permessi insufficienti.', 'fp-multilanguage' ) ) );
+        }
+
+        // Generate new nonce
+        $new_nonce = wp_create_nonce( 'wp_rest' );
+
+        wp_send_json_success( array( 'nonce' => $new_nonce ) );
     }
 }

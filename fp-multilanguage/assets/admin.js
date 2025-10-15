@@ -169,32 +169,58 @@
      */
     const refreshNonce = async () => {
         try {
-            // Get the refresh endpoint from the feedback element
+            // Try WordPress AJAX first (more reliable than REST for nonce refresh)
+            console.log('Tentativo refresh nonce tramite AJAX WordPress...');
+            
+            const ajaxResponse = await fetch(ajaxurl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'fpml_refresh_nonce',
+                    _wpnonce: document.querySelector('[data-nonce]')?.getAttribute('data-nonce') || ''
+                })
+            });
+
+            if (ajaxResponse.ok) {
+                const ajaxData = await ajaxResponse.json();
+                if (ajaxData.success && ajaxData.data && ajaxData.data.nonce) {
+                    console.log('Nuovo nonce ricevuto tramite AJAX:', ajaxData.data.nonce.substring(0, 10) + '...');
+                    return ajaxData.data.nonce;
+                }
+            }
+
+            // Fallback to REST endpoint if AJAX fails
+            console.log('AJAX fallito, tentativo tramite REST endpoint...');
             const refreshEndpoint = feedback?.getAttribute('data-refresh-endpoint');
             
             if (!refreshEndpoint) {
-                console.error('Endpoint di refresh nonce non disponibile');
-                console.log('Elemento feedback:', feedback);
+                console.error('Né AJAX né endpoint REST disponibili');
                 return null;
             }
 
-            console.log('Richiesta refresh nonce a:', refreshEndpoint);
             const response = await fetch(refreshEndpoint, {
                 method: 'GET',
                 credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
 
             if (!response.ok) {
-                console.error('Refresh nonce fallito con status:', response.status);
+                console.error('Refresh nonce REST fallito con status:', response.status);
                 return null;
             }
 
             const data = await response.json();
             if (data && data.nonce) {
-                console.log('Nuovo nonce ricevuto');
+                console.log('Nuovo nonce ricevuto tramite REST:', data.nonce.substring(0, 10) + '...');
                 return data.nonce;
             } else {
-                console.error('Risposta refresh nonce non valida:', data);
+                console.error('Risposta refresh nonce REST non valida:', data);
                 return null;
             }
         } catch (error) {
@@ -308,7 +334,7 @@
             } else {
                 console.error('Impossibile aggiornare il nonce');
                 if (feedback) {
-                    setFeedback('Errore: impossibile aggiornare le credenziali. Ricarica la pagina e riprova.', 'error');
+                    setFeedback('Errore: impossibile aggiornare le credenziali. <a href="' + window.location.href + '" style="color: #0073aa; text-decoration: underline;">Clicca qui per ricaricare la pagina</a> e riprova.', 'error');
                 }
             }
         }
