@@ -138,12 +138,52 @@ if ( $form_submitted ) {
 
 <div id="fpml-diagnostics-feedback" class="fpml-diagnostics-feedback" role="status" aria-live="polite" data-refresh-endpoint="<?php echo esc_url( $refresh_endpoint ); ?>"></div>
 
-<script type="text/javascript">
-// Assicurati che ajaxurl sia disponibile per il refresh del nonce
-if (typeof ajaxurl === 'undefined') {
-    var ajaxurl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
-}
-</script>
+        <script type="text/javascript">
+        // Assicurati che ajaxurl sia disponibile per il refresh del nonce
+        if (typeof ajaxurl === 'undefined') {
+            var ajaxurl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
+        }
+        
+        // Funzione per pulire i meta orfani
+        function cleanupOrphanedPairs() {
+            if (!confirm('Sei sicuro di voler pulire i meta orfani? Questo rimuoverà i riferimenti a traduzioni cancellate.')) {
+                return;
+            }
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Pulizia in corso...';
+            
+            // Usa AJAX diretto per la pulizia
+            const formData = new FormData();
+            formData.append('action', 'fpml_cleanup_orphaned_pairs');
+            
+            fetch(ajaxurl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Pulizia completata: ' + data.data.message);
+                    // Ricarica la pagina per aggiornare le statistiche
+                    location.reload();
+                } else {
+                    alert('Errore durante la pulizia: ' + (data.data?.message || 'Errore sconosciuto'));
+                }
+            })
+            .catch(error => {
+                console.error('Errore AJAX:', error);
+                alert('Errore durante la pulizia: ' + error.message);
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = originalText;
+            });
+        }
+        </script>
 
 <div class="fpml-diagnostics-grid">
         <div class="fpml-diagnostics-card">
@@ -209,6 +249,13 @@ if (typeof ajaxurl === 'undefined') {
                                 data-success-message="<?php echo esc_attr__( 'Batch eseguito. Aggiorna la pagina per aggiornare le metriche.', 'fp-multilanguage' ); ?>"
                                 data-success-template="<?php echo esc_attr( $run_queue_success_template ); ?>"
                         ><?php esc_html_e( 'Esegui batch ora', 'fp-multilanguage' ); ?></button>
+                        
+                        <button
+                                type="button"
+                                class="button button-warning"
+                                onclick="cleanupOrphanedPairs()"
+                                style="margin-left: 10px;"
+                        ><?php esc_html_e( 'Pulisci Meta Orfani', 'fp-multilanguage' ); ?></button>
                         <button
                                 type="button"
                                 class="button button-secondary"
