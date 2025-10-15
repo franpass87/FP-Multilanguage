@@ -102,24 +102,24 @@ class FPML_Setup_Wizard {
 			return;
 		}
 
-		// Non redirect se siamo già nel wizard.
-		if ( isset( $_GET['page'] ) && 'fpml-setup-wizard' === $_GET['page'] ) {
-			return;
-		}
+	// Non redirect se siamo già nel wizard.
+	if ( isset( $_GET['page'] ) && 'fpml-setup-wizard' === $_GET['page'] ) {
+		return;
+	}
 
-		// Non redirect se l'utente sta accedendo alle settings del plugin.
-		if ( isset( $_GET['page'] ) && 'fpml-settings' === $_GET['page'] ) {
-			return;
-		}
+	// Non redirect se l'utente vuole saltare il wizard (DEVE essere controllato PRIMA della pagina settings).
+	if ( isset( $_GET['fpml_skip_wizard'] ) && '1' === $_GET['fpml_skip_wizard'] ) {
+		// Segna il wizard come completato per evitare redirect futuri.
+		$settings = $this->settings ? $this->settings->all() : array();
+		$settings['setup_completed'] = true;
+		update_option( FPML_Settings::OPTION_KEY, $settings );
+		return;
+	}
 
-		// Non redirect se l'utente vuole saltare il wizard.
-		if ( isset( $_GET['fpml_skip_wizard'] ) && '1' === $_GET['fpml_skip_wizard'] ) {
-			// Segna il wizard come completato per evitare redirect futuri.
-			$settings = $this->settings ? $this->settings->all() : array();
-			$settings['setup_completed'] = true;
-			update_option( FPML_Settings::OPTION_KEY, $settings );
-			return;
-		}
+	// Non redirect se l'utente sta accedendo alle settings del plugin.
+	if ( isset( $_GET['page'] ) && 'fpml-settings' === $_GET['page'] ) {
+		return;
+	}
 
 		// Non redirect subito dopo l'attivazione (dà fastidio).
 		$activation_redirect_done = get_option( 'fpml_activation_redirect_done', false );
