@@ -232,7 +232,6 @@ class FPML_Setup_Wizard {
 				var apiKey = '';
 				
 				if (provider === 'openai') apiKey = $('input[name="openai_api_key"]').val();
-				if (provider === 'deepl') apiKey = $('input[name="deepl_api_key"]').val();
 				if (provider === 'google') apiKey = $('input[name="google_api_key"]').val();
 				
 				$btn.prop('disabled', true).text('<?php esc_html_e( 'Test in corso...', 'fp-multilanguage' ); ?>');
@@ -312,7 +311,7 @@ class FPML_Setup_Wizard {
 			
 			<h3><?php esc_html_e( 'Cosa faremo:', 'fp-multilanguage' ); ?></h3>
 			<ul style="line-height: 2;">
-				<li>✅ <?php esc_html_e( 'Configureremo il provider di traduzione (OpenAI, DeepL, Google o LibreTranslate)', 'fp-multilanguage' ); ?></li>
+				<li>✅ <?php esc_html_e( 'Configureremo il provider di traduzione (OpenAI o Google)', 'fp-multilanguage' ); ?></li>
 				<li>✅ <?php esc_html_e( 'Ottimizzeremo le performance per il tuo hosting', 'fp-multilanguage' ); ?></li>
 				<li>✅ <?php esc_html_e( 'Abiliteremo le funzionalità automatiche (auto-translate, SEO, health check)', 'fp-multilanguage' ); ?></li>
 				<li>✅ <?php esc_html_e( 'Avvieremo il primo reindex per tradurre i contenuti esistenti', 'fp-multilanguage' ); ?></li>
@@ -353,10 +352,8 @@ class FPML_Setup_Wizard {
 					<label><?php esc_html_e( 'Provider Preferito', 'fp-multilanguage' ); ?></label>
 					<select name="provider" required>
 						<option value=""><?php esc_html_e( '-- Seleziona --', 'fp-multilanguage' ); ?></option>
-						<option value="openai" <?php selected( $current['provider'] ?? '', 'openai' ); ?>>OpenAI (GPT-4) - <?php esc_html_e( 'Consigliato', 'fp-multilanguage' ); ?></option>
-						<option value="deepl" <?php selected( $current['provider'] ?? '', 'deepl' ); ?>>DeepL - <?php esc_html_e( 'Alta qualità', 'fp-multilanguage' ); ?></option>
+						<option value="openai" <?php selected( $current['provider'] ?? '', 'openai' ); ?>>OpenAI (GPT-5) - <?php esc_html_e( 'Consigliato', 'fp-multilanguage' ); ?></option>
 						<option value="google" <?php selected( $current['provider'] ?? '', 'google' ); ?>>Google Cloud Translation</option>
-						<option value="libretranslate" <?php selected( $current['provider'] ?? '', 'libretranslate' ); ?>>LibreTranslate - <?php esc_html_e( 'Self-hosted', 'fp-multilanguage' ); ?></option>
 					</select>
 					<p class="description"><?php esc_html_e( 'OpenAI offre la migliore qualità con contesto e tono naturale.', 'fp-multilanguage' ); ?></p>
 				</div>
@@ -364,12 +361,10 @@ class FPML_Setup_Wizard {
 				<div class="fpml-wizard-field">
 					<label><?php esc_html_e( 'API Key', 'fp-multilanguage' ); ?></label>
 					<input type="password" name="openai_api_key" value="<?php echo esc_attr( $current['openai_api_key'] ?? '' ); ?>" placeholder="sk-..." autocomplete="off" />
-					<input type="password" name="deepl_api_key" value="<?php echo esc_attr( $current['deepl_api_key'] ?? '' ); ?>" placeholder="..." autocomplete="off" style="display:none;" />
 					<input type="password" name="google_api_key" value="<?php echo esc_attr( $current['google_api_key'] ?? '' ); ?>" placeholder="..." autocomplete="off" style="display:none;" />
 					<p class="description">
 						<?php esc_html_e( 'Ottieni la tua chiave API su:', 'fp-multilanguage' ); ?>
 						<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> |
-						<a href="https://www.deepl.com/pro-api" target="_blank">DeepL</a> |
 						<a href="https://console.cloud.google.com/" target="_blank">Google Cloud</a>
 					</p>
 				</div>
@@ -398,7 +393,6 @@ class FPML_Setup_Wizard {
 			$('select[name="provider"]').on('change', function() {
 				$('input[type="password"]').hide();
 				if ($(this).val() === 'openai') $('input[name="openai_api_key"]').show();
-				if ($(this).val() === 'deepl') $('input[name="deepl_api_key"]').show();
 				if ($(this).val() === 'google') $('input[name="google_api_key"]').show();
 			}).trigger('change');
 

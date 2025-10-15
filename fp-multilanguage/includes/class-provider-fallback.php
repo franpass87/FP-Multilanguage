@@ -90,7 +90,7 @@ class FPML_Provider_Fallback {
 		$primary = $this->settings->get( 'provider', '' );
 
 		// Ordine di fallback consigliato.
-		$preferred_order = array( 'openai', 'deepl', 'google', 'libretranslate' );
+		$preferred_order = array( 'openai', 'google' );
 
 		// Inizia con primary.
 		if ( $primary ) {
@@ -132,12 +132,8 @@ class FPML_Provider_Fallback {
 		switch ( $provider ) {
 			case 'openai':
 				return ! empty( $this->settings->get( 'openai_api_key', '' ) );
-			case 'deepl':
-				return ! empty( $this->settings->get( 'deepl_api_key', '' ) );
 			case 'google':
 				return ! empty( $this->settings->get( 'google_api_key', '' ) ) && ! empty( $this->settings->get( 'google_project_id', '' ) );
-			case 'libretranslate':
-				return ! empty( $this->settings->get( 'libretranslate_api_url', '' ) );
 		}
 
 		return false;
@@ -293,25 +289,11 @@ class FPML_Provider_Fallback {
 				$instance = new FPML_Provider_OpenAI();
 				break;
 
-			case 'deepl':
-				if ( ! class_exists( 'FPML_Provider_DeepL' ) ) {
-					return new WP_Error( 'fpml_provider_missing', 'DeepL provider non disponibile' );
-				}
-				$instance = new FPML_Provider_DeepL();
-				break;
-
 			case 'google':
 				if ( ! class_exists( 'FPML_Provider_Google' ) ) {
 					return new WP_Error( 'fpml_provider_missing', 'Google provider non disponibile' );
 				}
 				$instance = new FPML_Provider_Google();
-				break;
-
-			case 'libretranslate':
-				if ( ! class_exists( 'FPML_Provider_LibreTranslate' ) ) {
-					return new WP_Error( 'fpml_provider_missing', 'LibreTranslate provider non disponibile' );
-				}
-				$instance = new FPML_Provider_LibreTranslate();
 				break;
 
 			default:

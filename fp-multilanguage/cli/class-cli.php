@@ -102,9 +102,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
                         $settings     = FPML_Settings::instance();
                         $provider_map = array(
                                 'openai'         => 'OpenAI',
-                                'deepl'          => 'DeepL',
                                 'google'         => 'Google Cloud Translation',
-                                'libretranslate' => 'LibreTranslate',
                         );
 
                         $provider_slug = $settings ? $settings->get( 'provider', '' ) : '';

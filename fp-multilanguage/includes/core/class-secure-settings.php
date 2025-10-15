@@ -37,9 +37,7 @@ class FPML_Secure_Settings {
 	 */
 	protected $encrypted_fields = array(
 		'openai_api_key',
-		'deepl_api_key',
 		'google_api_key',
-		'libretranslate_api_key',
 	);
 
 	/**

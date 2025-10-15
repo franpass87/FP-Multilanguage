@@ -62,7 +62,6 @@ class Test_FPML_Secure_Settings extends WP_UnitTestCase {
 	public function test_settings_encryption_filter() {
 		$settings = array(
 			'openai_api_key' => 'sk-test-openai-key',
-			'deepl_api_key'  => 'deepl-test-key',
 			'provider'       => 'openai',
 		);
 
@@ -70,7 +69,6 @@ class Test_FPML_Secure_Settings extends WP_UnitTestCase {
 
 		// API keys should be encrypted
 		$this->assertStringStartsWith( 'ENC:', $encrypted_settings['openai_api_key'], 'OpenAI key should be encrypted' );
-		$this->assertStringStartsWith( 'ENC:', $encrypted_settings['deepl_api_key'], 'DeepL key should be encrypted' );
 		
 		// Non-sensitive fields should remain unchanged
 		$this->assertEquals( 'openai', $encrypted_settings['provider'], 'Provider should not be encrypted' );

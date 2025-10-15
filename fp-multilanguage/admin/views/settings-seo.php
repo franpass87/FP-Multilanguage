@@ -42,16 +42,8 @@ $options = isset( $options ) ? $options : array();
 <input type="text" class="small-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[rate_openai]" value="<?php echo esc_attr( $options['rate_openai'] ); ?>" />
 </label>
 <label>
-<span><?php esc_html_e( 'DeepL', 'fp-multilanguage' ); ?></span><br />
-<input type="text" class="small-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[rate_deepl]" value="<?php echo esc_attr( $options['rate_deepl'] ); ?>" />
-</label>
-<label>
 <span><?php esc_html_e( 'Google', 'fp-multilanguage' ); ?></span><br />
 <input type="text" class="small-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[rate_google]" value="<?php echo esc_attr( $options['rate_google'] ); ?>" />
-</label>
-<label>
-<span><?php esc_html_e( 'LibreTranslate', 'fp-multilanguage' ); ?></span><br />
-<input type="text" class="small-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[rate_libretranslate]" value="<?php echo esc_attr( $options['rate_libretranslate'] ); ?>" />
 </label>
 </div>
 <p class="fpml-field-description"><?php esc_html_e( 'Utilizzato per stimare i costi nelle dashboard e nei report.', 'fp-multilanguage' ); ?></p>

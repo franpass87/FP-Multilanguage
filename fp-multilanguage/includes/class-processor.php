@@ -733,14 +733,8 @@ class FPML_Processor {
                         case 'openai':
                                 $translator = new FPML_Provider_OpenAI();
                                 break;
-                        case 'deepl':
-                                $translator = new FPML_Provider_DeepL();
-                                break;
                         case 'google':
                                 $translator = new FPML_Provider_Google();
-                                break;
-                        case 'libretranslate':
-                                $translator = new FPML_Provider_LibreTranslate();
                                 break;
                         default:
                                 return new WP_Error( 'fpml_provider_missing', __( 'Nessun provider configurato.', 'fp-multilanguage' ) );

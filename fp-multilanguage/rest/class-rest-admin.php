@@ -587,36 +587,22 @@ class FPML_REST_Admin {
 		$settings = FPML_Settings::instance();
 
 		switch ( $provider ) {
-			case 'openai':
-				$api_key = $settings->get( 'openai_api_key', '' );
-				if ( empty( $api_key ) ) {
-					return new WP_Error( 'fpml_no_api_key', __( 'API key OpenAI mancante.', 'fp-multilanguage' ) );
-				}
-				return new FPML_Provider_OpenAI();
+		case 'openai':
+			$api_key = $settings->get( 'openai_api_key', '' );
+			if ( empty( $api_key ) ) {
+				return new WP_Error( 'fpml_no_api_key', __( 'API key OpenAI mancante.', 'fp-multilanguage' ) );
+			}
+			return new FPML_Provider_OpenAI();
 
-			case 'deepl':
-				$api_key = $settings->get( 'deepl_api_key', '' );
-				if ( empty( $api_key ) ) {
-					return new WP_Error( 'fpml_no_api_key', __( 'API key DeepL mancante.', 'fp-multilanguage' ) );
-				}
-				return new FPML_Provider_DeepL();
+		case 'google':
+			$api_key = $settings->get( 'google_api_key', '' );
+			if ( empty( $api_key ) ) {
+				return new WP_Error( 'fpml_no_api_key', __( 'API key Google mancante.', 'fp-multilanguage' ) );
+			}
+			return new FPML_Provider_Google();
 
-			case 'google':
-				$api_key = $settings->get( 'google_api_key', '' );
-				if ( empty( $api_key ) ) {
-					return new WP_Error( 'fpml_no_api_key', __( 'API key Google mancante.', 'fp-multilanguage' ) );
-				}
-				return new FPML_Provider_Google();
-
-			case 'libretranslate':
-				$api_url = $settings->get( 'libretranslate_api_url', '' );
-				if ( empty( $api_url ) ) {
-					return new WP_Error( 'fpml_no_api_url', __( 'URL API LibreTranslate mancante.', 'fp-multilanguage' ) );
-				}
-				return new FPML_Provider_LibreTranslate();
-
-			default:
-				return new WP_Error( 'fpml_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
+		default:
+			return new WP_Error( 'fpml_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
 		}
 	}
 }

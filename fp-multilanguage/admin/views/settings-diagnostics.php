@@ -84,9 +84,7 @@ $average_jobs     = isset( $batch_average['jobs'] ) ? (float) $batch_average['jo
 
 $provider_labels = array(
         'openai'         => __( 'OpenAI', 'fp-multilanguage' ),
-        'deepl'          => __( 'DeepL', 'fp-multilanguage' ),
         'google'         => __( 'Google Cloud Translation', 'fp-multilanguage' ),
-        'libretranslate' => __( 'LibreTranslate', 'fp-multilanguage' ),
 );
 
 $provider_slug  = isset( $translator_data['provider'] ) ? $translator_data['provider'] : '';

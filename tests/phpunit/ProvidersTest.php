@@ -21,30 +21,16 @@ final class ProvidersTest extends TestCase {
 		$this->assertEquals( 'openai', $provider->get_slug() );
 	}
 
-	public function test_deepl_provider_returns_correct_slug(): void {
-		$provider = new FPML_Provider_DeepL();
-
-		$this->assertEquals( 'deepl', $provider->get_slug() );
-	}
-
 	public function test_google_provider_returns_correct_slug(): void {
 		$provider = new FPML_Provider_Google();
 
 		$this->assertEquals( 'google', $provider->get_slug() );
 	}
 
-	public function test_libretranslate_provider_returns_correct_slug(): void {
-		$provider = new FPML_Provider_LibreTranslate();
-
-		$this->assertEquals( 'libretranslate', $provider->get_slug() );
-	}
-
 	public function test_providers_implement_interface(): void {
 		$providers = array(
 			new FPML_Provider_OpenAI(),
-			new FPML_Provider_DeepL(),
 			new FPML_Provider_Google(),
-			new FPML_Provider_LibreTranslate(),
 		);
 
 		foreach ( $providers as $provider ) {
@@ -86,9 +72,7 @@ final class ProvidersTest extends TestCase {
 	public function test_is_configured_returns_boolean(): void {
 		$providers = array(
 			new FPML_Provider_OpenAI(),
-			new FPML_Provider_DeepL(),
 			new FPML_Provider_Google(),
-			new FPML_Provider_LibreTranslate(),
 		);
 
 		foreach ( $providers as $provider ) {

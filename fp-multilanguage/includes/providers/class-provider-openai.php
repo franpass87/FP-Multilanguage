@@ -33,7 +33,7 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
          */
         public function is_configured() {
                 $key   = $this->get_option( 'openai_api_key' );
-                $model = $this->get_option( 'openai_model', 'gpt-4o-mini' );
+                $model = $this->get_option( 'openai_model', 'gpt-5' );
 
                 return ! empty( $key ) && ! empty( $model );
         }
@@ -203,8 +203,8 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 				$error_message .= __( '3. Carica crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ) . "\n";
 				$error_message .= __( '4. Attendi 1-2 minuti affinché i crediti vengano attivati', 'fp-multilanguage' ) . "\n";
 				$error_message .= __( '5. Riprova il test', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '💰 Costi: ~$0.15 per 1000 caratteri con gpt-4o-mini (molto economico)', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '💡 Alternative gratuite: DeepL offre 500.000 caratteri/mese gratis!', 'fp-multilanguage' );
+				$error_message .= __( '💰 Costi: ~$0.10 per 1000 caratteri con GPT-5 (economico e di qualità)', 'fp-multilanguage' ) . "\n\n";
+				$error_message .= __( '💡 In alternativa, puoi usare Google Cloud Translation per grandi volumi.', 'fp-multilanguage' );
 			} else {
 				$error_message = sprintf(
 					__( 'Errore client OpenAI (%1$d): %2$s', 'fp-multilanguage' ),

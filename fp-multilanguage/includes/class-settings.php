@@ -81,13 +81,9 @@ public function get_defaults() {
 		return array(
 			'provider'                => '',
 			'openai_api_key'          => '',
-			'openai_model'            => 'gpt-4o-mini',
-			'deepl_api_key'           => '',
-			'deepl_use_free'          => false,
+			'openai_model'            => 'gpt-5',
 			'google_api_key'          => '',
 			'google_project_id'       => '',
-			'libretranslate_api_url'  => '',
-			'libretranslate_api_key'  => '',
 			'batch_size'              => 5,
 			'max_chars'               => 4500,
 			'max_chars_per_batch'     => 20000,
@@ -112,9 +108,7 @@ public function get_defaults() {
 			'exclude_regex'           => '',
 			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
 			'rate_openai'             => '',
-			'rate_deepl'              => '',
 			'rate_google'             => '',
-			'rate_libretranslate'     => '',
 			'remove_data'             => false,
 			// Nuove opzioni 0.4.0+.
 			'auto_translate_on_publish' => false,
@@ -251,12 +245,8 @@ $data     = wp_parse_args( is_array( $input ) ? $input : array(), $defaults );
 $data['provider']               = sanitize_text_field( $data['provider'] );
 $data['openai_api_key']         = sanitize_text_field( $data['openai_api_key'] );
 $data['openai_model']           = sanitize_text_field( $data['openai_model'] );
-$data['deepl_api_key']          = sanitize_text_field( $data['deepl_api_key'] );
-$data['deepl_use_free']         = ! empty( $data['deepl_use_free'] );
 $data['google_api_key']         = sanitize_text_field( $data['google_api_key'] );
 $data['google_project_id']      = sanitize_text_field( $data['google_project_id'] );
-$data['libretranslate_api_url'] = esc_url_raw( $data['libretranslate_api_url'] );
-$data['libretranslate_api_key'] = sanitize_text_field( $data['libretranslate_api_key'] );
 $data['batch_size']             = max( 1, absint( $data['batch_size'] ) );
 $data['max_chars']              = max( 500, absint( $data['max_chars'] ) );
 $data['max_chars_per_batch']    = max( 0, absint( $data['max_chars_per_batch'] ) );
@@ -288,9 +278,7 @@ $data['anonymize_logs']          = ! empty( $data['anonymize_logs'] );
 $data['exclude_regex']           = sanitize_textarea_field( $data['exclude_regex'] );
 $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shortcodes'] );
 	$data['rate_openai']             = sanitize_text_field( $data['rate_openai'] );
-	$data['rate_deepl']              = sanitize_text_field( $data['rate_deepl'] );
 	$data['rate_google']             = sanitize_text_field( $data['rate_google'] );
-	$data['rate_libretranslate']     = sanitize_text_field( $data['rate_libretranslate'] );
 	$data['remove_data']             = ! empty( $data['remove_data'] );
 
 	// Nuove opzioni 0.4.0+.
