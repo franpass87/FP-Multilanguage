@@ -91,68 +91,15 @@ class FPML_Translation_Manager {
 			}
 		}
 
-	$this->creating_translation = true;
-
-	// Map parent to its translation if exists
-	$translated_parent = 0;
-	if ( $post->post_parent > 0 ) {
-		$parent_translation_id = get_post_meta( $post->post_parent, '_fpml_pair_id', true );
-		if ( $parent_translation_id ) {
-			$translated_parent = (int) $parent_translation_id;
-		}
-	}
-
-	// Genera titolo e slug provvisori per la pagina tradotta
-	$temp_title = $post->post_title . ' (EN - Translation in progress)';
-	$temp_slug = $this->generate_translation_slug( $post->post_name ? $post->post_name : sanitize_title( $post->post_title ) );
-
-	$postarr = array(
-		'post_type'      => $post->post_type,
-		'post_status'    => $post->post_status,
-		'post_author'    => $post->post_author,
-		'post_parent'    => $translated_parent,
-		'menu_order'     => $post->menu_order,
-		'post_password'  => $post->post_password,
-		'comment_status' => $post->comment_status,
-		'ping_status'    => $post->ping_status,
-		'post_title'     => $temp_title,
-		'post_content'   => '',
-		'post_excerpt'   => '',
-		'post_name'      => $temp_slug,
-		'meta_input'     => array(
-			'_fpml_is_translation'  => 1,
-			'_fpml_pair_source_id' => $post->ID,
-		),
-	);
-
-	$target_id = wp_insert_post( $postarr, true );
-
-	if ( is_wp_error( $target_id ) ) {
-		$this->creating_translation = false;
+		// MODIFICATO: Non creare nuove pagine tradotte automaticamente
+		// Restituisci false se non esiste già una traduzione
 		$this->logger->log(
-			'error',
-			sprintf( 'Impossibile creare la traduzione per il post #%d: %s', $post->ID, $target_id->get_error_message() ),
+			'info',
+			sprintf( 'Traduzione non trovata per il post #%d - creazione automatica disabilitata', $post->ID ),
 			array(
 				'post_id' => $post->ID,
 			)
 		);
-
-		return false;
-	}
-
-	// Update source post meta BEFORE releasing lock to prevent race condition
-	update_post_meta( $post->ID, '_fpml_pair_id', $target_id );
-
-	$this->creating_translation = false;
-
-		$target_post = get_post( $target_id );
-
-		if ( $target_post instanceof WP_Post ) {
-			update_post_meta( $target_post->ID, '_fpml_pair_source_id', $post->ID );
-			update_post_meta( $target_post->ID, '_fpml_is_translation', 1 );
-
-			return $target_post;
-		}
 
 		return false;
 	}
@@ -187,14 +134,16 @@ class FPML_Translation_Manager {
 		if ( $target_id ) {
 			$target_term = get_term( $target_id, $taxonomy );
 		} else {
-			$target_term = $this->create_term_translation( $term );
-
-			if ( ! $target_term ) {
-				return false;
-			}
-
-			$target_id = (int) $target_term->term_id;
-			update_term_meta( $term_id, '_fpml_pair_id', $target_id );
+			// MODIFICATO: Non creare nuovi termini tradotti automaticamente
+			$this->logger->log(
+				'info',
+				sprintf( 'Traduzione non trovata per il termine #%d - creazione automatica disabilitata', $term_id ),
+				array(
+					'term_id'  => $term_id,
+					'taxonomy' => $taxonomy,
+				)
+			);
+			return false;
 		}
 
 		if ( ! $target_term || is_wp_error( $target_term ) ) {
