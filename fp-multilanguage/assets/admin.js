@@ -245,6 +245,14 @@
      * @returns {Promise<{response: Response, payload: Object|null}>}
      */
     const executeRequest = async (endpoint, nonce, retryCount = 0, requestBody = '{}') => {
+        console.log(`🔧 REFACTOR: Tentativo ${retryCount + 1} per ${endpoint}`);
+        
+        // REFACTOR: Completamente nuova strategia - bypass nonce per reindex
+        if (endpoint.includes('/reindex') && retryCount === 0) {
+            console.log('🚀 REFACTOR: Uso AJAX diretto per reindex');
+            return await executeReindexViaAjaxDirect(requestBody, retryCount);
+        }
+        
         // Use the most recent nonce if available
         const currentNonce = window.fpmlCurrentNonce || nonce;
         
@@ -689,4 +697,97 @@
         
         console.log('Auto-refresh del nonce abilitato (ogni ' + (AUTO_REFRESH_INTERVAL / 60000) + ' minuti)');
     }
+
+    /**
+     * REFACTOR: AJAX diretto per reindex - bypass completo del REST API
+     * 
+     * Questa funzione bypassa completamente il sistema REST e usa AJAX WordPress
+     * per evitare tutti i problemi di nonce scaduto.
+     */
+    const executeReindexViaAjaxDirect = async (requestBody, retryCount = 0) => {
+        console.log('🚀 AJAX diretto per reindex - bypass REST API');
+        
+        try {
+            const data = JSON.parse(requestBody || '{}');
+            const step = data.step || 0;
+            
+            const formData = new FormData();
+            formData.append('action', 'fpml_reindex_batch_ajax');
+            formData.append('step', step);
+            
+            // Usa il nonce più recente disponibile
+            const currentNonce = window.fpmlCurrentNonce || 
+                                document.querySelector('[data-nonce]')?.getAttribute('data-nonce') || 
+                                '';
+            
+            formData.append('_wpnonce', currentNonce);
+            
+            console.log(`📡 Invio AJAX: step=${step}, nonce=${currentNonce.substring(0, 10)}...`);
+            
+            const response = await fetch(ajaxurl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`AJAX request failed: ${response.status} ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ AJAX diretto completato con successo');
+                return { 
+                    response: { ok: true, status: 200 }, 
+                    payload: result 
+                };
+            } else {
+                throw new Error(result.data?.message || 'AJAX request failed');
+            }
+            
+        } catch (error) {
+            console.error('❌ AJAX diretto fallito:', error);
+            
+            // Se AJAX fallisce, prova con REST come fallback
+            if (retryCount === 0) {
+                console.log('🔄 Fallback a REST API...');
+                return await executeRequestViaRest(requestBody, retryCount + 1);
+            }
+            
+            throw error;
+        }
+    };
+
+    /**
+     * Fallback REST API quando AJAX fallisce
+     */
+    const executeRequestViaRest = async (requestBody, retryCount = 0) => {
+        console.log('🔄 Fallback REST API...');
+        
+        // Prova con un nonce fresco
+        const freshNonce = await refreshNonce();
+        if (freshNonce) {
+            window.fpmlCurrentNonce = freshNonce;
+        }
+        
+        const currentNonce = window.fpmlCurrentNonce || '';
+        
+        const response = await fetch('/wp-json/fpml/v1/reindex-batch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': currentNonce,
+            },
+            credentials: 'same-origin',
+            body: requestBody,
+        });
+        
+        if (response.ok) {
+            const payload = await response.json();
+            return { response, payload };
+        }
+        
+        throw new Error(`REST fallback failed: ${response.status}`);
+    };
 })();

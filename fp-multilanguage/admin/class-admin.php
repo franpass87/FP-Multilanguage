@@ -103,6 +103,7 @@ const MENU_SLUG = 'fpml-settings';
 		add_action( 'admin_post_fpml_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'wp_ajax_fpml_trigger_detection', array( $this, 'handle_trigger_detection' ) );
 		add_action( 'wp_ajax_fpml_refresh_nonce', array( $this, 'handle_refresh_nonce' ) );
+		add_action( 'wp_ajax_fpml_reindex_batch_ajax', array( $this, 'handle_reindex_batch_ajax' ) );
 		add_action( 'admin_init', array( $this, 'handle_expired_nonce_redirect' ) );
 		add_action( 'init', array( $this, 'handle_expired_nonce_early' ), 1 );
 		add_action( 'plugins_loaded', array( $this, 'handle_expired_nonce_very_early' ), 1 );
@@ -1524,5 +1525,68 @@ protected function get_tabs() {
 
         wp_safe_redirect( $redirect_url );
         exit;
+    }
+
+    /**
+     * Handle AJAX reindex batch to bypass REST API nonce issues.
+     * 
+     * This method provides a direct AJAX endpoint for reindex operations
+     * that bypasses the REST API nonce validation problems.
+     *
+     * @since 0.4.3
+     *
+     * @return void
+     */
+    public function handle_reindex_batch_ajax() {
+        // Check user permissions
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permessi insufficienti.', 'fp-multilanguage' ) ) );
+        }
+
+        // Get step parameter
+        $step = isset( $_POST['step'] ) ? absint( $_POST['step'] ) : 0;
+
+        try {
+            // Get the plugin instance
+            $plugin = FPML_Plugin::instance();
+
+            // Check if in assisted mode
+            if ( $plugin->is_assisted_mode() ) {
+                wp_send_json_error( array( 
+                    'message' => __( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ) 
+                ) );
+            }
+
+            // Get the content indexer
+            $indexer = FPML_Container::get( 'content_indexer' );
+            if ( ! $indexer ) {
+                $indexer = FPML_Content_Indexer::instance();
+            }
+
+            // Execute reindex batch
+            $result = $indexer->reindex_batch( $step );
+
+            if ( is_wp_error( $result ) ) {
+                wp_send_json_error( array( 
+                    'message' => $result->get_error_message(),
+                    'code' => $result->get_error_code()
+                ) );
+            }
+
+            // Return success response
+            wp_send_json_success( array(
+                'step' => $step,
+                'result' => $result,
+                'completed' => isset( $result['completed'] ) ? $result['completed'] : false,
+                'total_processed' => isset( $result['total_processed'] ) ? $result['total_processed'] : 0,
+                'message' => isset( $result['message'] ) ? $result['message'] : __( 'Batch completato.', 'fp-multilanguage' )
+            ) );
+
+        } catch ( Exception $e ) {
+            error_log( 'FPML AJAX reindex error: ' . $e->getMessage() );
+            wp_send_json_error( array( 
+                'message' => __( 'Errore durante il reindex: ', 'fp-multilanguage' ) . $e->getMessage() 
+            ) );
+        }
     }
 }
