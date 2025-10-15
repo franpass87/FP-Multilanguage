@@ -772,8 +772,8 @@ if ( null !== $this->excluded_shortcodes ) {
 return $this->excluded_shortcodes;
 }
 
-$raw = $this->settings ? $this->settings->get( 'excluded_shortcodes', '' ) : '';
-$defaults = array( 'vc_row', 'vc_column', 'vc_section', 'vc_tabs', 'vc_accordion', 'vc_tta_accordion', 'vc_tta_tabs' );
+	$raw = $this->settings ? $this->settings->get( 'excluded_shortcodes', '' ) : '';
+	$defaults = array( 'vc_row', 'vc_column', 'vc_section' );
 
 if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
 $this->excluded_shortcodes = $defaults;
