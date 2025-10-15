@@ -106,7 +106,7 @@ public function get_defaults() {
 			'queue_retention_days'    => 14,
 			'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc,_wp_attachment_image_alt,_product_attributes',
 			'exclude_regex'           => '',
-			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
+			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section',
 			'rate_openai'             => '',
 			'rate_google'             => '',
 			'remove_data'             => false,
