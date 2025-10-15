@@ -129,7 +129,7 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 			'timeout' => 45,
 		);
 
-                $max_attempts = 3;
+                $max_attempts = 5; // Aumentato da 3 a 5 per gestire meglio i rate limits
 
                 for ( $attempt = 1; $attempt <= $max_attempts; $attempt++ ) {
                         $response = wp_remote_post( self::API_ENDPOINT, $args );
@@ -148,7 +148,46 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                         // Errori temporanei - retry ha senso
                         if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
-                                        return new WP_Error( 'fpml_openai_rate_limit', __( 'OpenAI ha restituito un errore di rate limit o temporaneo.', 'fp-multilanguage' ) );
+                                        $body = wp_remote_retrieve_body( $response );
+                                        $error_data = json_decode( $body, true );
+                                        $api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : '';
+                                        
+                                        // Controlla l'header Retry-After
+                                        $retry_after = wp_remote_retrieve_header( $response, 'retry-after' );
+                                        
+                                        $error_message = '';
+                                        
+                                        if ( 429 === $code ) {
+                                                $error_message = __( '❌ Rate limit OpenAI superato.', 'fp-multilanguage' ) . "\n\n";
+                                                $error_message .= __( '📋 Cosa significa:', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Hai inviato troppe richieste in poco tempo', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• OpenAI limita il numero di richieste al minuto per prevenire abusi', 'fp-multilanguage' ) . "\n\n";
+                                                $error_message .= __( '✅ Come risolvere:', 'fp-multilanguage' ) . "\n";
+                                                if ( $retry_after ) {
+                                                        $error_message .= sprintf( __( '• Attendi %s secondi prima di riprovare', 'fp-multilanguage' ), $retry_after ) . "\n";
+                                                } else {
+                                                        $error_message .= __( '• Attendi 1-2 minuti prima di riprovare', 'fp-multilanguage' ) . "\n";
+                                                }
+                                                $error_message .= __( '• Riduci la frequenza delle traduzioni nelle impostazioni', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Verifica i limiti del tuo piano su https://platform.openai.com/account/limits', 'fp-multilanguage' ) . "\n";
+                                        } else {
+                                                $error_message = sprintf( __( '❌ Errore temporaneo di OpenAI (codice %d).', 'fp-multilanguage' ), $code ) . "\n\n";
+                                                $error_message .= __( '📋 Cosa significa:', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• I server di OpenAI stanno riscontrando problemi temporanei', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Questo errore è solitamente transitorio e si risolve da solo', 'fp-multilanguage' ) . "\n\n";
+                                                $error_message .= __( '✅ Come risolvere:', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Attendi 30-60 secondi e riprova', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Controlla lo stato dei servizi OpenAI su https://status.openai.com/', 'fp-multilanguage' ) . "\n";
+                                                $error_message .= __( '• Se il problema persiste, considera di usare Google Cloud Translation', 'fp-multilanguage' ) . "\n";
+                                        }
+                                        
+                                        if ( $api_message ) {
+                                                $error_message .= "\n\n" . __( '💬 Messaggio da OpenAI:', 'fp-multilanguage' ) . "\n" . wp_kses_post( $api_message );
+                                        }
+                                        
+                                        $error_message .= "\n\n" . sprintf( __( '⚠️ Tentativo %d/%d fallito. Il sistema ha ritentato automaticamente con backoff esponenziale.', 'fp-multilanguage' ), $max_attempts, $max_attempts );
+                                        
+                                        return new WP_Error( 'fpml_openai_rate_limit', $error_message );
                                 }
 
                                 if ( class_exists( 'FPML_Logger' ) ) {
@@ -343,6 +382,26 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 		$error_type = isset( $data['error']['type'] ) ? $data['error']['type'] : '';
 		$error_message = isset( $data['error']['message'] ) ? $data['error']['message'] : '';
 
+		// Rate limit errors
+		if ( 429 === $code ) {
+			$retry_after = wp_remote_retrieve_header( $response, 'retry-after' );
+			$wait_time = $retry_after ? $retry_after : '60';
+			return array(
+				'status'  => 'rate_limit',
+				'message' => sprintf( __( '⚠️ Rate limit raggiunto. Attendi %s secondi e riprova.', 'fp-multilanguage' ), $wait_time ),
+				'details' => $error_message,
+			);
+		}
+
+		// Temporary server errors
+		if ( in_array( $code, array( 500, 502, 503, 504 ), true ) ) {
+			return array(
+				'status'  => 'server_error',
+				'message' => sprintf( __( '⚠️ Errore temporaneo dei server OpenAI (codice %d). Riprova tra qualche secondo.', 'fp-multilanguage' ), $code ),
+				'details' => $error_message,
+			);
+		}
+
 		if ( 'insufficient_quota' === $error_type || false !== stripos( $error_message, 'quota' ) || false !== stripos( $error_message, 'billing' ) ) {
 			return array(
 				'status'  => 'quota_exceeded',
@@ -362,6 +421,7 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 		return array(
 			'status'  => 'error',
 			'message' => sprintf( __( 'Errore %d: %s', 'fp-multilanguage' ), $code, $error_message ),
+			'details' => $error_message,
 		);
 	}
 }
