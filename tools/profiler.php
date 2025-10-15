@@ -186,9 +186,7 @@ function fpml_profile_providers() {
 
 	$providers = array(
 		'openai' => 'FPML_Provider_OpenAI',
-		'deepl' => 'FPML_Provider_DeepL',
 		'google' => 'FPML_Provider_Google',
-		'libretranslate' => 'FPML_Provider_LibreTranslate',
 	);
 
 	$results = array();

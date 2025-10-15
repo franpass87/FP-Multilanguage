@@ -33,7 +33,7 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
          */
         public function is_configured() {
                 $key   = $this->get_option( 'openai_api_key' );
-                $model = $this->get_option( 'openai_model', 'gpt-4o-mini' );
+                $model = $this->get_option( 'openai_model', 'gpt-5' );
 
                 return ! empty( $key ) && ! empty( $model );
         }

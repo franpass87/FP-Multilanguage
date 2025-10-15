@@ -67,9 +67,7 @@ function fpml_migrate_api_keys_main() {
 	// Check which keys need migration
 	$keys_to_migrate = array(
 		'openai_api_key',
-		'deepl_api_key',
 		'google_api_key',
-		'libretranslate_api_key',
 	);
 
 	$plain_text_keys = array();

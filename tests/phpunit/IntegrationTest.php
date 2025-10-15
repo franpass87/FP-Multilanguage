@@ -47,9 +47,7 @@ final class IntegrationTest extends TestCase {
 	public function test_all_provider_classes_are_loadable(): void {
 		$providers = array(
 			'FPML_Provider_OpenAI',
-			'FPML_Provider_DeepL',
 			'FPML_Provider_Google',
-			'FPML_Provider_LibreTranslate',
 		);
 
 		foreach ( $providers as $provider ) {

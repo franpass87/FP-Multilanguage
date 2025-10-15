@@ -174,7 +174,7 @@ function fpml_maintenance_clear_stuck_jobs() {
 function fpml_maintenance_reset_rate_limits() {
 	echo "🔄 Resetting rate limits...\n";
 
-	$providers = array( 'openai', 'deepl', 'google', 'libretranslate' );
+	$providers = array( 'openai', 'google' );
 
 	foreach ( $providers as $provider ) {
 		FPML_Rate_Limiter::reset( $provider );

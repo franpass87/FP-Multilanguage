@@ -70,7 +70,7 @@ function fpml_monitor_queue( $interval = 5 ) {
 
 		// Rate limiter status
 		echo "Rate Limiters:\n";
-		$providers = array( 'openai', 'deepl', 'google', 'libretranslate' );
+		$providers = array( 'openai', 'google' );
 		foreach ( $providers as $provider ) {
 			$status = FPML_Rate_Limiter::get_status( $provider );
 			$indicator = $status['available'] ? '🟢' : '🔴';

@@ -130,7 +130,7 @@ function fpml_pre_deployment_check() {
 		
 		// Check if keys are encrypted
 		$settings = get_option( 'fpml_settings', array() );
-		$api_keys = array( 'openai_api_key', 'deepl_api_key', 'google_api_key', 'libretranslate_api_key' );
+		$api_keys = array( 'openai_api_key', 'google_api_key' );
 		
 		$encrypted_count = 0;
 		$plain_count     = 0;
@@ -183,9 +183,7 @@ function fpml_pre_deployment_check() {
 	
 	$provider_classes = array(
 		'openai'         => 'FPML_Provider_OpenAI',
-		'deepl'          => 'FPML_Provider_DeepL',
 		'google'         => 'FPML_Provider_Google',
-		'libretranslate' => 'FPML_Provider_LibreTranslate',
 	);
 
 	$available_providers = 0;
