@@ -304,6 +304,13 @@ $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shor
 	$data['enable_rush_mode']          = ! empty( $data['enable_rush_mode'] );
 	$data['enable_acf_support']        = ! empty( $data['enable_acf_support'] );
 	$data['setup_completed']           = ! empty( $data['setup_completed'] );
+	$data['enable_email_notifications'] = ! empty( $data['enable_email_notifications'] );
+
+	// Menu language switcher integration (0.4.2+).
+	$data['auto_integrate_menu_switcher'] = ! empty( $data['auto_integrate_menu_switcher'] );
+	$data['menu_switcher_style']          = in_array( $data['menu_switcher_style'], array( 'inline', 'dropdown' ), true ) ? $data['menu_switcher_style'] : $defaults['menu_switcher_style'];
+	$data['menu_switcher_show_flags']     = ! empty( $data['menu_switcher_show_flags'] );
+	$data['menu_switcher_position']       = in_array( $data['menu_switcher_position'], array( 'start', 'end' ), true ) ? $data['menu_switcher_position'] : $defaults['menu_switcher_position'];
 
 	update_option( 'fpml_remove_data', $data['remove_data'] );
 
