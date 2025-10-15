@@ -107,6 +107,20 @@ class FPML_Setup_Wizard {
 			return;
 		}
 
+		// Non redirect se l'utente sta accedendo alle settings del plugin.
+		if ( isset( $_GET['page'] ) && 'fpml-settings' === $_GET['page'] ) {
+			return;
+		}
+
+		// Non redirect se l'utente vuole saltare il wizard.
+		if ( isset( $_GET['fpml_skip_wizard'] ) && '1' === $_GET['fpml_skip_wizard'] ) {
+			// Segna il wizard come completato per evitare redirect futuri.
+			$settings = $this->settings ? $this->settings->all() : array();
+			$settings['setup_completed'] = true;
+			update_option( FPML_Settings::OPTION_KEY, $settings );
+			return;
+		}
+
 		// Non redirect subito dopo l'attivazione (dà fastidio).
 		$activation_redirect_done = get_option( 'fpml_activation_redirect_done', false );
 		if ( ! $activation_redirect_done ) {
@@ -307,7 +321,9 @@ class FPML_Setup_Wizard {
 			<p><strong><?php esc_html_e( 'Tempo stimato: 5 minuti', 'fp-multilanguage' ); ?></strong></p>
 
 			<div class="fpml-wizard-buttons">
-				<span></span>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-settings&fpml_skip_wizard=1' ) ); ?>" class="button button-link">
+					<?php esc_html_e( 'Salta wizard e vai alle impostazioni', 'fp-multilanguage' ); ?>
+				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-setup-wizard&step=2' ) ); ?>" class="button button-primary button-large">
 					<?php esc_html_e( 'Iniziamo!', 'fp-multilanguage' ); ?> →
 				</a>
@@ -365,9 +381,14 @@ class FPML_Setup_Wizard {
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-setup-wizard&step=1' ) ); ?>" class="button button-large">
 						← <?php esc_html_e( 'Indietro', 'fp-multilanguage' ); ?>
 					</a>
-					<button type="submit" class="button button-primary button-large">
-						<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
-					</button>
+					<div>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-settings&fpml_skip_wizard=1' ) ); ?>" class="button button-link" style="margin-right: 10px;">
+							<?php esc_html_e( 'Salta', 'fp-multilanguage' ); ?>
+						</a>
+						<button type="submit" class="button button-primary button-large">
+							<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
+						</button>
+					</div>
 				</div>
 			</form>
 		</div>
@@ -446,9 +467,14 @@ class FPML_Setup_Wizard {
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-setup-wizard&step=2' ) ); ?>" class="button button-large">
 						← <?php esc_html_e( 'Indietro', 'fp-multilanguage' ); ?>
 					</a>
-					<button type="submit" class="button button-primary button-large">
-						<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
-					</button>
+					<div>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-settings&fpml_skip_wizard=1' ) ); ?>" class="button button-link" style="margin-right: 10px;">
+							<?php esc_html_e( 'Salta', 'fp-multilanguage' ); ?>
+						</a>
+						<button type="submit" class="button button-primary button-large">
+							<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
+						</button>
+					</div>
 				</div>
 			</form>
 		</div>
@@ -523,9 +549,14 @@ class FPML_Setup_Wizard {
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-setup-wizard&step=3' ) ); ?>" class="button button-large">
 						← <?php esc_html_e( 'Indietro', 'fp-multilanguage' ); ?>
 					</a>
-					<button type="submit" class="button button-primary button-large">
-						<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
-					</button>
+					<div>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=fpml-settings&fpml_skip_wizard=1' ) ); ?>" class="button button-link" style="margin-right: 10px;">
+							<?php esc_html_e( 'Salta', 'fp-multilanguage' ); ?>
+						</a>
+						<button type="submit" class="button button-primary button-large">
+							<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →
+						</button>
+					</div>
 				</div>
 			</form>
 		</div>
