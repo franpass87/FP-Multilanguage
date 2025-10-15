@@ -313,4 +313,9 @@ function fpml_register_services() {
 	FPML_Container::register( 'translation_versioning', function() {
 		return class_exists( 'FPML_Translation_Versioning' ) ? FPML_Translation_Versioning::instance() : null;
 	} );
+
+	// Plugin detector.
+	FPML_Container::register( 'plugin_detector', function() {
+		return class_exists( 'FPML_Plugin_Detector' ) ? FPML_Plugin_Detector::instance() : null;
+	} );
 }
