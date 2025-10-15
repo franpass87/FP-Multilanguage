@@ -67,7 +67,8 @@ class FPML_Theme_Compatibility {
     protected function __construct() {
         $this->settings = FPML_Settings::instance();
 
-        // Detect theme
+        // Detect theme - get_template() returns parent theme for child themes
+        // This ensures child themes automatically inherit parent theme configuration
         $theme = wp_get_theme();
         $this->theme_slug = strtolower( $theme->get_template() );
         $this->theme_name = $theme->get( 'Name' );
@@ -158,28 +159,28 @@ class FPML_Theme_Compatibility {
      * @return string
      */
     protected function get_primary_menu_location() {
+        // Note: Child themes automatically inherit parent theme location
+        // because $this->theme_slug uses get_template() which returns parent theme.
         $locations = array(
-            'salient'         => 'top_nav',
-            'salient-child'   => 'top_nav',
-            'astra'           => 'primary',
-            'astra-child'     => 'primary',
-            'generatepress'   => 'primary',
-            'oceanwp'         => 'main_menu',
-            'neve'            => 'primary',
-            'kadence'         => 'primary',
-            'blocksy'         => 'primary',
-            'hello-elementor' => 'primary',
-            'storefront'      => 'primary',
-            'twentytwentyfour' => 'primary',
+            'salient'           => 'top_nav',
+            'astra'             => 'primary',
+            'generatepress'     => 'primary',
+            'oceanwp'           => 'main_menu',
+            'neve'              => 'primary',
+            'kadence'           => 'primary',
+            'blocksy'           => 'primary',
+            'hello-elementor'   => 'primary',
+            'storefront'        => 'primary',
+            'twentytwentyfour'  => 'primary',
             'twentytwentythree' => 'primary',
-            'twentytwentytwo' => 'primary',
-            'twentytwentyone' => 'primary',
-            'divi'            => 'primary-menu',
-            'avada'           => 'main_navigation',
-            'enfold'          => 'avia',
-            'flatsome'        => 'primary',
-            'bridge'          => 'main-menu',
-            'the7'            => 'primary',
+            'twentytwentytwo'   => 'primary',
+            'twentytwentyone'   => 'primary',
+            'divi'              => 'primary-menu',
+            'avada'             => 'main_navigation',
+            'enfold'            => 'avia',
+            'flatsome'          => 'primary',
+            'bridge'            => 'main-menu',
+            'the7'              => 'primary',
         );
 
         return isset( $locations[ $this->theme_slug ] ) ? $locations[ $this->theme_slug ] : 'primary';
@@ -452,6 +453,405 @@ class FPML_Theme_Compatibility {
     }
 
     /**
+     * Get CSS for Neve theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_neve_css() {
+        return '
+            .primary-menu-ul .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .primary-menu-ul .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .primary-menu-ul .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Blocksy theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_blocksy_css() {
+        return '
+            .ct-header .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .ct-header .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .ct-header .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Divi theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_divi_css() {
+        return '
+            #et-top-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            #et-top-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            #et-top-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+            
+            @media (max-width: 980px) {
+                #mobile_menu .menu-item-language-switcher.fpml-auto-integrated {
+                    text-align: center;
+                    padding: 10px 20px;
+                }
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Avada theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_avada_css() {
+        return '
+            .fusion-main-menu .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .fusion-main-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .fusion-main-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+            
+            @media (max-width: 800px) {
+                .fusion-mobile-menu-icons .menu-item-language-switcher.fpml-auto-integrated {
+                    text-align: center;
+                    padding: 10px 20px;
+                }
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Enfold theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_enfold_css() {
+        return '
+            .avia-menu .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .avia-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .avia-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Flatsome theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_flatsome_css() {
+        return '
+            .header-nav .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .header-nav .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .header-nav .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for The7 theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_the7_css() {
+        return '
+            .dt-primary-nav .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .dt-primary-nav .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .dt-primary-nav .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Bridge theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_bridge_css() {
+        return '
+            .main-menu .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .main-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .main-menu .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Hello Elementor theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_hello_elementor_css() {
+        return '
+            .site-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .site-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .site-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Storefront theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_storefront_css() {
+        return '
+            .main-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .main-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .main-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Twenty Twenty-Four theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_twentytwentyfour_css() {
+        return '
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Twenty Twenty-Three theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_twentytwentythree_css() {
+        return '
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Twenty Twenty-Two theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_twentytwentytwo_css() {
+        return '
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .wp-block-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for Twenty Twenty-One theme.
+     *
+     * @since 0.4.2
+     *
+     * @return string
+     */
+    protected function get_twentytwentyone_css() {
+        return '
+            .primary-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                display: inline-flex;
+                align-items: center;
+            }
+            
+            .primary-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item {
+                color: inherit;
+                font-size: inherit;
+                font-family: inherit;
+                padding: 6px 12px;
+            }
+            
+            .primary-navigation .menu-item-language-switcher.fpml-auto-integrated .fpml-switcher__item:hover {
+                opacity: 0.7;
+            }
+            
+            @media (max-width: 481px) {
+                .primary-navigation .menu-item-language-switcher.fpml-auto-integrated {
+                    text-align: center;
+                    padding: 10px 15px;
+                }
+            }
+        ';
+    }
+
+    /**
      * Get detected theme info.
      *
      * @since 0.4.2
@@ -485,10 +885,16 @@ class FPML_Theme_Compatibility {
             'blocksy',
             'hello-elementor',
             'storefront',
+            'twentytwentyfour',
+            'twentytwentythree',
+            'twentytwentytwo',
+            'twentytwentyone',
             'divi',
             'avada',
             'enfold',
             'flatsome',
+            'the7',
+            'bridge',
         );
 
         return in_array( $this->theme_slug, $supported_themes, true );
