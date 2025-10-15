@@ -152,9 +152,6 @@ function fpml_load_files() {
 	// Load admin, REST, CLI
 	if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
 		require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
-	} elseif ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin-cleanup.php' ) ) {
-		// Load temporary cleanup handler if main admin class is missing
-		require_once FPML_PLUGIN_DIR . 'admin/class-admin-cleanup.php';
 	}
 
 	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
