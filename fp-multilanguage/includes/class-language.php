@@ -421,10 +421,10 @@ class FPML_Language {
                 $classes[] = 'fpml-switcher__item--current';
             }
 
-            $label = esc_html( $language['label'] );
-
             if ( $show_flags ) {
-                $label = $this->maybe_prefix_flag( $code ) . $label;
+                $label = $this->maybe_prefix_flag( $code );
+            } else {
+                $label = esc_html( $language['label'] );
             }
 
             $items[] = sprintf(
@@ -456,10 +456,10 @@ class FPML_Language {
         $options = array();
 
         foreach ( $languages as $code => $language ) {
-            $label = esc_html( $language['label'] );
-
             if ( $show_flags ) {
-                $label = wp_kses_post( $this->maybe_prefix_flag( $code ) . $label );
+                $label = wp_kses_post( $this->maybe_prefix_flag( $code ) );
+            } else {
+                $label = esc_html( $language['label'] );
             }
 
             $options[] = sprintf(
@@ -505,7 +505,7 @@ class FPML_Language {
             return '';
         }
 
-        return sprintf( '<span class="fpml-switcher__flag" aria-hidden="true">%s</span> ', esc_html( $flags[ $code ] ) );
+        return sprintf( '<span class="fpml-switcher__flag" aria-hidden="true">%s</span>', esc_html( $flags[ $code ] ) );
     }
 
     /**

@@ -27,8 +27,10 @@
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     border: 1px solid transparent;
+    min-width: 40px;
 }
 
 .fpml-switcher__item:hover {
@@ -56,8 +58,9 @@
 
 /* Flag emoji */
 .fpml-switcher__flag {
-    font-size: 18px;
+    font-size: 24px;
     line-height: 1;
+    display: inline-block;
 }
 
 /* Dropdown Switcher */
@@ -133,6 +136,11 @@
     
     .fpml-switcher__item {
         padding: 8px 16px;
+        min-width: 48px;
+    }
+    
+    .fpml-switcher__flag {
+        font-size: 28px;
     }
     
     .fpml-switcher__select {
@@ -157,10 +165,11 @@
 .fpml-switcher--compact .fpml-switcher__item {
     padding: 4px 8px;
     font-size: 13px;
+    min-width: 36px;
 }
 
 .fpml-switcher--compact .fpml-switcher__flag {
-    font-size: 16px;
+    font-size: 20px;
 }
 
 /* Optional: Pills style variant */
