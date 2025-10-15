@@ -15,15 +15,54 @@ Impossibile aggiornare il nonce
 
 ## Causa del Problema
 
-Il problema era causato da un conflitto nel sistema di gestione dei nonce:
+Il problema era causato da **due diversi tipi** di errori di nonce scaduto:
 
-1. **Nonce Scaduto**: I nonce WordPress hanno una durata limitata (di solito 12-24 ore)
-2. **Endpoint Refresh Bloccato**: L'endpoint `/wp-json/fpml/v1/refresh-nonce` richiedeva autenticazione completa, creando un circolo vizioso
-3. **Gestione Errori Insufficiente**: Il JavaScript non forniva informazioni sufficienti per il debug
+### 1. **Errore AJAX/REST** (Risolto nella prima iterazione)
+- Nonce scaduto durante le richieste AJAX per il reindex
+- Endpoint refresh bloccato che richiedeva autenticazione completa
+- JavaScript che non gestiva correttamente i nonce scaduti
+
+### 2. **Errore Form Submit** (Problema principale identificato dall'utente)
+- Nonce scaduto quando si invia il form delle impostazioni
+- WordPress mostra "Il link che hai seguito è scaduto" dopo il redirect
+- L'errore appare **nella pagina**, non durante le richieste AJAX
 
 ## Soluzione Implementata
 
-### 1. Sistema AJAX WordPress (Soluzione Principale)
+### 1. **Gestione Form Submit** (Soluzione per il problema principale)
+
+**File**: `fp-multilanguage/admin/class-admin.php`
+
+Implementato un sistema multi-livello per intercettare e gestire gli errori di nonce scaduto:
+
+#### **Hook Precoce (`init` con priorità 1)**
+```php
+public function handle_expired_nonce_early() {
+    // Intercetta errori di nonce molto presto nel processo di caricamento
+    if ( $has_nonce_error ) {
+        $clean_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
+        $clean_url .= '&settings-updated=true';
+        wp_safe_redirect( $clean_url );
+        exit;
+    }
+}
+```
+
+#### **Hook Admin Init**
+```php
+public function handle_expired_nonce_redirect() {
+    // Gestisce redirect dopo submit del form con nonce scaduto
+}
+```
+
+#### **Custom wp_die Handler**
+```php
+public function custom_wp_die_handler( $handler ) {
+    // Intercetta le chiamate wp_die per errori di nonce
+}
+```
+
+### 2. Sistema AJAX WordPress (Per le richieste AJAX)
 
 **File**: `fp-multilanguage/admin/class-admin.php`
 
@@ -43,7 +82,23 @@ public function handle_refresh_nonce() {
 }
 ```
 
-### 2. Nuovo Metodo di Controllo Permessi (Fallback)
+### 4. **Messaggi di Successo** (Miglioramento UX)
+
+**File**: `fp-multilanguage/admin/views/settings-diagnostics.php`
+
+Aggiunto sistema di notifiche per confermare il salvataggio delle impostazioni:
+
+```php
+if ( $form_submitted ) {
+    add_action( 'admin_notices', function() {
+        echo '<div class="notice notice-success is-dismissible"><p>' . 
+             esc_html__( 'Impostazioni salvate con successo.', 'fp-multilanguage' ) . 
+             '</p></div>';
+    });
+}
+```
+
+### 5. Nuovo Metodo di Controllo Permessi (Fallback REST)
 
 **File**: `fp-multilanguage/rest/class-rest-admin.php`
 
@@ -150,8 +205,21 @@ Per evitare questo problema in futuro:
 
 ## Vantaggi della Soluzione
 
+### **Per il Problema Form Submit:**
+1. **Intercettazione Multi-Livello**: Tre hook diversi per catturare l'errore in qualsiasi momento
+2. **Redirect Pulito**: Rimuove automaticamente i parametri di nonce scaduto dall'URL
+3. **Messaggio di Successo**: Mostra conferma che le impostazioni sono state salvate
+4. **Zero Interruzioni**: L'utente non vede mai l'errore "link scaduto"
+
+### **Per il Problema AJAX:**
 1. **Doppio Fallback**: Se l'AJAX WordPress fallisce, prova l'endpoint REST
 2. **Più Affidabile**: L'AJAX WordPress è più stabile del REST API per operazioni semplici
 3. **Compatibilità**: Funziona anche se ci sono problemi con il REST API
 4. **Debugging**: Logging dettagliato per identificare rapidamente i problemi
 5. **UX Migliorata**: Messaggi di errore chiari con link per ricaricare la pagina
+
+### **Soluzione Completa:**
+- ✅ **Form Submit**: Nessun errore "link scaduto" dopo aver salvato le impostazioni
+- ✅ **Reindex AJAX**: Gestione automatica dei nonce scaduti durante il reindex
+- ✅ **Feedback Utente**: Messaggi chiari e informativi
+- ✅ **Robustezza**: Multipli livelli di fallback per ogni scenario

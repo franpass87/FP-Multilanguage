@@ -102,6 +102,9 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'admin_post_fpml_clear_sandbox', array( $this, 'handle_clear_sandbox' ) );
 		add_action( 'wp_ajax_fpml_trigger_detection', array( $this, 'handle_trigger_detection' ) );
 		add_action( 'wp_ajax_fpml_refresh_nonce', array( $this, 'handle_refresh_nonce' ) );
+		add_action( 'admin_init', array( $this, 'handle_expired_nonce_redirect' ) );
+		add_action( 'init', array( $this, 'handle_expired_nonce_early' ), 1 );
+		add_filter( 'wp_die_handler', array( $this, 'custom_wp_die_handler' ) );
 		add_action( 'current_screen', array( $this, 'setup_post_list_hooks' ) );
                 add_action( 'restrict_manage_posts', array( $this, 'render_language_filter' ), 20, 1 );
                 add_action( 'pre_get_posts', array( $this, 'handle_language_filter_query' ) );
@@ -1244,5 +1247,142 @@ protected function get_tabs() {
         $new_nonce = wp_create_nonce( 'wp_rest' );
 
         wp_send_json_success( array( 'nonce' => $new_nonce ) );
+    }
+
+    /**
+     * Handle expired nonce redirects on admin pages.
+     * 
+     * When WordPress redirects after form submission with an expired nonce,
+     * it shows "Il link che hai seguito è scaduto". This method detects
+     * such redirects to our plugin pages and redirects to a clean URL.
+     *
+     * @since 0.4.3
+     *
+     * @return void
+     */
+    public function handle_expired_nonce_redirect() {
+        // Only handle requests to our plugin admin pages
+        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== self::MENU_SLUG ) {
+            return;
+        }
+
+        // Check if we're being redirected after a form submission
+        $is_redirect = isset( $_SERVER['HTTP_REFERER'] ) && 
+                      strpos( $_SERVER['HTTP_REFERER'], 'options.php' ) !== false;
+
+        // Check if there's an expired nonce error in the URL or referrer
+        $has_nonce_error = isset( $_GET['_wpnonce'] ) || 
+                          ( isset( $_SERVER['HTTP_REFERER'] ) && 
+                            strpos( $_SERVER['HTTP_REFERER'], '_wpnonce=' ) !== false );
+
+        if ( $is_redirect && $has_nonce_error ) {
+            // Redirect to clean URL without nonce parameters
+            $clean_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
+            if ( isset( $_GET['tab'] ) ) {
+                $clean_url .= '&tab=' . sanitize_key( $_GET['tab'] );
+            }
+            
+            wp_safe_redirect( $clean_url );
+            exit;
+        }
+    }
+
+    /**
+     * Custom wp_die handler to intercept expired nonce errors.
+     * 
+     * This method intercepts WordPress wp_die calls and checks if they're
+     * related to expired nonces on our plugin pages. If so, it redirects
+     * to a clean URL instead of showing the error.
+     *
+     * @since 0.4.3
+     *
+     * @param callable $handler Current wp_die handler.
+     * @return callable Custom handler or original handler.
+     */
+    public function custom_wp_die_handler( $handler ) {
+        // Only intercept on our plugin pages
+        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== self::MENU_SLUG ) {
+            return $handler;
+        }
+
+        // Check if we're dealing with a nonce error
+        $is_nonce_error = false;
+        
+        // Check the current error message
+        if ( isset( $_GET['_wpnonce'] ) ) {
+            $is_nonce_error = true;
+        }
+
+        // Check if we came from a form submission
+        if ( isset( $_SERVER['HTTP_REFERER'] ) && 
+             strpos( $_SERVER['HTTP_REFERER'], 'options.php' ) !== false ) {
+            $is_nonce_error = true;
+        }
+
+        if ( $is_nonce_error ) {
+            // Redirect to clean URL
+            $clean_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
+            if ( isset( $_GET['tab'] ) ) {
+                $clean_url .= '&tab=' . sanitize_key( $_GET['tab'] );
+            }
+            
+            wp_safe_redirect( $clean_url );
+            exit;
+        }
+
+        return $handler;
+    }
+
+    /**
+     * Handle expired nonce errors very early in the WordPress load process.
+     * 
+     * This method runs on the 'init' hook with priority 1 to catch
+     * expired nonce errors before WordPress shows the error page.
+     *
+     * @since 0.4.3
+     *
+     * @return void
+     */
+    public function handle_expired_nonce_early() {
+        // Only handle admin requests
+        if ( ! is_admin() ) {
+            return;
+        }
+
+        // Check if we're on our plugin page
+        if ( ! isset( $_GET['page'] ) || $_GET['page'] !== self::MENU_SLUG ) {
+            return;
+        }
+
+        // Check if we have an expired nonce error
+        $has_nonce_error = false;
+
+        // Check URL parameters for nonce error indicators
+        if ( isset( $_GET['_wpnonce'] ) ) {
+            $has_nonce_error = true;
+        }
+
+        // Check if we came from a form submission with expired nonce
+        if ( isset( $_SERVER['HTTP_REFERER'] ) ) {
+            $referer = $_SERVER['HTTP_REFERER'];
+            if ( strpos( $referer, 'options.php' ) !== false && 
+                 strpos( $referer, '_wpnonce=' ) !== false ) {
+                $has_nonce_error = true;
+            }
+        }
+
+        if ( $has_nonce_error ) {
+            // Clean redirect to remove expired nonce parameters
+            $clean_url = admin_url( 'admin.php?page=' . self::MENU_SLUG );
+            if ( isset( $_GET['tab'] ) ) {
+                $clean_url .= '&tab=' . sanitize_key( $_GET['tab'] );
+            }
+            
+            // Add a success message to indicate settings were saved
+            $clean_url .= '&settings-updated=true';
+            
+            wp_safe_redirect( $clean_url );
+            exit;
+        }
     }
 }

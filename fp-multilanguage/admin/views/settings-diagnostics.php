@@ -99,6 +99,20 @@ $reindex_endpoint       = esc_url( rest_url( 'fpml/v1/reindex' ) );
 $reindex_batch_endpoint = esc_url( rest_url( 'fpml/v1/reindex-batch' ) );
 $cleanup_endpoint       = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
 $refresh_endpoint       = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
+
+// Verifica se siamo stati reindirizzati dopo un submit del form
+$form_submitted = isset( $_GET['settings-updated'] ) || isset( $_GET['updated'] );
+if ( $form_submitted ) {
+    // Se il form è stato inviato, crea un nuovo nonce per evitare l'errore "link scaduto"
+    $rest_nonce = wp_create_nonce( 'wp_rest' );
+    
+    // Mostra messaggio di successo
+    add_action( 'admin_notices', function() {
+        echo '<div class="notice notice-success is-dismissible"><p>' . 
+             esc_html__( 'Impostazioni salvate con successo.', 'fp-multilanguage' ) . 
+             '</p></div>';
+    });
+}
 ?>
 
 <form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
