@@ -341,17 +341,13 @@ class FPML_Plugin_Core {
 		}
 
 		// Fase 3: Features opzionali
-		if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
-			FPML_SEO_Optimizer::instance();
-		}
+	if ( class_exists( 'FPML_SEO_Optimizer' ) ) {
+		FPML_SEO_Optimizer::instance();
+	}
 
-		if ( class_exists( 'FPML_Setup_Wizard' ) ) {
-			FPML_Setup_Wizard::instance();
-		}
-
-		if ( class_exists( 'FPML_Provider_Fallback' ) ) {
-			FPML_Provider_Fallback::instance();
-		}
+	if ( class_exists( 'FPML_Provider_Fallback' ) ) {
+		FPML_Provider_Fallback::instance();
+	}
 
 		if ( class_exists( 'FPML_Auto_Relink' ) ) {
 			FPML_Auto_Relink::instance();
