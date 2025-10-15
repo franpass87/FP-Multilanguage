@@ -102,7 +102,7 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
         protected function request_translation( $text, $source, $target, $domain, $marketing ) {
                 $payload = array(
                         'model'       => $this->get_option( 'openai_model', 'gpt-4o-mini' ),
-                        'temperature' => 0.2,
+                        'temperature' => 1,
                         'messages'    => array(
                                 array(
                                         'role'    => 'system',
