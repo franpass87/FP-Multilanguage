@@ -174,20 +174,29 @@
             
             if (!refreshEndpoint) {
                 console.error('Endpoint di refresh nonce non disponibile');
+                console.log('Elemento feedback:', feedback);
                 return null;
             }
 
+            console.log('Richiesta refresh nonce a:', refreshEndpoint);
             const response = await fetch(refreshEndpoint, {
                 method: 'GET',
                 credentials: 'same-origin',
             });
 
             if (!response.ok) {
+                console.error('Refresh nonce fallito con status:', response.status);
                 return null;
             }
 
             const data = await response.json();
-            return data && data.nonce ? data.nonce : null;
+            if (data && data.nonce) {
+                console.log('Nuovo nonce ricevuto');
+                return data.nonce;
+            } else {
+                console.error('Risposta refresh nonce non valida:', data);
+                return null;
+            }
         } catch (error) {
             console.error('Errore durante il refresh del nonce:', error);
             return null;
@@ -235,8 +244,11 @@
         } else if (contentType.includes('text/html')) {
             isHtmlResponse = true;
             const htmlText = await response.text();
-            // WordPress nonce errors are often returned as HTML with "scaduto" or "expired"
-            if (htmlText.includes('scaduto') || htmlText.includes('expired')) {
+            // WordPress nonce errors are often returned as HTML with "scaduto", "expired" or "link che hai seguito"
+            if (htmlText.includes('scaduto') || 
+                htmlText.includes('expired') || 
+                htmlText.includes('link che hai seguito') ||
+                htmlText.includes('link you followed has expired')) {
                 payload = {
                     code: 'rest_cookie_invalid_nonce',
                     message: 'Il nonce è scaduto'
@@ -254,16 +266,20 @@
                 (payload.message && (
                     payload.message.toLowerCase().includes('scaduto') ||
                     payload.message.toLowerCase().includes('expired') ||
-                    payload.message.toLowerCase().includes('nonce')
+                    payload.message.toLowerCase().includes('nonce') ||
+                    payload.message.toLowerCase().includes('link che hai seguito') ||
+                    payload.message.toLowerCase().includes('link you followed')
                 ))
             ))
         );
 
         // If nonce is expired and we haven't retried yet, refresh and retry
         if (isNonceError && retryCount === 0) {
+            console.log('Nonce scaduto rilevato, aggiornamento in corso...');
             const newNonce = await refreshNonce();
             
             if (newNonce) {
+                console.log('Nonce aggiornato con successo, nuovo tentativo...');
                 // Update the nonce in all buttons for future requests
                 actionButtons.forEach((btn) => {
                     btn.setAttribute('data-nonce', newNonce);
@@ -271,6 +287,8 @@
 
                 // Retry the request with the new nonce (only once to avoid loops)
                 return executeRequest(endpoint, newNonce, retryCount + 1, requestBody);
+            } else {
+                console.error('Impossibile aggiornare il nonce');
             }
         }
 
@@ -355,9 +373,12 @@
                 setFeedback('Reindex completato.', 'success');
             }
 
+            return true; // Progress bar completata con successo
+
         } catch (error) {
             progressContainer.style.display = 'none';
             setFeedback(error && error.message ? error.message : 'Errore di rete imprevisto.', 'error');
+            return true; // Gestito, anche se con errore
         }
     };
 
