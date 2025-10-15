@@ -115,8 +115,10 @@ if ( $form_submitted ) {
 }
 ?>
 
-<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
-<?php settings_fields( 'fpml_settings_group' ); ?>
+<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+<input type="hidden" name="action" value="fpml_save_settings" />
+<input type="hidden" name="tab" value="diagnostics" />
+<?php wp_nonce_field( 'fpml_save_settings', 'fpml_settings_nonce' ); ?>
 <table class="form-table" role="presentation">
         <tbody>
                 <tr>
