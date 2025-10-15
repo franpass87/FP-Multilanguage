@@ -137,7 +137,15 @@ class FPML_Auto_Detection {
 		}
 
 		// Controlla se è già tra i translatable.
-		$translatable = apply_filters( 'fpml_translatable_post_types', array() );
+		$translatable = get_post_types( array( 'public' => true ), 'names' );
+		
+		// Aggiungi post types personalizzati accettati.
+		$custom_post_types = get_option( 'fpml_custom_translatable_post_types', array() );
+		if ( ! empty( $custom_post_types ) ) {
+			$translatable = array_merge( $translatable, $custom_post_types );
+		}
+		
+		$translatable = apply_filters( 'fpml_translatable_post_types', $translatable );
 
 		if ( in_array( $post_type, $translatable, true ) ) {
 			return;
@@ -186,7 +194,15 @@ class FPML_Auto_Detection {
 		}
 
 		// Controlla se è già tra i translatable.
-		$translatable = apply_filters( 'fpml_translatable_taxonomies', array() );
+		$translatable = get_taxonomies( array( 'public' => true ), 'names' );
+		
+		// Aggiungi tassonomie personalizzate accettate.
+		$custom_taxonomies = get_option( 'fpml_custom_translatable_taxonomies', array() );
+		if ( ! empty( $custom_taxonomies ) ) {
+			$translatable = array_merge( $translatable, $custom_taxonomies );
+		}
+		
+		$translatable = apply_filters( 'fpml_translatable_taxonomies', $translatable );
 
 		if ( in_array( $taxonomy, $translatable, true ) ) {
 			return;
