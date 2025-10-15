@@ -358,6 +358,94 @@ curl https://api.openai.com/v1/models \
 
 ---
 
+### OpenAI: "You exceeded your current quota" (Errore Billing)
+
+#### Sintomi
+- Errore: "You exceeded your current quota, please check your plan and billing details"
+- Il test del provider fallisce immediatamente
+- L'errore si verifica anche senza aver mai usato il servizio
+
+#### Causa
+Dal 2024, OpenAI **non offre più crediti gratuiti** per i nuovi account. L'API richiede:
+1. Un metodo di pagamento configurato
+2. Crediti prepagati caricati sull'account
+3. Un piano di billing attivo
+
+Anche con una chiave API valida, se non hai crediti riceverai questo errore.
+
+#### Come Verificare
+
+**Opzione 1: Usa il pulsante "Verifica Billing" nel plugin**
+1. Vai su FP Multilanguage → Impostazioni → Generali
+2. Clicca su "Verifica Billing" accanto alla chiave OpenAI
+3. Il sistema controllerà automaticamente lo stato del tuo account
+
+**Opzione 2: Verifica manualmente sul dashboard OpenAI**
+1. Vai su https://platform.openai.com/account/billing/overview
+2. Verifica che ci siano crediti disponibili nel "Credit balance"
+3. Controlla che ci sia un metodo di pagamento attivo
+
+#### Soluzione
+
+**1. Configura il Billing OpenAI**
+```
+1. Vai su https://platform.openai.com/account/billing/overview
+2. Clicca su "Add payment details"
+3. Aggiungi una carta di credito o debito
+4. Clicca su "Add to credit balance"
+5. Carica almeno $5 di crediti (consigliato: $10-20)
+6. Attendi 1-2 minuti per l'attivazione
+7. Torna al plugin e clicca "Test provider"
+```
+
+**2. Costi Reali**
+Con gpt-4o-mini (modello consigliato):
+- ~$0.15 per 1000 caratteri tradotti
+- Con $5 puoi tradurre circa 33.000 caratteri
+- Con $10 puoi tradurre circa 66.000 caratteri
+- Con $20 puoi tradurre circa 133.000 caratteri
+
+Un articolo medio (1000 parole = ~6000 caratteri) costa circa $0.90.
+
+**3. Alternative Gratuite**
+Se non vuoi usare OpenAI a pagamento:
+
+**DeepL** (Consigliato per iniziare)
+- 500.000 caratteri/mese **GRATIS**
+- Qualità eccellente
+- Configurazione in Settings → Provider → DeepL
+- Registrazione: https://www.deepl.com/pro#developer
+
+**LibreTranslate** (Massima privacy)
+- Completamente gratuito se self-hosted
+- Istanza pubblica disponibile
+- Nessun limite di caratteri
+- Configurazione in Settings → Provider → LibreTranslate
+
+#### Verifica che Funzioni
+
+Dopo aver caricato i crediti:
+```bash
+# Via WP-CLI
+wp fpml test openai
+
+# O dall'interfaccia
+# Dashboard → FP Multilanguage → Diagnostica → "Test provider"
+```
+
+#### Errori Comuni
+
+**"Billing setup is required"**
+→ Non hai ancora aggiunto un metodo di pagamento
+
+**"Insufficient quota" dopo aver caricato crediti**
+→ Attendi 1-2 minuti e riprova
+
+**"Invalid API key" dopo setup billing**
+→ La chiave API è scaduta, creane una nuova
+
+---
+
 ### DeepL: "Quota exceeded"
 
 #### Causa

@@ -167,19 +167,54 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                                 continue;
                         }
 
-                        // Errori client (4xx eccetto 429) - NON ritentare
-                        if ( $code >= 400 && $code < 500 ) {
-                                $body = wp_remote_retrieve_body( $response );
-                                $error_code = 'fpml_openai_client_error';
+		// Errori client (4xx eccetto 429) - NON ritentare
+		if ( $code >= 400 && $code < 500 ) {
+			$body = wp_remote_retrieve_body( $response );
+			$error_code = 'fpml_openai_client_error';
+			$error_message = '';
 
-                                if ( 401 === $code || 403 === $code ) {
-                                        $error_code = 'fpml_openai_auth_error';
-                                } elseif ( 400 === $code ) {
-                                        $error_code = 'fpml_openai_invalid_request';
-                                }
+			// Parse JSON error for better messaging
+			$error_data = json_decode( $body, true );
+			$error_type = isset( $error_data['error']['type'] ) ? $error_data['error']['type'] : '';
+			$api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : $body;
 
-                                return new WP_Error( $error_code, sprintf( __( 'Errore client OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body ) ) );
-                        }
+			if ( 401 === $code || 403 === $code ) {
+				$error_code = 'fpml_openai_auth_error';
+				$error_message = sprintf(
+					__( 'Errore di autenticazione OpenAI: La chiave API non è valida o non ha i permessi necessari. Verifica la tua chiave su https://platform.openai.com/api-keys', 'fp-multilanguage' )
+				);
+			} elseif ( 400 === $code ) {
+				$error_code = 'fpml_openai_invalid_request';
+				$error_message = sprintf(
+					__( 'Richiesta non valida: %s', 'fp-multilanguage' ),
+					wp_kses_post( $api_message )
+				);
+			} elseif ( 'insufficient_quota' === $error_type || false !== stripos( $api_message, 'quota' ) || false !== stripos( $api_message, 'billing' ) ) {
+				// Errore di quota specifico
+				$error_code = 'fpml_openai_quota_exceeded';
+				$error_message = __( '❌ Quota OpenAI superata o non configurata.', 'fp-multilanguage' ) . "\n\n";
+				$error_message .= __( '📋 Cosa significa:', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '• Il tuo account OpenAI non ha crediti disponibili', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '• OpenAI non offre più crediti gratuiti per i nuovi account', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '• Devi configurare un metodo di pagamento prima di usare l\'API', 'fp-multilanguage' ) . "\n\n";
+				$error_message .= __( '✅ Come risolvere:', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '1. Vai su https://platform.openai.com/account/billing/overview', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '2. Clicca su "Add payment details" e aggiungi una carta di credito', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '3. Carica crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '4. Attendi 1-2 minuti affinché i crediti vengano attivati', 'fp-multilanguage' ) . "\n";
+				$error_message .= __( '5. Riprova il test', 'fp-multilanguage' ) . "\n\n";
+				$error_message .= __( '💰 Costi: ~$0.15 per 1000 caratteri con gpt-4o-mini (molto economico)', 'fp-multilanguage' ) . "\n\n";
+				$error_message .= __( '💡 Alternative gratuite: DeepL offre 500.000 caratteri/mese gratis!', 'fp-multilanguage' );
+			} else {
+				$error_message = sprintf(
+					__( 'Errore client OpenAI (%1$d): %2$s', 'fp-multilanguage' ),
+					$code,
+					wp_kses_post( $api_message )
+				);
+			}
+
+			return new WP_Error( $error_code, $error_message );
+		}
 
                         // Altri errori
                         if ( $code < 200 || $code >= 300 ) {
@@ -242,10 +277,91 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                 return $instructions . "\n\n" . $text;
         }
 
-        /**
-         * {@inheritdoc}
-         */
-        protected function get_rate_option_key() {
-                return 'rate_openai';
-        }
+	/**
+	 * {@inheritdoc}
+	 */
+	protected function get_rate_option_key() {
+		return 'rate_openai';
+	}
+
+	/**
+	 * Verify OpenAI API key and billing status.
+	 *
+	 * @since 0.4.2
+	 *
+	 * @return array|WP_Error Array with status info or WP_Error on failure.
+	 */
+	public function verify_billing_status() {
+		if ( ! $this->is_configured() ) {
+			return new WP_Error( 'fpml_openai_not_configured', __( 'Chiave API OpenAI non configurata.', 'fp-multilanguage' ) );
+		}
+
+		// Try a minimal request to check quota
+		$test_payload = array(
+			'model'       => $this->get_option( 'openai_model', 'gpt-4o-mini' ),
+			'messages'    => array(
+				array(
+					'role'    => 'user',
+					'content' => 'Hi',
+				),
+			),
+			'max_tokens'  => 5,
+		);
+
+		$body = wp_json_encode( $test_payload );
+		if ( false === $body ) {
+			return new WP_Error( 'fpml_encoding_error', __( 'Errore di codifica JSON.', 'fp-multilanguage' ) );
+		}
+
+		$args = array(
+			'headers' => array(
+				'Authorization' => 'Bearer ' . $this->get_option( 'openai_api_key' ),
+				'Content-Type'  => 'application/json',
+			),
+			'body'    => $body,
+			'timeout' => 15,
+		);
+
+		$response = wp_remote_post( self::API_ENDPOINT, $args );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$response_body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $response_body, true );
+
+		if ( 200 === $code ) {
+			return array(
+				'status'  => 'ok',
+				'message' => __( '✅ API key valida e billing configurato correttamente.', 'fp-multilanguage' ),
+			);
+		}
+
+		// Check for quota/billing errors
+		$error_type = isset( $data['error']['type'] ) ? $data['error']['type'] : '';
+		$error_message = isset( $data['error']['message'] ) ? $data['error']['message'] : '';
+
+		if ( 'insufficient_quota' === $error_type || false !== stripos( $error_message, 'quota' ) || false !== stripos( $error_message, 'billing' ) ) {
+			return array(
+				'status'  => 'quota_exceeded',
+				'message' => __( '❌ Quota superata o billing non configurato. Aggiungi crediti su https://platform.openai.com/account/billing/overview', 'fp-multilanguage' ),
+				'details' => $error_message,
+			);
+		}
+
+		if ( 401 === $code || 403 === $code ) {
+			return array(
+				'status'  => 'auth_error',
+				'message' => __( '❌ Chiave API non valida o senza permessi. Verifica su https://platform.openai.com/api-keys', 'fp-multilanguage' ),
+				'details' => $error_message,
+			);
+		}
+
+		return array(
+			'status'  => 'error',
+			'message' => sprintf( __( 'Errore %d: %s', 'fp-multilanguage' ), $code, $error_message ),
+		);
+	}
 }

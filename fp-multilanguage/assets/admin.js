@@ -260,4 +260,72 @@
             }
         });
     });
+
+    // Check OpenAI billing button
+    const checkBillingButton = document.getElementById('fpml-check-openai-billing');
+    const billingStatus = document.getElementById('fpml-billing-status');
+
+    if (checkBillingButton && billingStatus) {
+        checkBillingButton.addEventListener('click', async () => {
+            const endpoint = checkBillingButton.getAttribute('data-endpoint') || '/wp-json/fpml/v1/check-billing';
+            const nonce = checkBillingButton.getAttribute('data-nonce') || document.querySelector('[data-nonce]')?.getAttribute('data-nonce') || '';
+
+            checkBillingButton.disabled = true;
+            billingStatus.innerHTML = '<p style="color: #0073aa;">⏳ Verifica in corso...</p>';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': nonce,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ provider: 'openai' }),
+                });
+
+                const payload = await response.json();
+
+                if (!response.ok || !payload || payload.success !== true) {
+                    const message = (payload && payload.message) || (payload && payload.data && payload.data.message) || 'Verifica non riuscita.';
+                    billingStatus.innerHTML = '<p style="color: #d63638; white-space: pre-wrap;">' + escapeHtml(message) + '</p>';
+                    return;
+                }
+
+                const billing = payload.billing || {};
+                const status = billing.status || 'unknown';
+                const message = billing.message || 'Stato sconosciuto';
+                const details = billing.details || '';
+
+                let color = '#0073aa';
+                if (status === 'ok') {
+                    color = '#00a32a';
+                } else if (status === 'quota_exceeded' || status === 'auth_error' || status === 'error') {
+                    color = '#d63638';
+                }
+
+                let html = '<p style="color: ' + color + '; white-space: pre-wrap; font-weight: bold;">' + escapeHtml(message) + '</p>';
+                if (details) {
+                    html += '<p style="color: #646970; font-size: 12px; margin-top: 8px; white-space: pre-wrap;">' + escapeHtml(details) + '</p>';
+                }
+
+                billingStatus.innerHTML = html;
+            } catch (error) {
+                billingStatus.innerHTML = '<p style="color: #d63638;">❌ Errore di rete: ' + escapeHtml(error && error.message ? error.message : 'Errore sconosciuto') + '</p>';
+            } finally {
+                checkBillingButton.disabled = false;
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 })();
