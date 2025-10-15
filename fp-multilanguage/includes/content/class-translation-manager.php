@@ -281,14 +281,12 @@ class FPML_Translation_Manager {
 
 		if ( '' === $slug ) {
 			$slug = uniqid( 'fpml-en-', true );
+			return $slug;
 		}
 
-		// Remove existing -en suffix to avoid duplicates
-		$slug = preg_replace( '/-en$/', '', $slug );
-		
-		// Add -en suffix
-		$slug .= '-en';
-
+		// Manteniamo lo slug originale senza suffisso -en
+		// Lo slug verrà tradotto automaticamente dal job di traduzione
+		// Questo garantisce che l'URL finale sia /en/translated-slug invece di /en/slug-en
 		return $slug;
 	}
 
