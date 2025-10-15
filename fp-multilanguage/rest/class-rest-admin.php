@@ -86,6 +86,24 @@ class FPML_REST_Admin {
 
                 register_rest_route(
                         'fpml/v1',
+                        '/reindex-batch',
+                        array(
+                                'methods'             => \WP_REST_Server::CREATABLE,
+                                'callback'            => array( $this, 'handle_reindex_batch' ),
+                                'permission_callback' => array( $this, 'check_permissions' ),
+                                'args'                => array(
+                                        'step' => array(
+                                                'required'          => false,
+                                                'type'              => 'integer',
+                                                'default'           => 0,
+                                                'sanitize_callback' => 'absint',
+                                        ),
+                                ),
+                        )
+                );
+
+                register_rest_route(
+                        'fpml/v1',
                         '/queue/cleanup',
                         array(
                                 'methods'             => \WP_REST_Server::CREATABLE,
@@ -345,6 +363,48 @@ class FPML_REST_Admin {
 				'summary' => $summary,
 			)
 		);
+	}
+
+	/**
+	 * Handle incremental reindex with progress tracking.
+	 *
+	 * @since 0.4.3
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_reindex_batch( $request ) {
+		$step = $request->get_param( 'step' );
+
+		if ( function_exists( 'set_time_limit' ) && false === strpos( ini_get( 'disable_functions' ), 'set_time_limit' ) ) {
+			@set_time_limit( 120 ); // 2 minuti per batch
+		}
+
+		$plugin = FPML_Plugin::instance();
+
+		if ( $plugin->is_assisted_mode() ) {
+			return new WP_Error(
+				'fpml_assisted_mode',
+				__( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$indexer = FPML_Container::get( 'content_indexer' );
+
+		if ( ! $indexer ) {
+			$indexer = FPML_Content_Indexer::instance();
+		}
+
+		$result = $indexer->reindex_batch( $step );
+
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 500 ), $result->get_error_code() );
+			return $result;
+		}
+
+		return rest_ensure_response( $result );
 	}
 
         /**

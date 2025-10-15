@@ -277,6 +277,90 @@
         return { response, payload };
     };
 
+    /**
+     * Executes reindex with progress bar updates.
+     * 
+     * @param {string} endpoint - The batch reindex endpoint URL
+     * @param {string} nonce - The WordPress REST API nonce
+     * @param {HTMLElement} button - The button that triggered the action
+     * @returns {Promise<void>}
+     */
+    const executeReindexWithProgress = async (endpoint, nonce, button) => {
+        const progressContainer = document.getElementById('fpml-reindex-progress');
+        const progressBar = document.getElementById('fpml-reindex-progress-bar');
+        const progressText = document.getElementById('fpml-reindex-progress-text');
+        
+        if (!progressContainer || !progressBar || !progressText) {
+            console.error('Progress bar elements not found');
+            return;
+        }
+
+        // Mostra la progress bar
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Inizializzazione...';
+
+        let step = 0;
+        let complete = false;
+        let finalSummary = null;
+
+        try {
+            while (!complete) {
+                const requestBody = JSON.stringify({ step: step });
+                const { response, payload } = await executeRequest(endpoint, nonce, 0, requestBody);
+
+                if (!response.ok || !payload || payload.success !== true) {
+                    const message = (payload && payload.message) || 'Errore durante il reindex.';
+                    setFeedback(message, 'error');
+                    progressContainer.style.display = 'none';
+                    return;
+                }
+
+                // Aggiorna la progress bar
+                const percent = payload.progress_percent || 0;
+                progressBar.style.width = percent + '%';
+                progressText.textContent = payload.current_task || 'Elaborazione...';
+
+                complete = payload.complete || false;
+                finalSummary = payload.summary || null;
+                step++;
+
+                // Piccolo delay per rendere visibile il progresso
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Completato con successo
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Completato!';
+
+            // Nascondi la progress bar dopo 2 secondi
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 2000);
+
+            // Mostra il messaggio di successo
+            if (finalSummary) {
+                const template = button.getAttribute('data-success-template');
+                const defaults = {
+                    posts_scanned: '0',
+                    posts_enqueued: '0',
+                    translations_created: '0',
+                    terms_scanned: '0',
+                    menus_synced: '0',
+                };
+                const replacements = buildSummaryReplacements(finalSummary, defaults);
+                const message = template ? fillTemplate(template, replacements) : 'Reindex completato.';
+                setFeedback(message, 'success');
+            } else {
+                setFeedback('Reindex completato.', 'success');
+            }
+
+        } catch (error) {
+            progressContainer.style.display = 'none';
+            setFeedback(error && error.message ? error.message : 'Errore di rete imprevisto.', 'error');
+        }
+    };
+
     actionButtons.forEach((button) => {
         button.addEventListener('click', async () => {
             const endpoint = button.getAttribute('data-endpoint');
@@ -288,6 +372,18 @@
             }
 
             button.disabled = true;
+
+            // Gestione speciale per il reindex con progress bar
+            if (action === 'reindex') {
+                const batchEndpoint = button.getAttribute('data-batch-endpoint');
+                if (batchEndpoint) {
+                    setFeedback('', 'info'); // Pulisci il feedback
+                    await executeReindexWithProgress(batchEndpoint, nonce, button);
+                    button.disabled = false;
+                    return;
+                }
+            }
+
             setFeedback(button.getAttribute('data-working-message') || 'Richiesta in corso…', 'info');
 
             try {

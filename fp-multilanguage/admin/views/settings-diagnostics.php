@@ -92,12 +92,13 @@ $provider_name  = isset( $provider_labels[ $provider_slug ] ) ? $provider_labels
 $provider_ready = ! empty( $translator_data['configured'] );
 $provider_error = isset( $translator_data['error'] ) ? $translator_data['error'] : '';
 
-$rest_nonce        = wp_create_nonce( 'wp_rest' );
-$run_endpoint      = esc_url( rest_url( 'fpml/v1/queue/run' ) );
-$test_endpoint     = esc_url( rest_url( 'fpml/v1/test-provider' ) );
-$reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
-$cleanup_endpoint  = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
-$refresh_endpoint  = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
+$rest_nonce             = wp_create_nonce( 'wp_rest' );
+$run_endpoint           = esc_url( rest_url( 'fpml/v1/queue/run' ) );
+$test_endpoint          = esc_url( rest_url( 'fpml/v1/test-provider' ) );
+$reindex_endpoint       = esc_url( rest_url( 'fpml/v1/reindex' ) );
+$reindex_batch_endpoint = esc_url( rest_url( 'fpml/v1/reindex-batch' ) );
+$cleanup_endpoint       = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
+$refresh_endpoint       = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
 ?>
 
 <form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
@@ -200,12 +201,19 @@ $refresh_endpoint  = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
                                 class="button"
                                 data-fpml-action="reindex"
                                 data-endpoint="<?php echo esc_url( $reindex_endpoint ); ?>"
+                                data-batch-endpoint="<?php echo esc_url( $reindex_batch_endpoint ); ?>"
                                 data-nonce="<?php echo esc_attr( $rest_nonce ); ?>"
                                 data-working-message="<?php echo esc_attr__( 'Reindex in corso... Potrebbe richiedere alcuni minuti. Attendere.', 'fp-multilanguage' ); ?>"
                                 data-success-message="<?php echo esc_attr__( 'Reindex completato. Controlla la coda per nuovi job.', 'fp-multilanguage' ); ?>"
                                 data-success-template="<?php echo esc_attr( $reindex_success_template ); ?>"
                         ><?php esc_html_e( 'Forza reindex', 'fp-multilanguage' ); ?></button>
                 </p>
+                <div id="fpml-reindex-progress" class="fpml-reindex-progress" style="display: none;">
+                        <div class="fpml-reindex-progress-bar-container">
+                                <div id="fpml-reindex-progress-bar" class="fpml-reindex-progress-bar"></div>
+                        </div>
+                        <div id="fpml-reindex-progress-text" class="fpml-reindex-progress-text"></div>
+                </div>
                 <?php if ( $lock_active ) : ?>
                         <p class="fpml-diagnostics-warning"><?php esc_html_e( 'Attenzione: il lock del processor è attivo. Attendi la fine del batch o usa WP-CLI per forzare il reset.', 'fp-multilanguage' ); ?></p>
                 <?php endif; ?>
