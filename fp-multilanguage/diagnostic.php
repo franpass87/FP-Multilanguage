@@ -5,7 +5,7 @@
  */
 
 // Security check
-if ( ! isset( $_GET['fpml_diag'] ) || $_GET['fpml_diag'] !== 'check' ) {
+if ( ! isset( $_GET['fpml_diag'] ) || sanitize_key( $_GET['fpml_diag'] ) !== 'check' ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	die( 'Access denied. Add ?fpml_diag=check to URL to run diagnostics.' );
 }
 

@@ -75,7 +75,7 @@ $options = isset( $options ) ? $options : array();
 <p class="fpml-field-description"><?php esc_html_e( 'La traslitterazione base viene migliorata dal provider per mantenere semantica SEO.', 'fp-multilanguage' ); ?></p>
 </td>
 </tr>
-<tr id="fpml-slug-redirect" style="<?php echo $options['translate_slugs'] ? '' : 'display:none;'; ?>">
+<tr id="fpml-slug-redirect" style="<?php echo esc_attr( $options['translate_slugs'] ? '' : 'display:none;' ); ?>">
 <th scope="row"><?php esc_html_e( 'Redirect slug precedenti', 'fp-multilanguage' ); ?></th>
 <td>
 <label>
