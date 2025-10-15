@@ -214,3 +214,42 @@ word-break: break-word;
 .fpml-diagnostics-card--logs table {
     margin-top: 12px;
 }
+
+/* Progress bar per reindex */
+.fpml-reindex-progress {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+}
+
+.fpml-reindex-progress-bar-container {
+    width: 100%;
+    height: 24px;
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.fpml-reindex-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #2271b1 0%, #135e96 100%);
+    transition: width 0.3s ease;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.fpml-reindex-progress-text {
+    text-align: center;
+    color: #1d2327;
+    font-size: 14px;
+    font-weight: 500;
+}
