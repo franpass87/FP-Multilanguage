@@ -342,10 +342,28 @@ add_filter( 'fpml_plugin_detection_rules', function( $rules ) {
 	font-size: 13px;
 	line-height: 1.6;
 }
+
+.dashicons.spin {
+	animation: fpml-spin 1s linear infinite;
+}
+
+@keyframes fpml-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
 </style>
 
 <script>
 jQuery(document).ready(function($) {
+	// Assicurati che ajaxurl sia definito
+	if (typeof ajaxurl === 'undefined') {
+		var ajaxurl = '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>';
+	}
+
 	// Toggle field list
 	$('.fpml-show-fields').on('click', function(e) {
 		e.preventDefault();
@@ -359,7 +377,8 @@ jQuery(document).ready(function($) {
 	});
 
 	// Trigger detection
-	$('#fpml-trigger-detection').on('click', function() {
+	$('#fpml-trigger-detection').on('click', function(e) {
+		e.preventDefault();
 		var $button = $(this);
 		$button.prop('disabled', true).find('.dashicons').addClass('spin');
 
@@ -370,9 +389,13 @@ jQuery(document).ready(function($) {
 			if (response.success) {
 				location.reload();
 			} else {
-				alert('Errore durante il rilevamento');
+				var errorMsg = response.data && response.data.message ? response.data.message : 'Errore durante il rilevamento';
+				alert(errorMsg);
 				$button.prop('disabled', false).find('.dashicons').removeClass('spin');
 			}
+		}).fail(function() {
+			alert('Errore di connessione. Riprova.');
+			$button.prop('disabled', false).find('.dashicons').removeClass('spin');
 		});
 	});
 
