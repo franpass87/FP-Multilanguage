@@ -321,11 +321,28 @@
         let step = 0;
         let complete = false;
         let finalSummary = null;
+        let currentNonce = nonce;
 
         try {
             while (!complete) {
+                // Refresh del nonce ogni 3 step per evitare scadenze durante processi lunghi
+                if (step > 0 && step % 3 === 0) {
+                    console.log('Aggiornamento preventivo del nonce allo step', step);
+                    const newNonce = await refreshNonce();
+                    if (newNonce) {
+                        currentNonce = newNonce;
+                        // Aggiorna il nonce in tutti i pulsanti per richieste future
+                        actionButtons.forEach((btn) => {
+                            btn.setAttribute('data-nonce', newNonce);
+                        });
+                        console.log('Nonce aggiornato con successo');
+                    } else {
+                        console.warn('Impossibile aggiornare il nonce preventivamente, continuo con quello corrente');
+                    }
+                }
+
                 const requestBody = JSON.stringify({ step: step });
-                const { response, payload } = await executeRequest(endpoint, nonce, 0, requestBody);
+                const { response, payload } = await executeRequest(endpoint, currentNonce, 0, requestBody);
 
                 if (!response.ok || !payload || payload.success !== true) {
                     const message = (payload && payload.message) || 'Errore durante il reindex.';
@@ -414,7 +431,20 @@
             setFeedback(button.getAttribute('data-working-message') || 'Richiesta in corso…', 'info');
 
             try {
-                const { response, payload } = await executeRequest(endpoint, nonce);
+                // Per operazioni lunghe come il reindex, aggiorna il nonce prima di iniziare
+                let currentNonce = nonce;
+                if (action === 'reindex') {
+                    const newNonce = await refreshNonce();
+                    if (newNonce) {
+                        currentNonce = newNonce;
+                        actionButtons.forEach((btn) => {
+                            btn.setAttribute('data-nonce', newNonce);
+                        });
+                        console.log('Nonce aggiornato prima del reindex');
+                    }
+                }
+
+                const { response, payload } = await executeRequest(endpoint, currentNonce);
 
                 if (!response.ok || !payload || payload.success !== true) {
                     const message = (payload && payload.message) || (payload && payload.data && payload.data.message) || 'Operazione non riuscita.';
