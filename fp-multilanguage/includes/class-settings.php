@@ -82,6 +82,8 @@ public function get_defaults() {
 			'provider'                => '',
 			'openai_api_key'          => '',
 			'openai_model'            => 'gpt-5',
+			'google_api_key'          => '',
+			'google_project_id'       => '',
 			'batch_size'              => 5,
 			'max_chars'               => 4500,
 			'max_chars_per_batch'     => 20000,
@@ -106,6 +108,7 @@ public function get_defaults() {
 			'exclude_regex'           => '',
 			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_tabs,vc_accordion,vc_tta_accordion,vc_tta_tabs',
 			'rate_openai'             => '',
+			'rate_google'             => '',
 			'remove_data'             => false,
 			// Nuove opzioni 0.4.0+.
 			'auto_translate_on_publish' => false,
