@@ -1,7 +1,8 @@
 # 🎨 Compatibilità Automatica Temi - Language Switcher
 
-**Versione:** 0.4.2  
-**Data:** 14 Ottobre 2025
+**Versione:** 0.4.3  
+**Data:** 15 Ottobre 2025  
+**Note:** Bug fix - Supporto completo per tutti i temi dichiarati
 
 ---
 
@@ -42,6 +43,12 @@ Il plugin include CSS e logica specifici per questi temi:
 
 ### Temi Generici
 - ✅ Qualsiasi tema WordPress (con CSS generico)
+
+**Note Versione 0.4.3:**
+- ✅ Corretto bug: mancanza di CSS per Neve, Blocksy, Divi, Avada, Enfold, Flatsome, The7, Bridge
+- ✅ Corretto bug: Twenty Twenty themes non erano nella lista supportati
+- ✅ Migliorato: Supporto automatico per tutti i child theme
+- ✅ Ottimizzato: Rimossi mapping ridondanti per child theme
 
 ---
 
