@@ -100,7 +100,8 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'admin_post_fpml_export_logs', array( $this, 'handle_export_logs' ) );
         add_action( 'admin_post_fpml_import_logs', array( $this, 'handle_import_logs' ) );
         add_action( 'admin_post_fpml_clear_sandbox', array( $this, 'handle_clear_sandbox' ) );
-                add_action( 'current_screen', array( $this, 'setup_post_list_hooks' ) );
+		add_action( 'wp_ajax_fpml_trigger_detection', array( $this, 'handle_trigger_detection' ) );
+		add_action( 'current_screen', array( $this, 'setup_post_list_hooks' ) );
                 add_action( 'restrict_manage_posts', array( $this, 'render_language_filter' ), 20, 1 );
                 add_action( 'pre_get_posts', array( $this, 'handle_language_filter_query' ) );
                 add_filter( 'the_title', array( $this, 'maybe_add_translation_badge' ), 10, 2 );
@@ -249,6 +250,10 @@ protected function get_tabs() {
 'glossary'    => array(
 'label' => esc_html__( 'Glossario', 'fp-multilanguage' ),
 'view'  => 'settings-glossary.php',
+),
+'compatibility' => array(
+'label' => esc_html__( 'Compatibilità Plugin', 'fp-multilanguage' ),
+'view'  => 'settings-plugin-compatibility.php',
 ),
 'export'      => array(
 'label' => esc_html__( 'Export / Import', 'fp-multilanguage' ),
@@ -742,6 +747,42 @@ protected function get_tabs() {
 
         $this->redirect_to_tab( 'export' );
     }
+
+	/**
+	 * Handle AJAX plugin detection trigger.
+	 *
+	 * @since 0.4.2
+	 *
+	 * @return void
+	 */
+	public function handle_trigger_detection() {
+		check_ajax_referer( 'fpml_trigger_detection', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permessi insufficienti.', 'fp-multilanguage' ) ) );
+		}
+
+		if ( ! class_exists( 'FPML_Plugin_Detector' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Plugin Detector non disponibile.', 'fp-multilanguage' ) ) );
+		}
+
+		$detector = FPML_Plugin_Detector::instance();
+		$summary = $detector->trigger_detection();
+
+		wp_send_json_success( array(
+			'summary' => $summary,
+			'message' => sprintf(
+				/* translators: %d: number of plugins detected */
+				_n(
+					'Rilevato %d plugin compatibile.',
+					'Rilevati %d plugin compatibili.',
+					$summary['total'],
+					'fp-multilanguage'
+				),
+				$summary['total']
+			),
+		) );
+	}
 
     /**
      * Prepare admin post list enhancements.
