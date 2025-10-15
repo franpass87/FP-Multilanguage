@@ -161,6 +161,12 @@
         }
     };
 
+    /**
+     * Refreshes the WordPress REST API nonce.
+     * This is called automatically when a nonce expires.
+     * 
+     * @returns {Promise<string|null>} The new nonce or null if refresh failed
+     */
     const refreshNonce = async () => {
         try {
             // Get the refresh endpoint from the feedback element
@@ -188,7 +194,22 @@
         }
     };
 
-    const executeRequest = async (endpoint, nonce, retryCount = 0) => {
+    /**
+     * Executes a REST API request with automatic nonce refresh on expiration.
+     * 
+     * This function handles the common WordPress issue where nonces expire after a certain time.
+     * When a nonce expiration is detected (either as JSON or HTML response), it automatically:
+     * 1. Fetches a fresh nonce from the server
+     * 2. Updates all action buttons with the new nonce
+     * 3. Retries the original request once
+     * 
+     * @param {string} endpoint - The REST API endpoint URL
+     * @param {string} nonce - The WordPress REST API nonce
+     * @param {number} retryCount - Current retry attempt (max 1)
+     * @param {string} requestBody - The JSON body to send with the request
+     * @returns {Promise<{response: Response, payload: Object|null}>}
+     */
+    const executeRequest = async (endpoint, nonce, retryCount = 0, requestBody = '{}') => {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -196,16 +217,46 @@
                 'X-WP-Nonce': nonce,
             },
             credentials: 'same-origin',
-            body: '{}',
+            body: requestBody,
         });
 
-        const payload = await response.json();
+        let payload = null;
+        let isHtmlResponse = false;
 
-        // Check for expired nonce error
-        const isNonceError = !response.ok && payload && (
-            payload.code === 'rest_cookie_invalid_nonce' ||
-            payload.code === 'fpml_rest_nonce_invalid' ||
-            (payload.message && payload.message.toLowerCase().includes('scaduto'))
+        // Try to parse as JSON, but handle HTML responses
+        // WordPress sometimes returns HTML for nonce errors instead of JSON
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+                payload = await response.json();
+            } catch (e) {
+                payload = null;
+            }
+        } else if (contentType.includes('text/html')) {
+            isHtmlResponse = true;
+            const htmlText = await response.text();
+            // WordPress nonce errors are often returned as HTML with "scaduto" or "expired"
+            if (htmlText.includes('scaduto') || htmlText.includes('expired')) {
+                payload = {
+                    code: 'rest_cookie_invalid_nonce',
+                    message: 'Il nonce è scaduto'
+                };
+            }
+        }
+
+        // Check for expired nonce error - handles multiple error codes and messages
+        const isNonceError = !response.ok && (
+            isHtmlResponse ||
+            (payload && (
+                payload.code === 'rest_cookie_invalid_nonce' ||
+                payload.code === 'fpml_rest_nonce_invalid' ||
+                payload.code === 'rest_forbidden' ||
+                (payload.message && (
+                    payload.message.toLowerCase().includes('scaduto') ||
+                    payload.message.toLowerCase().includes('expired') ||
+                    payload.message.toLowerCase().includes('nonce')
+                ))
+            ))
         );
 
         // If nonce is expired and we haven't retried yet, refresh and retry
@@ -218,8 +269,8 @@
                     btn.setAttribute('data-nonce', newNonce);
                 });
 
-                // Retry the request with the new nonce
-                return executeRequest(endpoint, newNonce, retryCount + 1);
+                // Retry the request with the new nonce (only once to avoid loops)
+                return executeRequest(endpoint, newNonce, retryCount + 1, requestBody);
             }
         }
 
@@ -323,23 +374,14 @@
     if (checkBillingButton && billingStatus) {
         checkBillingButton.addEventListener('click', async () => {
             const endpoint = checkBillingButton.getAttribute('data-endpoint') || '/wp-json/fpml/v1/check-billing';
-            const nonce = checkBillingButton.getAttribute('data-nonce') || document.querySelector('[data-nonce]')?.getAttribute('data-nonce') || '';
+            let nonce = checkBillingButton.getAttribute('data-nonce') || document.querySelector('[data-nonce]')?.getAttribute('data-nonce') || '';
 
             checkBillingButton.disabled = true;
             billingStatus.innerHTML = '<p style="color: #0073aa;">⏳ Verifica in corso...</p>';
 
             try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': nonce,
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ provider: 'openai' }),
-                });
-
-                const payload = await response.json();
+                const requestBody = JSON.stringify({ provider: 'openai' });
+                const { response, payload } = await executeRequest(endpoint, nonce, 0, requestBody);
 
                 if (!response.ok || !payload || payload.success !== true) {
                     const message = (payload && payload.message) || (payload && payload.data && payload.data.message) || 'Verifica non riuscita.';
