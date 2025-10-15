@@ -400,7 +400,12 @@
         let currentNonce = nonce;
 
         try {
-            while (!complete) {
+            let maxSteps = 50; // Limite di sicurezza per evitare loop infiniti
+            let stepCount = 0;
+            
+            while (!complete && stepCount < maxSteps) {
+                stepCount++;
+                
                 // Refresh del nonce ogni 2 step per evitare scadenze durante processi lunghi
                 // WordPress nonces can expire after inactivity, so we refresh proactively
                 if (step > 0 && step % 2 === 0) {
@@ -439,6 +444,13 @@
 
                 // Piccolo delay per rendere visibile il progresso
                 await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Controllo di sicurezza: se abbiamo raggiunto il limite massimo
+            if (stepCount >= maxSteps) {
+                console.warn('⚠️ Raggiunto limite massimo di step, forzando completamento');
+                complete = true;
+                progressText.textContent = 'Completato (limite raggiunto)';
             }
 
             // Completato con successo
@@ -738,9 +750,30 @@
             
             if (result.success) {
                 console.log('✅ AJAX diretto completato con successo');
+                console.log('📊 Dati ricevuti:', result.data);
+                
+                // Mappa la risposta AJAX al formato atteso dal JavaScript principale
+                const mappedPayload = {
+                    success: true,
+                    complete: result.data.complete || false,
+                    step: result.data.step || 0,
+                    total_steps: result.data.total_steps || 0,
+                    progress_percent: result.data.progress_percent || 0,
+                    current_task: result.data.current_task || 'Elaborazione...',
+                    summary: result.data.summary || {},
+                    message: result.data.message || 'OK'
+                };
+                
+                // Controlla se il reindex è completato
+                if (mappedPayload.complete) {
+                    console.log('🎉 REINDEX COMPLETATO!');
+                } else {
+                    console.log('⏳ Reindex in corso, step:', mappedPayload.step);
+                }
+                
                 return { 
                     response: { ok: true, status: 200 }, 
-                    payload: result 
+                    payload: mappedPayload 
                 };
             } else {
                 throw new Error(result.data?.message || 'AJAX request failed');

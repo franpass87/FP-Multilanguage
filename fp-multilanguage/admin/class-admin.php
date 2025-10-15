@@ -1573,12 +1573,15 @@ protected function get_tabs() {
                 ) );
             }
 
-            // Return success response
+            // Return success response - mappa correttamente i campi per il JavaScript
             wp_send_json_success( array(
-                'step' => $step,
-                'result' => $result,
-                'completed' => isset( $result['completed'] ) ? $result['completed'] : false,
-                'total_processed' => isset( $result['total_processed'] ) ? $result['total_processed'] : 0,
+                'success' => true,
+                'complete' => isset( $result['complete'] ) ? $result['complete'] : false,
+                'step' => isset( $result['step'] ) ? $result['step'] : $step,
+                'total_steps' => isset( $result['total_steps'] ) ? $result['total_steps'] : 0,
+                'progress_percent' => isset( $result['progress_percent'] ) ? $result['progress_percent'] : 0,
+                'current_task' => isset( $result['current_task'] ) ? $result['current_task'] : __( 'Elaborazione...', 'fp-multilanguage' ),
+                'summary' => isset( $result['summary'] ) ? $result['summary'] : array(),
                 'message' => isset( $result['message'] ) ? $result['message'] : __( 'Batch completato.', 'fp-multilanguage' )
             ) );
 
