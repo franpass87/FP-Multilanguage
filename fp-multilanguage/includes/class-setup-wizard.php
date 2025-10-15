@@ -359,9 +359,9 @@ class FPML_Setup_Wizard {
 				</div>
 
 				<div class="fpml-wizard-field">
-					<label><?php esc_html_e( 'API Key', 'fp-multilanguage' ); ?></label>
-					<input type="password" name="openai_api_key" value="<?php echo esc_attr( $current['openai_api_key'] ?? '' ); ?>" placeholder="sk-..." autocomplete="off" />
-					<input type="password" name="google_api_key" value="<?php echo esc_attr( $current['google_api_key'] ?? '' ); ?>" placeholder="..." autocomplete="off" style="display:none;" />
+					<label><?php esc_html_e( 'API Key', 'fp-multilanguage' ); ?> <span style="color: red;">*</span></label>
+					<input type="password" name="openai_api_key" value="<?php echo esc_attr( $current['openai_api_key'] ?? '' ); ?>" placeholder="sk-proj-..." autocomplete="off" style="width: 100%; padding: 10px; font-size: 14px;" />
+					<input type="password" name="google_api_key" value="<?php echo esc_attr( $current['google_api_key'] ?? '' ); ?>" placeholder="AIza..." autocomplete="off" style="display:none; width: 100%; padding: 10px; font-size: 14px;" />
 					<p class="description">
 						<?php esc_html_e( 'Ottieni la tua chiave API su:', 'fp-multilanguage' ); ?>
 						<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI</a> |
@@ -390,22 +390,77 @@ class FPML_Setup_Wizard {
 
 		<script>
 		jQuery(document).ready(function($) {
+			// Gestione cambio provider
 			$('select[name="provider"]').on('change', function() {
-				$('input[type="password"]').hide();
-				if ($(this).val() === 'openai') $('input[name="openai_api_key"]').show();
-				if ($(this).val() === 'google') $('input[name="google_api_key"]').show();
+				$('input[type="password"]').hide().prop('required', false);
+				if ($(this).val() === 'openai') {
+					$('input[name="openai_api_key"]').show().prop('required', true);
+				}
+				if ($(this).val() === 'google') {
+					$('input[name="google_api_key"]').show().prop('required', true);
+				}
 			}).trigger('change');
 
+			// Submit form
 			$('#fpml-wizard-step-2').on('submit', function(e) {
 				e.preventDefault();
-				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=2&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
-				$.post(ajaxurl, data, function(response) {
-					if (response.success) {
-						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=3' ) ); ?>';
-					} else {
-						alert(response.data.message);
+				
+				// Validazione lato client
+				var provider = $('select[name="provider"]').val();
+				if (!provider) {
+					alert('<?php esc_html_e( 'Seleziona un provider di traduzione.', 'fp-multilanguage' ); ?>');
+					return false;
+				}
+				
+				var apiKey = '';
+				if (provider === 'openai') {
+					apiKey = $('input[name="openai_api_key"]').val();
+				} else if (provider === 'google') {
+					apiKey = $('input[name="google_api_key"]').val();
+				}
+				
+				if (!apiKey || apiKey.trim() === '') {
+					alert('<?php esc_html_e( 'Inserisci la tua API key.', 'fp-multilanguage' ); ?>');
+					return false;
+				}
+				
+				// Disabilita il pulsante per evitare doppi submit
+				var $submitBtn = $(this).find('button[type="submit"]');
+				$submitBtn.prop('disabled', true).text('<?php esc_html_e( 'Salvataggio...', 'fp-multilanguage' ); ?>');
+				
+				// Prepara i dati - includi solo il campo API key visibile
+				var formData = new FormData();
+				formData.append('provider', provider);
+				if (provider === 'openai') {
+					formData.append('openai_api_key', $('input[name="openai_api_key"]').val());
+				} else if (provider === 'google') {
+					formData.append('google_api_key', $('input[name="google_api_key"]').val());
+				}
+				formData.append('action', 'fpml_wizard_save_step');
+				formData.append('step', '2');
+				formData.append('nonce', '<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>');
+				
+				$.ajax({
+					url: ajaxurl,
+					type: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					success: function(response) {
+						if (response.success) {
+							window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=3' ) ); ?>';
+						} else {
+							alert(response.data.message || '<?php esc_html_e( 'Errore durante il salvataggio.', 'fp-multilanguage' ); ?>');
+							$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
+						}
+					},
+					error: function() {
+						alert('<?php esc_html_e( 'Errore di connessione. Riprova.', 'fp-multilanguage' ); ?>');
+						$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
 					}
 				});
+				
+				return false;
 			});
 		});
 		</script>
@@ -477,13 +532,22 @@ class FPML_Setup_Wizard {
 		jQuery(document).ready(function($) {
 			$('#fpml-wizard-step-3').on('submit', function(e) {
 				e.preventDefault();
+				
+				// Disabilita il pulsante per evitare doppi submit
+				var $submitBtn = $(this).find('button[type="submit"]');
+				$submitBtn.prop('disabled', true).text('<?php esc_html_e( 'Salvataggio...', 'fp-multilanguage' ); ?>');
+				
 				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=3&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
 				$.post(ajaxurl, data, function(response) {
 					if (response.success) {
 						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=4' ) ); ?>';
 					} else {
-						alert(response.data.message);
+						alert(response.data.message || '<?php esc_html_e( 'Errore durante il salvataggio.', 'fp-multilanguage' ); ?>');
+						$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
 					}
+				}).fail(function() {
+					alert('<?php esc_html_e( 'Errore di connessione. Riprova.', 'fp-multilanguage' ); ?>');
+					$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
 				});
 			});
 		});
@@ -559,13 +623,22 @@ class FPML_Setup_Wizard {
 		jQuery(document).ready(function($) {
 			$('#fpml-wizard-step-4').on('submit', function(e) {
 				e.preventDefault();
+				
+				// Disabilita il pulsante per evitare doppi submit
+				var $submitBtn = $(this).find('button[type="submit"]');
+				$submitBtn.prop('disabled', true).text('<?php esc_html_e( 'Salvataggio...', 'fp-multilanguage' ); ?>');
+				
 				var data = $(this).serialize() + '&action=fpml_wizard_save_step&step=4&nonce=<?php echo esc_js( wp_create_nonce( 'fpml_wizard' ) ); ?>';
 				$.post(ajaxurl, data, function(response) {
 					if (response.success) {
 						window.location.href = '<?php echo esc_js( admin_url( 'admin.php?page=fpml-setup-wizard&step=5' ) ); ?>';
 					} else {
-						alert(response.data.message);
+						alert(response.data.message || '<?php esc_html_e( 'Errore durante il salvataggio.', 'fp-multilanguage' ); ?>');
+						$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
 					}
+				}).fail(function() {
+					alert('<?php esc_html_e( 'Errore di connessione. Riprova.', 'fp-multilanguage' ); ?>');
+					$submitBtn.prop('disabled', false).text('<?php esc_html_e( 'Continua', 'fp-multilanguage' ); ?> →');
 				});
 			});
 		});
@@ -661,6 +734,21 @@ class FPML_Setup_Wizard {
 		// Salva le impostazioni.
 		$settings = $this->settings ? $this->settings->all() : array();
 
+		// Validazioni specifiche per step
+		if ( '2' === $step ) {
+			// Verifica che provider e api key siano presenti
+			$provider = isset( $_POST['provider'] ) ? sanitize_text_field( $_POST['provider'] ) : '';
+			if ( ! $provider ) {
+				wp_send_json_error( array( 'message' => __( 'Seleziona un provider di traduzione.', 'fp-multilanguage' ) ) );
+			}
+			
+			$api_key_field = $provider . '_api_key';
+			$api_key = isset( $_POST[ $api_key_field ] ) ? sanitize_text_field( $_POST[ $api_key_field ] ) : '';
+			if ( ! $api_key || '' === trim( $api_key ) ) {
+				wp_send_json_error( array( 'message' => __( 'Inserisci la tua API key.', 'fp-multilanguage' ) ) );
+			}
+		}
+
 		foreach ( $_POST as $key => $value ) {
 			if ( in_array( $key, array( 'action', 'step', 'nonce', 'fpml_wizard_nonce', '_wp_http_referer' ), true ) ) {
 				continue;
@@ -678,7 +766,13 @@ class FPML_Setup_Wizard {
 			$settings['setup_completed'] = true;
 		}
 
-		update_option( FPML_Settings::OPTION_KEY, $settings );
+		// Salva le impostazioni
+		$updated = update_option( FPML_Settings::OPTION_KEY, $settings );
+
+		// Verifica che il salvataggio sia andato a buon fine
+		if ( false === $updated && ! get_option( FPML_Settings::OPTION_KEY ) ) {
+			wp_send_json_error( array( 'message' => __( 'Errore durante il salvataggio delle impostazioni.', 'fp-multilanguage' ) ) );
+		}
 
 		wp_send_json_success( array( 'message' => __( 'Impostazioni salvate.', 'fp-multilanguage' ) ) );
 	}
