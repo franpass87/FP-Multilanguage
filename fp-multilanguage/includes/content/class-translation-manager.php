@@ -102,6 +102,10 @@ class FPML_Translation_Manager {
 		}
 	}
 
+	// Genera titolo e slug provvisori per la pagina tradotta
+	$temp_title = $post->post_title . ' (EN - Translation in progress)';
+	$temp_slug = $this->generate_translation_slug( $post->post_name ? $post->post_name : sanitize_title( $post->post_title ) );
+
 	$postarr = array(
 		'post_type'      => $post->post_type,
 		'post_status'    => $post->post_status,
@@ -111,10 +115,10 @@ class FPML_Translation_Manager {
 		'post_password'  => $post->post_password,
 		'comment_status' => $post->comment_status,
 		'ping_status'    => $post->ping_status,
-		'post_title'     => '',
+		'post_title'     => $temp_title,
 		'post_content'   => '',
 		'post_excerpt'   => '',
-		'post_name'      => '',
+		'post_name'      => $temp_slug,
 		'meta_input'     => array(
 			'_fpml_is_translation'  => 1,
 			'_fpml_pair_source_id' => $post->ID,
