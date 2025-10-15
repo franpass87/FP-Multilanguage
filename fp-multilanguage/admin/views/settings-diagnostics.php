@@ -97,6 +97,7 @@ $run_endpoint      = esc_url( rest_url( 'fpml/v1/queue/run' ) );
 $test_endpoint     = esc_url( rest_url( 'fpml/v1/test-provider' ) );
 $reindex_endpoint  = esc_url( rest_url( 'fpml/v1/reindex' ) );
 $cleanup_endpoint  = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
+$refresh_endpoint  = esc_url( rest_url( 'fpml/v1/refresh-nonce' ) );
 ?>
 
 <form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
@@ -118,7 +119,7 @@ $cleanup_endpoint  = esc_url( rest_url( 'fpml/v1/queue/cleanup' ) );
 <?php submit_button(); ?>
 </form>
 
-<div id="fpml-diagnostics-feedback" class="fpml-diagnostics-feedback" role="status" aria-live="polite"></div>
+<div id="fpml-diagnostics-feedback" class="fpml-diagnostics-feedback" role="status" aria-live="polite" data-refresh-endpoint="<?php echo esc_url( $refresh_endpoint ); ?>"></div>
 
 <div class="fpml-diagnostics-grid">
         <div class="fpml-diagnostics-card">

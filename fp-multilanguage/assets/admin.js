@@ -161,6 +161,71 @@
         }
     };
 
+    const refreshNonce = async () => {
+        try {
+            // Get the refresh endpoint from the feedback element
+            const refreshEndpoint = feedback?.getAttribute('data-refresh-endpoint');
+            
+            if (!refreshEndpoint) {
+                console.error('Endpoint di refresh nonce non disponibile');
+                return null;
+            }
+
+            const response = await fetch(refreshEndpoint, {
+                method: 'GET',
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+            return data && data.nonce ? data.nonce : null;
+        } catch (error) {
+            console.error('Errore durante il refresh del nonce:', error);
+            return null;
+        }
+    };
+
+    const executeRequest = async (endpoint, nonce, retryCount = 0) => {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': nonce,
+            },
+            credentials: 'same-origin',
+            body: '{}',
+        });
+
+        const payload = await response.json();
+
+        // Check for expired nonce error
+        const isNonceError = !response.ok && payload && (
+            payload.code === 'rest_cookie_invalid_nonce' ||
+            payload.code === 'fpml_rest_nonce_invalid' ||
+            (payload.message && payload.message.toLowerCase().includes('scaduto'))
+        );
+
+        // If nonce is expired and we haven't retried yet, refresh and retry
+        if (isNonceError && retryCount === 0) {
+            const newNonce = await refreshNonce();
+            
+            if (newNonce) {
+                // Update the nonce in all buttons for future requests
+                actionButtons.forEach((btn) => {
+                    btn.setAttribute('data-nonce', newNonce);
+                });
+
+                // Retry the request with the new nonce
+                return executeRequest(endpoint, newNonce, retryCount + 1);
+            }
+        }
+
+        return { response, payload };
+    };
+
     actionButtons.forEach((button) => {
         button.addEventListener('click', async () => {
             const endpoint = button.getAttribute('data-endpoint');
@@ -175,17 +240,7 @@
             setFeedback(button.getAttribute('data-working-message') || 'Richiesta in corso…', 'info');
 
             try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': nonce,
-                    },
-                    credentials: 'same-origin',
-                    body: '{}',
-                });
-
-                const payload = await response.json();
+                const { response, payload } = await executeRequest(endpoint, nonce);
 
                 if (!response.ok || !payload || payload.success !== true) {
                     const message = (payload && payload.message) || (payload && payload.data && payload.data.message) || 'Operazione non riuscita.';
