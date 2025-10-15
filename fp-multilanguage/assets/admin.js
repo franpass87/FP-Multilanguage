@@ -245,11 +245,14 @@
      * @returns {Promise<{response: Response, payload: Object|null}>}
      */
     const executeRequest = async (endpoint, nonce, retryCount = 0, requestBody = '{}') => {
+        // Use the most recent nonce if available
+        const currentNonce = window.fpmlCurrentNonce || nonce;
+        
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-WP-Nonce': nonce,
+                'X-WP-Nonce': currentNonce,
             },
             credentials: 'same-origin',
             body: requestBody,
@@ -323,6 +326,24 @@
                 actionButtons.forEach((btn) => {
                     btn.setAttribute('data-nonce', newNonce);
                 });
+
+                // Update the nonce in the global WordPress REST API object
+                if (typeof wp !== 'undefined' && wp.apiFetch) {
+                    wp.apiFetch.use(function(options, next) {
+                        if (options.headers) {
+                            options.headers['X-WP-Nonce'] = newNonce;
+                        }
+                        return next(options);
+                    });
+                }
+
+                // Update the global nonce for fetch requests
+                window.fpmlCurrentNonce = newNonce;
+                
+                // Update any existing fetch interceptors
+                if (window.fpmlFetchInterceptor) {
+                    window.fpmlFetchInterceptor.nonce = newNonce;
+                }
 
                 // Show feedback that we're retrying
                 if (feedback) {
@@ -640,6 +661,9 @@
         return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 
+    // Initialize global nonce
+    window.fpmlCurrentNonce = actionButtons[0]?.getAttribute('data-nonce') || '';
+
     // Auto-refresh nonce every 10 minutes to prevent expiration during long sessions
     // WordPress nonces can expire after 12-24 hours of inactivity, but we refresh
     // proactively to ensure smooth operation
@@ -651,6 +675,9 @@
             const newNonce = await refreshNonce();
             
             if (newNonce) {
+                // Update global nonce
+                window.fpmlCurrentNonce = newNonce;
+                // Update all buttons with new nonce
                 actionButtons.forEach((btn) => {
                     btn.setAttribute('data-nonce', newNonce);
                 });
