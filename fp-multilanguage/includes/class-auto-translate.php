@@ -334,15 +334,25 @@ class FPML_Auto_Translate {
 		if ( $pair_id ) {
 			$translation = get_post( $pair_id );
 			if ( $translation ) {
-				echo '<hr />';
-				echo '<p><strong>' . esc_html__( 'Traduzione:', 'fp-multilanguage' ) . '</strong></p>';
-				echo '<p>';
-				echo '<a href="' . esc_url( get_edit_post_link( $translation->ID ) ) . '" target="_blank">';
-				echo esc_html( $translation->post_title ? $translation->post_title : __( '(Senza titolo)', 'fp-multilanguage' ) );
-				echo '</a><br />';
-				echo '<span class="dashicons dashicons-visibility"></span> ';
-				echo '<a href="' . esc_url( get_permalink( $translation->ID ) ) . '" target="_blank">' . esc_html__( 'Visualizza', 'fp-multilanguage' ) . '</a>';
-				echo '</p>';
+			echo '<hr />';
+			echo '<p><strong>' . esc_html__( 'Traduzione:', 'fp-multilanguage' ) . '</strong></p>';
+			echo '<p>';
+			echo '<a href="' . esc_url( get_edit_post_link( $translation->ID ) ) . '" target="_blank">';
+			
+			// Controlla lo stato della traduzione del titolo
+			$title_status = get_post_meta( $translation->ID, '_fpml_status_post_title', true );
+			if ( 'needs_update' === $title_status ) {
+				echo esc_html__( '(Traduzione in corso...)', 'fp-multilanguage' );
+			} elseif ( $translation->post_title ) {
+				echo esc_html( $translation->post_title );
+			} else {
+				echo esc_html__( '(Senza titolo)', 'fp-multilanguage' );
+			}
+			
+			echo '</a><br />';
+			echo '<span class="dashicons dashicons-visibility"></span> ';
+			echo '<a href="' . esc_url( get_permalink( $translation->ID ) ) . '" target="_blank">' . esc_html__( 'Visualizza', 'fp-multilanguage' ) . '</a>';
+			echo '</p>';
 
 				// Stato traduzione.
 				$this->render_translation_status( $translation );
