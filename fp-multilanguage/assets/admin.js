@@ -331,7 +331,7 @@
                     const message = (payload && payload.message) || 'Errore durante il reindex.';
                     setFeedback(message, 'error');
                     progressContainer.style.display = 'none';
-                    return;
+                    return true; // Errore gestito
                 }
 
                 // Aggiorna la progress bar
