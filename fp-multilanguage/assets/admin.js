@@ -288,7 +288,7 @@
 
                 if (!response.ok || !payload || payload.success !== true) {
                     const message = (payload && payload.message) || (payload && payload.data && payload.data.message) || 'Verifica non riuscita.';
-                    billingStatus.innerHTML = '<p style="color: #d63638; white-space: pre-wrap;">' + escapeHtml(message) + '</p>';
+                    billingStatus.innerHTML = '<div style="background: #fff3cd; border-left: 4px solid #d63638; padding: 12px; margin-top: 10px;"><p style="color: #d63638; white-space: pre-wrap; margin: 0;">' + escapeHtml(message) + '</p></div>';
                     return;
                 }
 
@@ -298,20 +298,33 @@
                 const details = billing.details || '';
 
                 let color = '#0073aa';
+                let backgroundColor = '#e7f5ff';
+                let borderColor = '#0073aa';
+                
                 if (status === 'ok') {
                     color = '#00a32a';
+                    backgroundColor = '#ecf7ed';
+                    borderColor = '#00a32a';
                 } else if (status === 'quota_exceeded' || status === 'auth_error' || status === 'error') {
                     color = '#d63638';
+                    backgroundColor = '#fff3cd';
+                    borderColor = '#d63638';
+                } else if (status === 'rate_limit' || status === 'server_error') {
+                    color = '#f0b849';
+                    backgroundColor = '#fff8e5';
+                    borderColor = '#f0b849';
                 }
 
-                let html = '<p style="color: ' + color + '; white-space: pre-wrap; font-weight: bold;">' + escapeHtml(message) + '</p>';
+                let html = '<div style="background: ' + backgroundColor + '; border-left: 4px solid ' + borderColor + '; padding: 12px; margin-top: 10px;">';
+                html += '<p style="color: ' + color + '; white-space: pre-wrap; font-weight: bold; margin: 0;">' + escapeHtml(message) + '</p>';
                 if (details) {
-                    html += '<p style="color: #646970; font-size: 12px; margin-top: 8px; white-space: pre-wrap;">' + escapeHtml(details) + '</p>';
+                    html += '<p style="color: #646970; font-size: 12px; margin-top: 8px; margin-bottom: 0; white-space: pre-wrap;">' + escapeHtml(details) + '</p>';
                 }
+                html += '</div>';
 
                 billingStatus.innerHTML = html;
             } catch (error) {
-                billingStatus.innerHTML = '<p style="color: #d63638;">❌ Errore di rete: ' + escapeHtml(error && error.message ? error.message : 'Errore sconosciuto') + '</p>';
+                billingStatus.innerHTML = '<div style="background: #fff3cd; border-left: 4px solid #d63638; padding: 12px; margin-top: 10px;"><p style="color: #d63638; margin: 0;">❌ Errore di rete: ' + escapeHtml(error && error.message ? error.message : 'Errore sconosciuto') + '</p></div>';
             } finally {
                 checkBillingButton.disabled = false;
             }
