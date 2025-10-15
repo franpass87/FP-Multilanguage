@@ -144,14 +144,37 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                         }
 
                         $code = (int) wp_remote_retrieve_response_code( $response );
+                        $body = wp_remote_retrieve_body( $response );
+                        $error_data = json_decode( $body, true );
+                        $error_type = isset( $error_data['error']['type'] ) ? $error_data['error']['type'] : '';
+                        $api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : '';
 
-                        // Errori temporanei - retry ha senso
+                        // PRIMA controlla se è un errore di quota (NON deve essere ritentato)
+                        if ( 429 === $code && ( 'insufficient_quota' === $error_type || false !== stripos( $api_message, 'quota' ) || false !== stripos( $api_message, 'billing' ) ) ) {
+                                $error_message = __( '❌ Quota OpenAI superata o non configurata.', 'fp-multilanguage' ) . "\n\n";
+                                $error_message .= __( '📋 Cosa significa:', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '• Il tuo account OpenAI non ha crediti disponibili', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '• OpenAI non offre più crediti gratuiti per i nuovi account', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '• Devi configurare un metodo di pagamento prima di usare l\'API', 'fp-multilanguage' ) . "\n\n";
+                                $error_message .= __( '✅ Come risolvere:', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '1. Vai su https://platform.openai.com/account/billing/overview', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '2. Clicca su "Add payment details" e aggiungi una carta di credito', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '3. Carica crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '4. Attendi 1-2 minuti affinché i crediti vengano attivati', 'fp-multilanguage' ) . "\n";
+                                $error_message .= __( '5. Riprova il test', 'fp-multilanguage' ) . "\n\n";
+                                $error_message .= __( '💰 Costi: ~$0.10 per 1000 caratteri con GPT-5 (economico e di qualità)', 'fp-multilanguage' ) . "\n\n";
+                                $error_message .= __( '💡 In alternativa, puoi usare Google Cloud Translation per grandi volumi.', 'fp-multilanguage' );
+                                
+                                if ( $api_message ) {
+                                        $error_message .= "\n\n" . __( '💬 Messaggio da OpenAI:', 'fp-multilanguage' ) . "\n" . wp_kses_post( $api_message );
+                                }
+                                
+                                return new WP_Error( 'fpml_openai_quota_exceeded', $error_message );
+                        }
+
+                        // Errori temporanei - retry ha senso (rate limit vero, errori server)
                         if ( in_array( $code, array( 429, 500, 502, 503, 504 ), true ) ) {
                                 if ( $attempt === $max_attempts ) {
-                                        $body = wp_remote_retrieve_body( $response );
-                                        $error_data = json_decode( $body, true );
-                                        $api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : '';
-                                        
                                         // Controlla l'header Retry-After
                                         $retry_after = wp_remote_retrieve_header( $response, 'retry-after' );
                                         
@@ -207,15 +230,19 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
                         }
 
 		// Errori client (4xx eccetto 429) - NON ritentare
+		// NOTA: Gli errori 429 con quota exceeded sono già gestiti sopra
 		if ( $code >= 400 && $code < 500 ) {
-			$body = wp_remote_retrieve_body( $response );
 			$error_code = 'fpml_openai_client_error';
 			$error_message = '';
 
-			// Parse JSON error for better messaging
-			$error_data = json_decode( $body, true );
+			// Riutilizza i dati già parsati (per evitare di decodificare due volte)
+			if ( ! isset( $error_data ) || null === $error_data ) {
+				$body = wp_remote_retrieve_body( $response );
+				$error_data = json_decode( $body, true );
+			}
+			
 			$error_type = isset( $error_data['error']['type'] ) ? $error_data['error']['type'] : '';
-			$api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : $body;
+			$api_message = isset( $error_data['error']['message'] ) ? $error_data['error']['message'] : wp_remote_retrieve_body( $response );
 
 			if ( 401 === $code || 403 === $code ) {
 				$error_code = 'fpml_openai_auth_error';
@@ -228,22 +255,6 @@ class FPML_Provider_OpenAI extends FPML_Base_Provider {
 					__( 'Richiesta non valida: %s', 'fp-multilanguage' ),
 					wp_kses_post( $api_message )
 				);
-			} elseif ( 'insufficient_quota' === $error_type || false !== stripos( $api_message, 'quota' ) || false !== stripos( $api_message, 'billing' ) ) {
-				// Errore di quota specifico
-				$error_code = 'fpml_openai_quota_exceeded';
-				$error_message = __( '❌ Quota OpenAI superata o non configurata.', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '📋 Cosa significa:', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '• Il tuo account OpenAI non ha crediti disponibili', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '• OpenAI non offre più crediti gratuiti per i nuovi account', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '• Devi configurare un metodo di pagamento prima di usare l\'API', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '✅ Come risolvere:', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '1. Vai su https://platform.openai.com/account/billing/overview', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '2. Clicca su "Add payment details" e aggiungi una carta di credito', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '3. Carica crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '4. Attendi 1-2 minuti affinché i crediti vengano attivati', 'fp-multilanguage' ) . "\n";
-				$error_message .= __( '5. Riprova il test', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '💰 Costi: ~$0.10 per 1000 caratteri con GPT-5 (economico e di qualità)', 'fp-multilanguage' ) . "\n\n";
-				$error_message .= __( '💡 In alternativa, puoi usare Google Cloud Translation per grandi volumi.', 'fp-multilanguage' );
 			} else {
 				$error_message = sprintf(
 					__( 'Errore client OpenAI (%1$d): %2$s', 'fp-multilanguage' ),
