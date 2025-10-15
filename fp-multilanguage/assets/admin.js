@@ -283,7 +283,7 @@
      * @param {string} endpoint - The batch reindex endpoint URL
      * @param {string} nonce - The WordPress REST API nonce
      * @param {HTMLElement} button - The button that triggered the action
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} Returns true if progress bar is available, false for fallback
      */
     const executeReindexWithProgress = async (endpoint, nonce, button) => {
         const progressContainer = document.getElementById('fpml-reindex-progress');
@@ -291,8 +291,8 @@
         const progressText = document.getElementById('fpml-reindex-progress-text');
         
         if (!progressContainer || !progressBar || !progressText) {
-            console.error('Progress bar elements not found');
-            return;
+            console.error('Progress bar elements not found, falling back to standard reindex');
+            return false; // Fallback to standard method
         }
 
         // Mostra la progress bar
@@ -378,9 +378,15 @@
                 const batchEndpoint = button.getAttribute('data-batch-endpoint');
                 if (batchEndpoint) {
                     setFeedback('', 'info'); // Pulisci il feedback
-                    await executeReindexWithProgress(batchEndpoint, nonce, button);
-                    button.disabled = false;
-                    return;
+                    const progressBarAvailable = await executeReindexWithProgress(batchEndpoint, nonce, button);
+                    
+                    // Se la progress bar non è disponibile, usa il metodo standard
+                    if (progressBarAvailable === false) {
+                        // Continua con il metodo standard qui sotto
+                    } else {
+                        button.disabled = false;
+                        return;
+                    }
                 }
             }
 
