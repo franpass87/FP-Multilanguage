@@ -154,6 +154,16 @@ class FPML_REST_Admin {
 				),
 			)
 		);
+
+		register_rest_route(
+			'fpml/v1',
+			'/refresh-nonce',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'handle_refresh_nonce' ),
+				'permission_callback' => array( $this, 'check_admin_permissions' ),
+			)
+		);
 	}
 
         /**
@@ -184,6 +194,28 @@ class FPML_REST_Admin {
                         return new WP_Error(
                                 'fpml_rest_nonce_invalid',
                                 __( 'Nonce non valido.', 'fp-multilanguage' ),
+                                array( 'status' => rest_authorization_required_code() )
+                        );
+                }
+
+                return true;
+        }
+
+        /**
+         * Check admin permissions without nonce verification.
+         * Used only for nonce refresh endpoint.
+         *
+         * @since 0.4.2
+         *
+         * @param WP_REST_Request $request Request instance.
+         *
+         * @return bool|WP_Error
+         */
+        public function check_admin_permissions( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                if ( ! current_user_can( 'manage_options' ) ) {
+                        return new WP_Error(
+                                'fpml_rest_forbidden',
+                                __( 'Permessi insufficienti.', 'fp-multilanguage' ),
                                 array( 'status' => rest_authorization_required_code() )
                         );
                 }
@@ -604,5 +636,25 @@ class FPML_REST_Admin {
 		default:
 			return new WP_Error( 'fpml_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
 		}
+	}
+
+	/**
+	 * Refresh the REST API nonce.
+	 *
+	 * @since 0.4.2
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function handle_refresh_nonce( $request ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+		$new_nonce = wp_create_nonce( 'wp_rest' );
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'nonce'   => $new_nonce,
+			)
+		);
 	}
 }
