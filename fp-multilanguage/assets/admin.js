@@ -245,10 +245,14 @@
             isHtmlResponse = true;
             const htmlText = await response.text();
             // WordPress nonce errors are often returned as HTML with "scaduto", "expired" or "link che hai seguito"
-            if (htmlText.includes('scaduto') || 
-                htmlText.includes('expired') || 
-                htmlText.includes('link che hai seguito') ||
-                htmlText.includes('link you followed has expired')) {
+            // Check for various WordPress nonce error messages in Italian and English
+            const lowerHtml = htmlText.toLowerCase();
+            if (lowerHtml.includes('scaduto') || 
+                lowerHtml.includes('expired') || 
+                lowerHtml.includes('link che hai seguito') ||
+                lowerHtml.includes('link you followed') ||
+                lowerHtml.includes('are you sure you want to do this') ||
+                lowerHtml.includes('sei sicuro di voler fare questo')) {
                 payload = {
                     code: 'rest_cookie_invalid_nonce',
                     message: 'Il nonce è scaduto'
@@ -259,16 +263,19 @@
         // Check for expired nonce error - handles multiple error codes and messages
         const isNonceError = !response.ok && (
             isHtmlResponse ||
+            response.status === 403 || // Forbidden often indicates nonce issues
             (payload && (
                 payload.code === 'rest_cookie_invalid_nonce' ||
                 payload.code === 'fpml_rest_nonce_invalid' ||
                 payload.code === 'rest_forbidden' ||
+                payload.code === 'rest_cookie_check_errors' ||
                 (payload.message && (
                     payload.message.toLowerCase().includes('scaduto') ||
                     payload.message.toLowerCase().includes('expired') ||
                     payload.message.toLowerCase().includes('nonce') ||
                     payload.message.toLowerCase().includes('link che hai seguito') ||
-                    payload.message.toLowerCase().includes('link you followed')
+                    payload.message.toLowerCase().includes('link you followed') ||
+                    payload.message.toLowerCase().includes('cookie')
                 ))
             ))
         );
@@ -276,6 +283,12 @@
         // If nonce is expired and we haven't retried yet, refresh and retry
         if (isNonceError && retryCount === 0) {
             console.log('Nonce scaduto rilevato, aggiornamento in corso...');
+            
+            // Show temporary feedback to user
+            if (feedback) {
+                setFeedback('Aggiornamento credenziali in corso...', 'info');
+            }
+            
             const newNonce = await refreshNonce();
             
             if (newNonce) {
@@ -285,10 +298,18 @@
                     btn.setAttribute('data-nonce', newNonce);
                 });
 
+                // Show feedback that we're retrying
+                if (feedback) {
+                    setFeedback('Credenziali aggiornate, ripetizione richiesta...', 'info');
+                }
+
                 // Retry the request with the new nonce (only once to avoid loops)
                 return executeRequest(endpoint, newNonce, retryCount + 1, requestBody);
             } else {
                 console.error('Impossibile aggiornare il nonce');
+                if (feedback) {
+                    setFeedback('Errore: impossibile aggiornare le credenziali. Ricarica la pagina e riprova.', 'error');
+                }
             }
         }
 
@@ -325,8 +346,9 @@
 
         try {
             while (!complete) {
-                // Refresh del nonce ogni 3 step per evitare scadenze durante processi lunghi
-                if (step > 0 && step % 3 === 0) {
+                // Refresh del nonce ogni 2 step per evitare scadenze durante processi lunghi
+                // WordPress nonces can expire after inactivity, so we refresh proactively
+                if (step > 0 && step % 2 === 0) {
                     console.log('Aggiornamento preventivo del nonce allo step', step);
                     const newNonce = await refreshNonce();
                     if (newNonce) {
@@ -335,9 +357,9 @@
                         actionButtons.forEach((btn) => {
                             btn.setAttribute('data-nonce', newNonce);
                         });
-                        console.log('Nonce aggiornato con successo');
+                        console.log('Nonce aggiornato con successo allo step', step);
                     } else {
-                        console.warn('Impossibile aggiornare il nonce preventivamente, continuo con quello corrente');
+                        console.warn('Impossibile aggiornare il nonce preventivamente allo step', step, '- continuo con quello corrente');
                     }
                 }
 
@@ -590,5 +612,28 @@
             "'": '&#039;'
         };
         return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // Auto-refresh nonce every 10 minutes to prevent expiration during long sessions
+    // WordPress nonces can expire after 12-24 hours of inactivity, but we refresh
+    // proactively to ensure smooth operation
+    if (actionButtons.length > 0) {
+        const AUTO_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+        
+        setInterval(async () => {
+            console.log('Auto-refresh del nonce in background...');
+            const newNonce = await refreshNonce();
+            
+            if (newNonce) {
+                actionButtons.forEach((btn) => {
+                    btn.setAttribute('data-nonce', newNonce);
+                });
+                console.log('Nonce aggiornato automaticamente in background');
+            } else {
+                console.warn('Auto-refresh del nonce fallito');
+            }
+        }, AUTO_REFRESH_INTERVAL);
+        
+        console.log('Auto-refresh del nonce abilitato (ogni ' + (AUTO_REFRESH_INTERVAL / 60000) + ' minuti)');
     }
 })();
