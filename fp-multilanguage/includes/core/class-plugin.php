@@ -97,24 +97,6 @@ class FPML_Plugin_Core {
 			// Migration service is now initialized and will handle backup/restore
 		}
 		
-		// Initialize settings fix
-		$settings_fix = FPML_Container::get( 'settings_fix' );
-		if ( $settings_fix ) {
-			// Settings fix service is now initialized and will handle save issues
-		}
-		
-		// Initialize settings save fix
-		$settings_save_fix = FPML_Container::get( 'settings_save_fix' );
-		if ( $settings_save_fix ) {
-			// Settings save fix service is now initialized and will handle form submissions
-		}
-		
-		// Initialize direct settings save
-		$direct_settings_save = FPML_Container::get( 'direct_settings_save' );
-		if ( $direct_settings_save ) {
-			// Direct settings save service is now initialized and will handle direct saves
-		}
-		
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
 		}

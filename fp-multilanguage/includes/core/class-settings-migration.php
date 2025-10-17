@@ -64,9 +64,6 @@ class FPML_Settings_Migration {
 		
 		// Hook into plugin initialization to restore settings (only once)
 		add_action( 'fpml_after_initialization', array( $this, 'maybe_restore_settings' ) );
-		
-		// Hook into settings save to update migration version (with very low priority to avoid conflicts)
-		add_action( 'update_option_fpml_settings', array( $this, 'update_migration_version' ), 999, 2 );
 	}
 
 	/**
@@ -278,67 +275,6 @@ class FPML_Settings_Migration {
 		return $migrated;
 	}
 
-	/**
-	 * Update migration version when settings are saved.
-	 *
-	 * @since 0.4.1
-	 *
-	 * @param array $old_value Old settings value.
-	 * @param array $new_value New settings value.
-	 *
-	 * @return void
-	 */
-	public function update_migration_version( $old_value, $new_value ) {
-		// Only update version if this is a normal save (not a restore operation)
-		// and we're not in the middle of a form submission
-		if ( ! $this->is_restore_operation() && ! $this->is_form_submission() ) {
-			update_option( self::MIGRATION_VERSION_KEY, self::CURRENT_MIGRATION_VERSION, false );
-		}
-	}
-	
-	/**
-	 * Check if we're currently in a restore operation to avoid conflicts.
-	 *
-	 * @since 0.4.1
-	 *
-	 * @return bool True if we're in a restore operation.
-	 */
-	protected function is_restore_operation() {
-		// Check if we're in the middle of a restore operation
-		static $restore_in_progress = false;
-		
-		// Set flag during restore operations
-		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 );
-		foreach ( $backtrace as $frame ) {
-			if ( isset( $frame['function'] ) && $frame['function'] === 'restore_from_backup' ) {
-				$restore_in_progress = true;
-				break;
-			}
-		}
-		
-		return $restore_in_progress;
-	}
-	
-	/**
-	 * Check if we're currently in a form submission to avoid conflicts.
-	 *
-	 * @since 0.4.1
-	 *
-	 * @return bool True if we're in a form submission.
-	 */
-	protected function is_form_submission() {
-		// Check if we're processing a form submission
-		if ( isset( $_POST['option_page'] ) && $_POST['option_page'] === 'fpml_settings_group' ) {
-			return true;
-		}
-		
-		// Check if we're in options.php (WordPress settings page)
-		if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( $_SERVER['REQUEST_URI'], 'options.php' ) !== false ) {
-			return true;
-		}
-		
-		return false;
-	}
 
 	/**
 	 * Get backup information.
