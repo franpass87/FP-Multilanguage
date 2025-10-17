@@ -168,6 +168,16 @@ function fpml_load_files() {
 		require_once FPML_PLUGIN_DIR . 'FORCE-SAVE-NOW.php';
 	}
 
+	// Load ULTRA DIRECT SAVE (saves directly to database)
+	if ( file_exists( FPML_PLUGIN_DIR . 'ULTRA-DIRECT-SAVE.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'ULTRA-DIRECT-SAVE.php';
+	}
+
+	// Load ULTIMATE SAVE FIX (intercepts everything)
+	if ( file_exists( FPML_PLUGIN_DIR . 'ULTIMATE-SAVE-FIX.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'ULTIMATE-SAVE-FIX.php';
+	}
+
 	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
 		require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
 	}
