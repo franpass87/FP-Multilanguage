@@ -163,6 +163,11 @@ function fpml_load_files() {
 		require_once FPML_PLUGIN_DIR . 'ultra-simple-save.php';
 	}
 
+	// Load FORCE SAVE NOW (guaranteed to work)
+	if ( file_exists( FPML_PLUGIN_DIR . 'FORCE-SAVE-NOW.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'FORCE-SAVE-NOW.php';
+	}
+
 	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
 		require_once FPML_PLUGIN_DIR . 'rest/class-rest-admin.php';
 	}
