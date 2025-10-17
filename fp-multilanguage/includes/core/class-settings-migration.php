@@ -62,11 +62,11 @@ class FPML_Settings_Migration {
 		// Hook into plugin activation to backup settings
 		add_action( 'fpml_before_activation', array( $this, 'backup_settings' ) );
 		
-		// Hook into plugin initialization to restore settings
+		// Hook into plugin initialization to restore settings (only once)
 		add_action( 'fpml_after_initialization', array( $this, 'maybe_restore_settings' ) );
 		
-		// Hook into settings save to update migration version
-		add_action( 'update_option_fpml_settings', array( $this, 'update_migration_version' ), 10, 2 );
+		// Hook into settings save to update migration version (with very low priority to avoid conflicts)
+		add_action( 'update_option_fpml_settings', array( $this, 'update_migration_version' ), 999, 2 );
 	}
 
 	/**
@@ -108,6 +108,11 @@ class FPML_Settings_Migration {
 	 * @return bool True if restoration was successful.
 	 */
 	public function maybe_restore_settings() {
+		// Only run during plugin initialization, not on every page load
+		if ( ! $this->should_run_restore() ) {
+			return false;
+		}
+		
 		// Check if we have a backup
 		$backup = get_option( self::BACKUP_OPTION_KEY, array() );
 		
@@ -126,6 +131,32 @@ class FPML_Settings_Migration {
 
 		// Settings are not defaults, just migrate new options
 		return $this->migrate_new_options( $current_settings, $backup['settings'] );
+	}
+	
+	/**
+	 * Check if restore should run (only once per session).
+	 *
+	 * @since 0.4.1
+	 *
+	 * @return bool True if restore should run.
+	 */
+	protected function should_run_restore() {
+		// Check if we've already run restore in this session
+		static $restore_run = false;
+		
+		if ( $restore_run ) {
+			return false;
+		}
+		
+		// Only run if we're in admin or during plugin activation
+		if ( ! is_admin() && ! wp_doing_ajax() && ! defined( 'DOING_CRON' ) ) {
+			return false;
+		}
+		
+		// Mark as run
+		$restore_run = true;
+		
+		return true;
 	}
 
 	/**
@@ -258,9 +289,55 @@ class FPML_Settings_Migration {
 	 * @return void
 	 */
 	public function update_migration_version( $old_value, $new_value ) {
-		unset( $old_value, $new_value );
+		// Only update version if this is a normal save (not a restore operation)
+		// and we're not in the middle of a form submission
+		if ( ! $this->is_restore_operation() && ! $this->is_form_submission() ) {
+			update_option( self::MIGRATION_VERSION_KEY, self::CURRENT_MIGRATION_VERSION, false );
+		}
+	}
+	
+	/**
+	 * Check if we're currently in a restore operation to avoid conflicts.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @return bool True if we're in a restore operation.
+	 */
+	protected function is_restore_operation() {
+		// Check if we're in the middle of a restore operation
+		static $restore_in_progress = false;
 		
-		update_option( self::MIGRATION_VERSION_KEY, self::CURRENT_MIGRATION_VERSION, false );
+		// Set flag during restore operations
+		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 );
+		foreach ( $backtrace as $frame ) {
+			if ( isset( $frame['function'] ) && $frame['function'] === 'restore_from_backup' ) {
+				$restore_in_progress = true;
+				break;
+			}
+		}
+		
+		return $restore_in_progress;
+	}
+	
+	/**
+	 * Check if we're currently in a form submission to avoid conflicts.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @return bool True if we're in a form submission.
+	 */
+	protected function is_form_submission() {
+		// Check if we're processing a form submission
+		if ( isset( $_POST['option_page'] ) && $_POST['option_page'] === 'fpml_settings_group' ) {
+			return true;
+		}
+		
+		// Check if we're in options.php (WordPress settings page)
+		if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( $_SERVER['REQUEST_URI'], 'options.php' ) !== false ) {
+			return true;
+		}
+		
+		return false;
 	}
 
 	/**
