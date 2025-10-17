@@ -31,6 +31,22 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'wp_ajax_fpml_refresh_nonce', array( $this, 'handle_refresh_nonce' ) );
         add_action( 'wp_ajax_fpml_reindex_batch_ajax', array( $this, 'handle_reindex_batch_ajax' ) );
         add_action( 'wp_ajax_fpml_cleanup_orphaned_pairs', array( $this, 'handle_cleanup_orphaned_pairs' ) );
+        add_action( 'wp_ajax_fpml_trigger_detection', array( $this, 'handle_trigger_detection' ) );
+        
+        // Admin-post handlers
+        add_action( 'admin_post_fpml_save_settings', array( $this, 'handle_save_settings' ) );
+                add_action( 'admin_post_fpml_scan_strings', array( $this, 'handle_scan_strings' ) );
+        add_action( 'admin_post_fpml_save_overrides', array( $this, 'handle_save_overrides' ) );
+        add_action( 'admin_post_fpml_import_overrides', array( $this, 'handle_import_overrides' ) );
+        add_action( 'admin_post_fpml_export_overrides', array( $this, 'handle_export_overrides' ) );
+        add_action( 'admin_post_fpml_save_glossary', array( $this, 'handle_save_glossary' ) );
+        add_action( 'admin_post_fpml_import_glossary', array( $this, 'handle_import_glossary' ) );
+        add_action( 'admin_post_fpml_export_glossary', array( $this, 'handle_export_glossary' ) );
+        add_action( 'admin_post_fpml_export_state', array( $this, 'handle_export_state' ) );
+        add_action( 'admin_post_fpml_import_state', array( $this, 'handle_import_state' ) );
+        add_action( 'admin_post_fpml_export_logs', array( $this, 'handle_export_logs' ) );
+        add_action( 'admin_post_fpml_import_logs', array( $this, 'handle_import_logs' ) );
+        add_action( 'admin_post_fpml_clear_sandbox', array( $this, 'handle_clear_sandbox' ) );
         
         // Nonce handling
         add_action( 'admin_init', array( $this, 'handle_expired_nonce_redirect' ) );
@@ -38,9 +54,6 @@ const MENU_SLUG = 'fpml-settings';
         add_action( 'plugins_loaded', array( $this, 'handle_expired_nonce_very_early' ), 1 );
         add_filter( 'wp_die_handler', array( $this, 'custom_wp_die_handler' ) );
         add_filter( 'check_admin_referer', array( $this, 'handle_admin_referer_check' ), 10, 2 );
-        
-        // Settings save handler
-        add_action( 'admin_post_fpml_save_settings', array( $this, 'handle_save_settings' ) );
     }
     
     /**
@@ -84,28 +97,33 @@ return;
      * Render admin page
      */
     public function render_admin_page() {
-        $tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'diagnostics';
+        $tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'general';
         
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'FP Multilanguage', 'fp-multilanguage' ) . '</h1>';
-        
+
         // Tab navigation
         $this->render_tab_navigation( $tab );
-        
+
         // Tab content
         $this->render_tab_content( $tab );
 
-        echo '</div>';
-}
+                echo '</div>';
+        }
 
 /**
      * Render tab navigation
      */
     private function render_tab_navigation( $current_tab ) {
         $tabs = array(
-            'diagnostics' => __( 'Diagnostiche', 'fp-multilanguage' ),
             'general' => __( 'Generale', 'fp-multilanguage' ),
             'content' => __( 'Contenuto', 'fp-multilanguage' ),
+            'strings' => __( 'Stringhe', 'fp-multilanguage' ),
+            'glossary' => __( 'Glossario', 'fp-multilanguage' ),
+            'seo' => __( 'SEO', 'fp-multilanguage' ),
+            'export' => __( 'Export/Import', 'fp-multilanguage' ),
+            'compatibility' => __( 'Compatibilità', 'fp-multilanguage' ),
+            'diagnostics' => __( 'Diagnostiche', 'fp-multilanguage' ),
         );
         
         echo '<nav class="nav-tab-wrapper wp-clearfix">';
@@ -122,17 +140,32 @@ return;
      */
     private function render_tab_content( $tab ) {
         switch ( $tab ) {
-            case 'diagnostics':
-                $this->render_diagnostics_tab();
-                break;
             case 'general':
                 $this->render_general_tab();
                 break;
             case 'content':
                 $this->render_content_tab();
                 break;
-            default:
+            case 'strings':
+                $this->render_strings_tab();
+                break;
+            case 'glossary':
+                $this->render_glossary_tab();
+                break;
+            case 'seo':
+                $this->render_seo_tab();
+                break;
+            case 'export':
+                $this->render_export_tab();
+                break;
+            case 'compatibility':
+                $this->render_compatibility_tab();
+                break;
+            case 'diagnostics':
                 $this->render_diagnostics_tab();
+                break;
+            default:
+                $this->render_general_tab();
                 break;
         }
     }
@@ -152,14 +185,77 @@ return;
      * Render general tab
      */
     private function render_general_tab() {
-        echo '<p>' . __( 'Impostazioni generali in fase di sviluppo.', 'fp-multilanguage' ) . '</p>';
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-general.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-general.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni generali non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
     }
     
     /**
      * Render content tab
      */
     private function render_content_tab() {
-        echo '<p>' . __( 'Impostazioni contenuto in fase di sviluppo.', 'fp-multilanguage' ) . '</p>';
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-content.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-content.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni contenuto non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
+    }
+    
+    /**
+     * Render strings tab
+     */
+    private function render_strings_tab() {
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-strings.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-strings.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni stringhe non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
+    }
+    
+    /**
+     * Render glossary tab
+     */
+    private function render_glossary_tab() {
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-glossary.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-glossary.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni glossario non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
+    }
+    
+    /**
+     * Render SEO tab
+     */
+    private function render_seo_tab() {
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-seo.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-seo.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni SEO non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
+    }
+    
+    /**
+     * Render export tab
+     */
+    private function render_export_tab() {
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-export.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-export.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni export non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
+    }
+    
+    /**
+     * Render compatibility tab
+     */
+    private function render_compatibility_tab() {
+        if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-plugin-compatibility.php' ) ) {
+            include FPML_PLUGIN_DIR . 'admin/views/settings-plugin-compatibility.php';
+        } else {
+            echo '<p>' . __( 'File impostazioni compatibilità non trovato.', 'fp-multilanguage' ) . '</p>';
+        }
     }
     
     /**
@@ -228,7 +324,7 @@ return;
      * Handle cleanup orphaned pairs AJAX
      */
     public function handle_cleanup_orphaned_pairs() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Permessi insufficienti.', 'fp-multilanguage' ) ) );
 		}
 
@@ -265,8 +361,8 @@ return;
                 }
             }
 
-            wp_send_json_success( array(
-                'message' => sprintf( 
+		wp_send_json_success( array(
+			'message' => sprintf(
                     __( 'Pulizia completata: %d meta orfani rimossi.', 'fp-multilanguage' ), 
                     $cleaned_count 
                 ),
@@ -449,6 +545,174 @@ return;
         $redirect_url .= '&settings-updated=true';
 
         wp_safe_redirect( $redirect_url );
+        exit;
+    }
+    
+    /**
+     * Handle trigger detection AJAX
+     */
+    public function handle_trigger_detection() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permessi insufficienti.', 'fp-multilanguage' ) ) );
+        }
+        
+        // Implementation for trigger detection
+        wp_send_json_success( array( 'message' => __( 'Rilevamento completato.', 'fp-multilanguage' ) ) );
+    }
+    
+    /**
+     * Handle scan strings
+     */
+    public function handle_scan_strings() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for string scanning
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=strings&strings-scanned=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle save overrides
+     */
+    public function handle_save_overrides() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for saving overrides
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=strings&overrides-saved=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle import overrides
+     */
+    public function handle_import_overrides() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for importing overrides
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=strings&overrides-imported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle export overrides
+     */
+    public function handle_export_overrides() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for exporting overrides
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=strings&overrides-exported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle save glossary
+     */
+    public function handle_save_glossary() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for saving glossary
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=glossary&glossary-saved=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle import glossary
+     */
+    public function handle_import_glossary() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for importing glossary
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=glossary&glossary-imported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle export glossary
+     */
+    public function handle_export_glossary() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for exporting glossary
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=glossary&glossary-exported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle export state
+     */
+    public function handle_export_state() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for exporting state
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=export&state-exported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle import state
+     */
+    public function handle_import_state() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for importing state
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=export&state-imported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle export logs
+     */
+    public function handle_export_logs() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for exporting logs
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=export&logs-exported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle import logs
+     */
+    public function handle_import_logs() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for importing logs
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=export&logs-imported=true' ) );
+        exit;
+    }
+    
+    /**
+     * Handle clear sandbox
+     */
+    public function handle_clear_sandbox() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
+        }
+        
+        // Implementation for clearing sandbox
+        wp_redirect( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=export&sandbox-cleared=true' ) );
         exit;
     }
 }

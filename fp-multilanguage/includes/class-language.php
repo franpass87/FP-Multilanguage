@@ -112,6 +112,8 @@ class FPML_Language {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
         add_shortcode( 'fp_lang_switcher', array( $this, 'render_switcher' ) );
         add_filter( 'locale', array( $this, 'filter_locale' ) );
+        add_filter( 'post_link', array( $this, 'filter_translation_permalink' ), 10, 2 );
+        add_filter( 'page_link', array( $this, 'filter_translation_permalink' ), 10, 2 );
     }
 
     /**
@@ -136,6 +138,44 @@ class FPML_Language {
                 filemtime( $css_file )
             );
         }
+    }
+
+    /**
+     * Filter permalinks for translated pages to use /en/ prefix.
+     *
+     * @since 0.4.1
+     *
+     * @param string  $permalink The post's permalink.
+     * @param WP_Post $post      The post object.
+     *
+     * @return string
+     */
+    public function filter_translation_permalink( $permalink, $post ) {
+        if ( is_admin() || ! $post instanceof WP_Post ) {
+            return $permalink;
+        }
+
+        // Solo per le pagine tradotte
+        if ( ! get_post_meta( $post->ID, '_fpml_is_translation', true ) ) {
+            return $permalink;
+        }
+
+        // Solo se il routing mode è 'segment'
+        $routing = $this->settings->get( 'routing_mode', 'segment' );
+        if ( 'segment' !== $routing ) {
+            return $permalink;
+        }
+
+        // Se lo slug inizia con 'en-', rimuovi il prefisso e aggiungi /en/ all'URL
+        if ( 0 === strpos( $post->post_name, 'en-' ) ) {
+            $base_slug = substr( $post->post_name, 3 ); // Rimuovi 'en-'
+            
+            // Costruisci l'URL con /en/ prefix
+            $home_url = home_url( '/' );
+            $permalink = $home_url . 'en/' . $base_slug . '/';
+        }
+
+        return $permalink;
     }
 
     /**

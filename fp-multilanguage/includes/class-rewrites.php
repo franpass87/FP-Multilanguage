@@ -200,7 +200,16 @@ class FPML_Rewrites {
                 $slug           = is_string( $slug ) ? $slug : '';
 
                 if ( '' !== $slug ) {
-                    $public_taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+                    // Prova prima a cercare una pagina tradotta con slug "en-*"
+                    $translation_slug = 'en-' . $slug;
+                    $translation_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
+                    
+                    if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
+                        $result = array(
+                            'p' => $translation_post->ID,
+                        );
+                    } else {
+                        $public_taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
 
                     if ( ! empty( $public_taxonomies ) ) {
                         foreach ( $public_taxonomies as $taxonomy ) {
@@ -247,6 +256,7 @@ class FPML_Rewrites {
                             'name'      => $slug,
                             'post_type' => 'any',
                         );
+                    }
                     }
                 }
             }

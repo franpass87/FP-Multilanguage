@@ -102,9 +102,17 @@ class FPML_Translation_Manager {
 		}
 	}
 
-	// Genera titolo e slug provvisori per la pagina tradotta
-	$temp_title = $post->post_title . ' (EN - Translation in progress)';
+	// Genera titolo e slug per la pagina tradotta
+	// Usa il titolo originale invece di aggiungere "(EN - Translation in progress)"
+	$translation_title = $post->post_title;
 	$temp_slug = $this->generate_translation_slug( $post->post_name ? $post->post_name : sanitize_title( $post->post_title ) );
+
+	// Crea contenuto placeholder più appropriato
+	$placeholder_content = sprintf(
+		'<!-- FPML Translation Placeholder -->\n<p>This page is being translated from Italian. Content will be updated automatically.</p>\n<p><em>Original page: <a href="%s">%s</a></em></p>',
+		get_permalink( $post->ID ),
+		$post->post_title
+	);
 
 	$postarr = array(
 		'post_type'      => $post->post_type,
@@ -115,13 +123,14 @@ class FPML_Translation_Manager {
 		'post_password'  => $post->post_password,
 		'comment_status' => $post->comment_status,
 		'ping_status'    => $post->ping_status,
-		'post_title'     => $temp_title,
-		'post_content'   => '',
+		'post_title'     => $translation_title,
+		'post_content'   => $placeholder_content,
 		'post_excerpt'   => '',
 		'post_name'      => $temp_slug,
 		'meta_input'     => array(
 			'_fpml_is_translation'  => 1,
 			'_fpml_pair_source_id' => $post->ID,
+			'_fpml_translation_status' => 'pending',
 		),
 	);
 
@@ -284,10 +293,19 @@ class FPML_Translation_Manager {
 			return $slug;
 		}
 
-		// Manteniamo lo slug originale senza suffisso -en
-		// Lo slug verrà tradotto automaticamente dal job di traduzione
-		// Questo garantisce che l'URL finale sia /en/translated-slug invece di /en/slug-en
-		return $slug;
+		// Per le traduzioni, aggiungiamo un prefisso per evitare conflitti
+		// Questo evita che WordPress aggiunga -2, -3, etc.
+		$translation_slug = 'en-' . $slug;
+		
+		// Verifica se lo slug esiste già
+		$existing_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
+		
+		if ( $existing_post ) {
+			// Se esiste già, aggiungi un timestamp per renderlo unico
+			$translation_slug = 'en-' . $slug . '-' . time();
+		}
+
+		return $translation_slug;
 	}
 
 	/**
