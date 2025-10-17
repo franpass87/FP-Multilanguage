@@ -59,10 +59,11 @@ class FPML_Secure_Settings {
 	 * Constructor.
 	 */
 	protected function __construct() {
+		// DISABILITATO TEMPORANEAMENTE PER DEBUG
 		// Hook into settings save to encrypt
-		add_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10, 2 );
+		// add_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10, 2 );
 		// Hook into settings retrieval to decrypt
-		add_filter( 'option_fpml_settings', array( $this, 'decrypt_settings' ), 10, 1 );
+		// add_filter( 'option_fpml_settings', array( $this, 'decrypt_settings' ), 10, 1 );
 	}
 
 	/**
