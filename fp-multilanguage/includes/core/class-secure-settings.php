@@ -59,7 +59,7 @@ class FPML_Secure_Settings {
 	 * Constructor.
 	 */
 	protected function __construct() {
-		// DISABILITATO TEMPORANEAMENTE PER DEBUG
+		// DISABILITATO COMPLETAMENTE - NON INTERFERISCE CON IL SALVATAGGIO
 		// Hook into settings save to encrypt
 		// add_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10, 2 );
 		// Hook into settings retrieval to decrypt
@@ -279,7 +279,7 @@ class FPML_Secure_Settings {
 		}
 
 	if ( $migrated > 0 ) {
-		// DISABILITATO TEMPORANEAMENTE PER DEBUG
+		// DISABILITATO COMPLETAMENTE - NON INTERFERISCE CON IL SALVATAGGIO
 		// Update without triggering our filter (to avoid double encryption)
 		// remove_filter( 'pre_update_option_fpml_settings', array( $this, 'encrypt_settings' ), 10 );
 		

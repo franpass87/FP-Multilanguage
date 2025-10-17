@@ -131,6 +131,7 @@ function fpml_load_files() {
 	$core_classes = array(
 		'includes/core/class-container.php',
 		'includes/core/class-plugin.php',
+		'includes/core/class-simple-settings.php', // NUOVO SISTEMA SEMPLICE
 		'includes/core/class-secure-settings.php',
 		'includes/core/class-settings-migration.php',
 		'includes/core/class-translation-cache.php',
