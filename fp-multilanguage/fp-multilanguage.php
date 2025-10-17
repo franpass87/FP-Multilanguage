@@ -132,6 +132,7 @@ function fpml_load_files() {
 		'includes/core/class-container.php',
 		'includes/core/class-plugin.php',
 		'includes/core/class-secure-settings.php',
+		'includes/core/class-settings-migration.php',
 		'includes/core/class-translation-cache.php',
 		'includes/core/class-translation-versioning.php',
 	);
@@ -317,5 +318,10 @@ function fpml_register_services() {
 	// Plugin detector.
 	FPML_Container::register( 'plugin_detector', function() {
 		return class_exists( 'FPML_Plugin_Detector' ) ? FPML_Plugin_Detector::instance() : null;
+	} );
+
+	// Settings migration.
+	FPML_Container::register( 'settings_migration', function() {
+		return class_exists( 'FPML_Settings_Migration' ) ? FPML_Settings_Migration::instance() : null;
 	} );
 }

@@ -91,6 +91,12 @@ class FPML_Plugin_Core {
 		$this->translation_manager = FPML_Container::get( 'translation_manager' ) ?: ( class_exists( 'FPML_Translation_Manager' ) ? FPML_Translation_Manager::instance() : null );
 		$this->job_enqueuer = FPML_Container::get( 'job_enqueuer' ) ?: ( class_exists( 'FPML_Job_Enqueuer' ) ? FPML_Job_Enqueuer::instance() : null );
 		
+		// Initialize settings migration
+		$settings_migration = FPML_Container::get( 'settings_migration' );
+		if ( $settings_migration ) {
+			// Migration service is now initialized and will handle backup/restore
+		}
+		
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
 		}
@@ -137,6 +143,9 @@ class FPML_Plugin_Core {
 
 		// Now it's safe to run setup tasks
 		try {
+			// Trigger settings restoration after initialization
+			do_action( 'fpml_after_initialization' );
+			
 			$reason = self::detect_external_multilingual();
 
 			// Register rewrites if not in assisted mode
@@ -173,6 +182,9 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	public static function activate() {
+		// Trigger settings backup before activation
+		do_action( 'fpml_before_activation' );
+		
 		// SAFE ACTIVATION: Just set a flag, do nothing else
 		// Actual setup will happen on first use
 		update_option( 'fpml_needs_setup', '1', false );
