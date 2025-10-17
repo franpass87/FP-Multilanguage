@@ -135,6 +135,7 @@ function fpml_load_files() {
 		'includes/core/class-settings-migration.php',
 		'includes/core/class-settings-fix.php',
 		'includes/core/class-settings-save-fix.php',
+		'includes/core/class-direct-settings-save.php',
 		'includes/core/class-translation-cache.php',
 		'includes/core/class-translation-versioning.php',
 	);
@@ -155,6 +156,11 @@ function fpml_load_files() {
 	// Load admin, REST, CLI
 	if ( file_exists( FPML_PLUGIN_DIR . 'admin/class-admin.php' ) ) {
 		require_once FPML_PLUGIN_DIR . 'admin/class-admin.php';
+	}
+
+	// Load ultra simple save (bypasses all complex systems)
+	if ( file_exists( FPML_PLUGIN_DIR . 'ultra-simple-save.php' ) ) {
+		require_once FPML_PLUGIN_DIR . 'ultra-simple-save.php';
 	}
 
 	if ( file_exists( FPML_PLUGIN_DIR . 'rest/class-rest-admin.php' ) ) {
@@ -335,5 +341,10 @@ function fpml_register_services() {
 	// Settings save fix.
 	FPML_Container::register( 'settings_save_fix', function() {
 		return class_exists( 'FPML_Settings_Save_Fix' ) ? FPML_Settings_Save_Fix::instance() : null;
+	} );
+
+	// Direct settings save.
+	FPML_Container::register( 'direct_settings_save', function() {
+		return class_exists( 'FPML_Direct_Settings_Save' ) ? FPML_Direct_Settings_Save::instance() : null;
 	} );
 }

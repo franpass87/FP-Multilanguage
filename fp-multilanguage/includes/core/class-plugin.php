@@ -109,6 +109,12 @@ class FPML_Plugin_Core {
 			// Settings save fix service is now initialized and will handle form submissions
 		}
 		
+		// Initialize direct settings save
+		$direct_settings_save = FPML_Container::get( 'direct_settings_save' );
+		if ( $direct_settings_save ) {
+			// Direct settings save service is now initialized and will handle direct saves
+		}
+		
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
 		}
