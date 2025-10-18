@@ -253,8 +253,12 @@ class FPML_Simple_Settings {
 	}
 }
 
+// DISABILITATO: Usa WordPress Settings API standard (registrata in FPML_Settings)
+// La classe rimane disponibile per retrocompatibilità ma non viene inizializzata
+// per evitare conflitti con il sistema di salvataggio standard
+
 // Inizializza il sistema
-FPML_Simple_Settings::instance();
+// FPML_Simple_Settings::instance();
 
 // Mostra messaggi di successo
-add_action( 'admin_notices', array( FPML_Simple_Settings::instance(), 'show_success_message' ) );
+// add_action( 'admin_notices', array( FPML_Simple_Settings::instance(), 'show_success_message' ) );
