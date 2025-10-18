@@ -123,8 +123,11 @@ class FPML_Auto_Detection {
 	 * @return void
 	 */
 	public function on_post_type_registered( $post_type, $args ) {
+		// Gestisci $args come oggetto o array.
+		$is_public = is_object( $args ) ? $args->public : ( isset( $args['public'] ) ? $args['public'] : false );
+		
 		// Ignora post types interni e non pubblici.
-		if ( ! $args->public || in_array( $post_type, array( 'attachment', 'revision', 'nav_menu_item' ), true ) ) {
+		if ( ! $is_public || in_array( $post_type, array( 'attachment', 'revision', 'nav_menu_item' ), true ) ) {
 			return;
 		}
 
@@ -152,11 +155,21 @@ class FPML_Auto_Detection {
 		}
 
 		// Rileva il nuovo post type.
+		// Gestisci label e hierarchical sia per oggetti che array.
+		$label = $post_type;
+		if ( is_object( $args ) ) {
+			$label = $args->labels->singular_name ?? $post_type;
+		} elseif ( isset( $args['labels']['singular_name'] ) ) {
+			$label = $args['labels']['singular_name'];
+		}
+		
+		$hierarchical = is_object( $args ) ? $args->hierarchical : ( isset( $args['hierarchical'] ) ? $args['hierarchical'] : false );
+		
 		$detected[ $post_type ] = array(
-			'label'        => $args->labels->singular_name ?? $post_type,
+			'label'        => $label,
 			'detected_at'  => current_time( 'timestamp', true ),
 			'post_count'   => wp_count_posts( $post_type )->publish ?? 0,
-			'hierarchical' => $args->hierarchical,
+			'hierarchical' => $hierarchical,
 		);
 
 		update_option( self::OPTION_DETECTED_POST_TYPES, $detected, false );
@@ -180,8 +193,11 @@ class FPML_Auto_Detection {
 	 * @return void
 	 */
 	public function on_taxonomy_registered( $taxonomy, $object_type, $args ) {
+		// Gestisci $args come oggetto o array.
+		$is_public = is_object( $args ) ? $args->public : ( isset( $args['public'] ) ? $args['public'] : false );
+		
 		// Ignora tassonomie interne e non pubbliche.
-		if ( ! $args->public || in_array( $taxonomy, array( 'nav_menu', 'link_category', 'post_format' ), true ) ) {
+		if ( ! $is_public || in_array( $taxonomy, array( 'nav_menu', 'link_category', 'post_format' ), true ) ) {
 			return;
 		}
 
@@ -210,12 +226,22 @@ class FPML_Auto_Detection {
 
 		// Rileva la nuova tassonomia.
 		$term_count = wp_count_terms( array( 'taxonomy' => $taxonomy, 'hide_empty' => false ) );
+		
+		// Gestisci label e hierarchical sia per oggetti che array.
+		$label = $taxonomy;
+		if ( is_object( $args ) ) {
+			$label = $args->labels->singular_name ?? $taxonomy;
+		} elseif ( isset( $args['labels']['singular_name'] ) ) {
+			$label = $args['labels']['singular_name'];
+		}
+		
+		$hierarchical = is_object( $args ) ? $args->hierarchical : ( isset( $args['hierarchical'] ) ? $args['hierarchical'] : false );
 
 		$detected[ $taxonomy ] = array(
-			'label'        => $args->labels->singular_name ?? $taxonomy,
+			'label'        => $label,
 			'detected_at'  => current_time( 'timestamp', true ),
 			'term_count'   => is_wp_error( $term_count ) ? 0 : $term_count,
-			'hierarchical' => $args->hierarchical,
+			'hierarchical' => $hierarchical,
 		);
 
 		update_option( self::OPTION_DETECTED_TAXONOMIES, $detected, false );
