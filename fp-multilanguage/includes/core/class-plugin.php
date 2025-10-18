@@ -226,6 +226,17 @@ class FPML_Plugin_Core {
 	}
 
 	/**
+	 * Load plugin text domain for translations.
+	 *
+	 * @since 0.4.1
+	 *
+	 * @return void
+	 */
+	public function load_textdomain() {
+		load_plugin_textdomain( 'fp-multilanguage', false, dirname( plugin_basename( FPML_PLUGIN_FILE ) ) . '/languages' );
+	}
+
+	/**
 	 * Detect active multilingual plugins that require assisted mode.
 	 *
 	 * @since 0.2.0
@@ -308,7 +319,8 @@ class FPML_Plugin_Core {
 	 * @return void
 	 */
 	protected function define_hooks() {
-		load_plugin_textdomain( 'fp-multilanguage', false, dirname( plugin_basename( FPML_PLUGIN_FILE ) ) . '/languages' );
+		// Load translations at init to comply with WordPress 6.7.0+ requirements
+		add_action( 'init', array( $this, 'load_textdomain' ) );
 
 		// Classi base (testate e funzionanti)
 		FPML_Settings::instance();
