@@ -101,6 +101,9 @@ return;
         
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__( 'FP Multilanguage', 'fp-multilanguage' ) . '</h1>';
+        
+        // Mostra messaggi di successo/errore della Settings API
+        settings_errors();
 
         // Tab navigation
         $this->render_tab_navigation( $tab );
@@ -175,6 +178,8 @@ return;
      */
     private function render_diagnostics_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-diagnostics.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-diagnostics.php';
         } else {
             echo '<p>' . __( 'File diagnostiche non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -186,6 +191,8 @@ return;
      */
     private function render_general_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-general.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-general.php';
         } else {
             echo '<p>' . __( 'File impostazioni generali non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -197,6 +204,8 @@ return;
      */
     private function render_content_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-content.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-content.php';
         } else {
             echo '<p>' . __( 'File impostazioni contenuto non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -208,6 +217,8 @@ return;
      */
     private function render_strings_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-strings.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-strings.php';
         } else {
             echo '<p>' . __( 'File impostazioni stringhe non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -219,6 +230,8 @@ return;
      */
     private function render_glossary_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-glossary.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-glossary.php';
         } else {
             echo '<p>' . __( 'File impostazioni glossario non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -230,6 +243,8 @@ return;
      */
     private function render_seo_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-seo.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-seo.php';
         } else {
             echo '<p>' . __( 'File impostazioni SEO non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -241,6 +256,8 @@ return;
      */
     private function render_export_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-export.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-export.php';
         } else {
             echo '<p>' . __( 'File impostazioni export non trovato.', 'fp-multilanguage' ) . '</p>';
@@ -252,6 +269,8 @@ return;
      */
     private function render_compatibility_tab() {
         if ( file_exists( FPML_PLUGIN_DIR . 'admin/views/settings-plugin-compatibility.php' ) ) {
+            // Passa le opzioni correnti alla vista
+            $options = FPML_Settings::instance()->all();
             include FPML_PLUGIN_DIR . 'admin/views/settings-plugin-compatibility.php';
         } else {
             echo '<p>' . __( 'File impostazioni compatibilità non trovato.', 'fp-multilanguage' ) . '</p>';
