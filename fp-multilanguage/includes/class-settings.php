@@ -65,9 +65,9 @@ return self::$instance;
 		$this->settings = is_array( $saved_settings ) ? array_merge( $defaults, $saved_settings ) : $defaults;
 	}
 	
-	// DISABILITATO COMPLETAMENTE - USA FPML_Simple_Settings
-	// add_action( 'admin_init', array( $this, 'register_settings' ) );
-	// add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
+	// Registrazione impostazioni per Settings API
+	add_action( 'admin_init', array( $this, 'register_settings' ) );
+	add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
 	add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
