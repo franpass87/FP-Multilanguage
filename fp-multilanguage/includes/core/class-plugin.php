@@ -105,6 +105,9 @@ class FPML_Plugin_Core {
 		
 		// TEST 5C: Aggiungi define_hooks - QUESTA È SOSPETTA!
 		$this->define_hooks();
+		
+		// Run setup if needed (includes rewrite rules registration)
+		add_action( 'init', array( $this, 'maybe_run_setup' ), 5 );
 	}
 
 	/**
