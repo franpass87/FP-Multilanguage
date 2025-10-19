@@ -170,9 +170,36 @@ class FPML_Language {
         if ( 0 === strpos( $post->post_name, 'en-' ) ) {
             $base_slug = substr( $post->post_name, 3 ); // Rimuovi 'en-'
             
+            // Gestisci pagine gerarchiche (con parent)
+            $parent_permalink = '';
+            if ( $post->post_parent > 0 ) {
+                $parent = get_post( $post->post_parent );
+                if ( $parent instanceof WP_Post ) {
+                    // Il parent è tradotto? Ottieni il suo permalink tradotto
+                    if ( get_post_meta( $parent->ID, '_fpml_is_translation', true ) ) {
+                        $parent_permalink = $this->filter_translation_permalink( get_permalink( $parent ), $parent );
+                    } else {
+                        // Parent non tradotto, usa il suo permalink normale
+                        $parent_permalink = get_permalink( $parent );
+                    }
+                    // Rimuovi home_url per evitare duplicazioni
+                    $parent_permalink = str_replace( home_url( '/' ), '', trailingslashit( $parent_permalink ) );
+                }
+            }
+            
             // Costruisci l'URL con /en/ prefix
-            $home_url = home_url( '/' );
-            $permalink = $home_url . 'en/' . $base_slug . '/';
+            $home_url = trailingslashit( home_url() );
+            
+            // Se c'è un parent, usa la sua struttura
+            if ( $parent_permalink ) {
+                // Rimuovi 'en/' dal parent se presente per evitare duplicazione
+                $parent_permalink = str_replace( 'en/', '', $parent_permalink );
+                $permalink = $home_url . 'en/' . trailingslashit( $parent_permalink ) . $base_slug . '/';
+            } else {
+                $permalink = $home_url . 'en/' . $base_slug . '/';
+            }
+            
+            $permalink = user_trailingslashit( $permalink );
         }
 
         return $permalink;
