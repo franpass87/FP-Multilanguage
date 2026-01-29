@@ -150,16 +150,21 @@ class MetaboxAssets {
                     if (\$saveDraftBtn.length > 0) {
                         // Clicca il pulsante Salva bozza se esiste
                         return new Promise((resolve) => {
-                            // Verifica se ci sono modifiche
-                            const hasChanges = typeof wp !== 'undefined' && wp.autosave && wp.autosave.server && wp.autosave.server.postChanged();
-                            
-                            if (hasChanges) {
-                                // Trigger del click sul pulsante Salva bozza
-                                \$saveDraftBtn.trigger('click');
+                            try {
+                                // Verifica se ci sono modifiche (con controllo tipo funzione)
+                                const hasChanges = typeof wp !== 'undefined' && wp.autosave && wp.autosave.server && typeof wp.autosave.server.postChanged === 'function' && wp.autosave.server.postChanged();
                                 
-                                // Aspetta che il salvataggio sia completato
-                                setTimeout(resolve, 2000);
-                            } else {
+                                if (hasChanges) {
+                                    // Trigger del click sul pulsante Salva bozza
+                                    \$saveDraftBtn.trigger('click');
+                                    
+                                    // Aspetta che il salvataggio sia completato
+                                    setTimeout(resolve, 2000);
+                                } else {
+                                    resolve();
+                                }
+                            } catch(e) {
+                                // Errore nel controllo modifiche, procedi comunque
                                 resolve();
                             }
                         });
@@ -199,8 +204,15 @@ class MetaboxAssets {
                     \$progressContainer.find('.fpml-progress-bar-fill').css('width', progress + '%');
                 }, 500);
 
-                // Salva il post e poi procedi con la traduzione
-                savePostBeforeTranslate().then(() => {
+                // Salva il post e poi procedi con la traduzione (con timeout di sicurezza di 5 secondi)
+                Promise.race([
+                    savePostBeforeTranslate(),
+                    new Promise(resolve => setTimeout(resolve, 5000))
+                ]).then(() => {
+                    \$btn.html('⏳ Traduzione in corso...');
+                    doTranslate(1);
+                }).catch(() => {
+                    // In caso di errore, procedi comunque con la traduzione
                     \$btn.html('⏳ Traduzione in corso...');
                     doTranslate(1);
                 });
