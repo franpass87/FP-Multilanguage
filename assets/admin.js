@@ -29,9 +29,14 @@
     const feedback = document.querySelector('#fpml-diagnostics-feedback');
     const providerResult = document.querySelector('[data-fpml-provider-result]');
 
-    if (!actionButtons.length || typeof window.fetch !== 'function') {
+    // Check if fetch is supported
+    if (typeof window.fetch !== 'function') {
+        console.warn('FP Multilanguage: fetch API not supported');
         return;
     }
+
+    // Only skip action buttons processing if none exist, but continue with other handlers
+    const hasActionButtons = actionButtons.length > 0;
 
     const escapeRegExp = (value) => value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
 
@@ -488,15 +493,17 @@
         }
     };
 
-    actionButtons.forEach((button) => {
-        button.addEventListener('click', async () => {
-            const endpoint = button.getAttribute('data-endpoint');
-            const nonce = button.getAttribute('data-nonce') || '';
-            const action = button.getAttribute('data-fpml-action');
+    // Only process action buttons if they exist
+    if (hasActionButtons) {
+        actionButtons.forEach((button) => {
+            button.addEventListener('click', async () => {
+                const endpoint = button.getAttribute('data-endpoint');
+                const nonce = button.getAttribute('data-nonce') || '';
+                const action = button.getAttribute('data-fpml-action');
 
-            if (!endpoint) {
-                return;
-            }
+                if (!endpoint) {
+                    return;
+                }
 
             button.disabled = true;
 
@@ -608,6 +615,7 @@
             }
         });
     });
+    } // End of hasActionButtons check
 
     // Test API Key button
     const testApiKeyButton = document.getElementById('fpml-test-api-key');
