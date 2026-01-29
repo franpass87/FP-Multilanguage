@@ -10,20 +10,16 @@
 
 namespace FP\Multilanguage\Kernel;
 
-use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
-use Psr\Container\ContainerExceptionInterface;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * PSR-11 compatible service container.
+ * Service container.
  *
  * @since 1.0.0
  */
-class Container implements ContainerInterface {
+class Container {
 	/**
 	 * Registered service factories.
 	 *
@@ -57,8 +53,8 @@ class Container implements ContainerInterface {
 	 *
 	 * @param string $id Identifier of the entry to look for.
 	 * @return mixed Entry.
-	 * @throws NotFoundExceptionInterface  No entry was found for this identifier.
-	 * @throws ContainerExceptionInterface Error while retrieving the entry.
+	 * @throws NotFoundException  No entry was found for this identifier.
+	 * @throws ContainerException Error while retrieving the entry.
 	 */
 	public function get( $id ) {
 		// Resolve alias if present
@@ -210,7 +206,7 @@ class Container implements ContainerInterface {
  *
  * @since 1.0.0
  */
-class NotFoundException extends \Exception implements NotFoundExceptionInterface {
+class NotFoundException extends \Exception {
 }
 
 /**
@@ -218,7 +214,7 @@ class NotFoundException extends \Exception implements NotFoundExceptionInterface
  *
  * @since 1.0.0
  */
-class ContainerException extends \Exception implements ContainerExceptionInterface {
+class ContainerException extends \Exception {
 }
 
 
