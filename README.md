@@ -1,692 +1,376 @@
 # FP Multilanguage
 
-[![Versione](https://img.shields.io/badge/version-0.4.1-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
+[![Versione](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
 [![WordPress](https://img.shields.io/badge/wordpress-5.8+-green.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/php-8.0+-purple.svg)](https://php.net)
-[![Licenza](https://img.shields.io/badge/license-GPL--2.0-orange.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![License](https://img.shields.io/badge/license-GPL--2.0+-orange.svg)](LICENSE)
 
-> Plugin WordPress enterprise-grade che automatizza la traduzione di contenuti dall'italiano all'inglese con processing basato su coda e supporto per OpenAI, DeepL, Google Cloud Translation e LibreTranslate.
-
----
-
-## 📋 Indice
-
-- [Caratteristiche](#-caratteristiche)
-- [Novità v0.4.1](#-novità-v041)
-- [Requisiti](#-requisiti)
-- [Installazione](#-installazione)
-- [Utilizzo](#-utilizzo)
-- [Comandi WP-CLI](#-comandi-wp-cli)
-- [Hook e Filtri](#-hook-e-filtri)
-- [Documentazione](#-documentazione)
-- [Sviluppo](#-sviluppo)
-- [Supporto](#-supporto)
-- [Licenza](#-licenza)
+Plugin WordPress enterprise-grade per traduzione automatica italiano-inglese con AI, integrazioni WooCommerce, Salient Theme, e architettura PSR-4.
 
 ---
 
-## 🚀 Caratteristiche
+## 🎯 Panoramica
 
-### Traduzione Core
+**FP Multilanguage** è una soluzione completa per gestire contenuti multilingua (IT/EN) su WordPress con:
 
-- **Processing incrementale basato su coda** - Elabora solo frammenti di contenuto modificati
-- **Supporto multi-provider** - OpenAI, DeepL, Google Cloud Translation, LibreTranslate
-- **Gestione intelligente contenuti** - Preserva blocchi Gutenberg, campi ACF e shortcode
-- **Duplicazione automatica** - Post, pagine, CPT, tassonomie, menu e metadata media
-
-### Capacità Avanzate
-
-- **Ottimizzazione SEO** - Hreflang automatici, URL canonici, sitemap inglesi dedicati
-- **Supporto WooCommerce** - Traduzioni prodotti, attributi e metadata
-- **Routing frontend** - Struttura URL `/en/` o switching basato su query-string
-- **Rilevamento browser** - Redirect automatico lingua basato su preferenze utente
-- **Multisite ready** - Supporto completo per reti WordPress Multisite
-
-### Performance e Affidabilità
-
-- **Processing batch** - Gestione ottimizzata memoria per dataset grandi
-- **Protezione cache stampede** - Pattern lock prevengono rigenerazione concorrente
-- **Sicurezza race condition** - Operazioni atomiche per thread safety
-- **Zero memory leak** - Cleanup esplicito e gestione risorse
-- **Ottimizzato dataset grandi** - Gestisce milioni di record efficientemente
-
-### 🔐 Sicurezza (v0.4.1)
-
-- ✅ **11 vulnerabilità critiche risolte**
-- ✅ **Crittografia chiavi API** (AES-256-CBC)
-- ✅ Protezione race condition
-- ✅ Autenticazione REST API
-- ✅ Verifica nonce AJAX
-- ✅ Prevenzione object injection
-- ✅ Protezione SQL injection
-- ✅ Prevenzione XSS
+- ✅ **Traduzione AI** (OpenAI GPT-5 nano)
+- ✅ **98% Coverage** traduzione automatica
+- ✅ **WooCommerce** completo (prodotti, varianti, attributi con queue translation)
+- ✅ **Commenti Annidati** - Supporto completo commenti threaded
+- ✅ **Salient Theme** (70+ meta fields)
+- ✅ **Menu Navigation** (sync bidirezionale)
+- ✅ **FP-SEO-Manager** (25+ meta fields SEO)
+- ✅ **WPBakery** shortcodes
+- ✅ **Dashboard Overview** con statistiche real-time
 
 ---
 
-## ✨ Novità v0.4.1
+## ✨ Novità v0.9.0 (Novembre 2025)
 
-### 1. 🔐 Crittografia Chiavi API
+### 🛒 WooCommerce Integration (98% Coverage)
+- Supporto completo prodotti: Simple, Variable, Grouped, External, Downloadable
+- Sincronizzazione varianti (attributi, prezzi, stock, immagini)
+- Gallerie prodotto con traduzione ALT text
+- Relazioni prodotto (upsell/cross-sell) con mapping automatico
+- Tab custom e file scaricabili
 
-Tutte le chiavi API (OpenAI, DeepL, Google, LibreTranslate) sono ora **crittografate nel database** con AES-256-CBC.
+### 🧭 Menu Navigation (100% Coverage)
+- Duplicazione automatica menu IT → EN
+- Sincronizzazione real-time item menu
+- Mapping gerarchie parent/child
+- Custom fields Salient (icone, mega menu, button styles)
+- Frontend language switching automatico
+- UI admin con status e link rapidi
 
-**Caratteristiche**:
-- Crittografia/decrittografia trasparente tramite filtri WordPress
-- Chiavi derivate da WordPress AUTH_KEY/SALT
-- Tool migrazione automatica con backup: `tools/migrate-api-keys.php`
-- Zero modifiche codice richieste
+### ✨ Salient Theme (98% Coverage)
+- 70+ meta fields sincronizzati (era 6 in v0.8.0)
+- Page headers, portfolio, post formats
+- WPBakery integration
+- Navigation settings
 
-**Migrazione**:
-```bash
-# Backup database
-wp db export backup-$(date +%Y%m%d).sql
+### 🔄 FP-SEO-Manager (100% Coverage)
+- 25+ meta fields sincronizzati
+- Core SEO, AI features, GEO data
+- Social meta (OG, Twitter)
+- Schema.org
 
-# Migra chiavi API (una volta)
-php tools/migrate-api-keys.php
-# oppure
-wp eval-file tools/migrate-api-keys.php
+### 🛡️ Security & Bugfix
+- Output escaping completo
+- Nonce verification su tutti gli AJAX
+- PHP 8.0+ version check
+- Exception namespace fixes
 
-# Verifica - le chiavi devono avere prefisso ENC:
-wp db query "SELECT option_value FROM wp_options WHERE option_name='fpml_settings'"
-```
-
-### 2. 💾 Sistema Versionamento Traduzioni
-
-**Backup completo e rollback** per tutte le traduzioni con trail audit.
-
-**Caratteristiche**:
-- Salva automaticamente ogni modifica traduzione
-- Rollback a qualsiasi versione precedente
-- Trail audit completo (chi, quando, provider, modifiche)
-- Cleanup automatico (default: 90 giorni, minimo 5 versioni)
-- Nuova tabella `{prefix}_fpml_translation_versions`
-
-**Esempio Rollback**:
-```php
-// Recupera versioni precedenti
-$versions = FPML_Translation_Versioning::instance()->get_versions('post', $post_id, 'post_title');
-
-// Rollback a versione precedente
-FPML_Translation_Versioning::instance()->rollback_post($post_id, $version_id);
-```
-
-### 3. 🔍 Endpoint REST Anteprima Traduzione
-
-Nuovo endpoint `/wp-json/fpml/v1/preview-translation` per **testare traduzioni senza salvare**.
-
-**Caratteristiche**:
-- Test traduzioni senza impatto database
-- Stima costi real-time
-- Test provider diversi senza modificare configurazione
-- Cache-aware per ridurre costi API
-- Autenticazione e nonce validation
-
-**Esempio**:
-```javascript
-// JavaScript
-const response = await fetch('/wp-json/fpml/v1/preview-translation', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'X-WP-Nonce': wpApiSettings.nonce
-    },
-    body: JSON.stringify({
-        text: 'Ciao mondo',
-        provider: 'openai' // opzionale
-    })
-});
-
-const data = await response.json();
-console.log(data.translation); // "Hello world"
-console.log(data.cost_estimate); // 0.00015
-```
-
-**Vedi**: [`docs/api-preview-endpoint.md`](docs/api-preview-endpoint.md) per documentazione completa.
-
-### 4. 🛡️ 36 Correzioni Bug
-
-- **11 vulnerabilità sicurezza critiche risolte**
-- **25 correzioni bug** (memory leak, cache stampede, PCRE errors, JSON encoding)
-- **Performance**: Reindex 10x più veloce, -70% uso memoria, -40% costi API
-- **Testing**: +21 test unitari, copertura 30% → 50%
-
-**Vedi**: [CHANGELOG.md](CHANGELOG.md) per lista completa.
+**Vedi**: [CHANGELOG.md](CHANGELOG.md) per dettagli completi
 
 ---
 
 ## 📋 Requisiti
 
-| Componente | Versione Richiesta | Raccomandata |
-|------------|-------------------|--------------|
-| **WordPress** | 5.8+ | 6.5+ |
-| **PHP** | 8.0+ | 8.2+ |
-| **MySQL** | 5.7+ | 8.0+ |
-| **Provider API** | Almeno uno | Più provider |
+- **WordPress**: 5.8+
+- **PHP**: 8.0+ (8.2+ raccomandato)
+- **Composer**: Per autoload PSR-4
+- **OpenAI API**: Chiave API per traduzioni
 
-### Provider Supportati
-
-- **OpenAI** (GPT-4, GPT-3.5-turbo)
-- **DeepL** (API Free/Pro)
-- **Google Cloud Translation** (v2/v3)
-- **LibreTranslate** (Self-hosted/Cloud)
+### Opzionali (per integrazioni)
+- **WooCommerce**: 7.0+ (per e-commerce)
+- **Salient Theme**: 15.0+ (per theme features)
+- **FP-SEO-Manager**: 0.9.0+ (per SEO avanzato)
 
 ---
 
 ## 💾 Installazione
 
-### Installazione Standard
+### 1. Via Plugin Manager
+1. Carica cartella `FP-Multilanguage/` in `/wp-content/plugins/`
+2. Attiva tramite **Plugin → Plugin Installati**
 
-1. **Scarica** il plugin dall'[ultima release](https://github.com/francescopasseri/FP-Multilanguage/releases)
-2. **Carica** la cartella `fp-multilanguage` in `/wp-content/plugins/`
-3. **Attiva** il plugin tramite **Plugin → Plugin Installati** in WordPress
-4. **Configura** provider in **Impostazioni → FP Multilanguage**
-5. **Esegui** sync iniziale dal tab Diagnostici o via `wp fpml queue run`
-
-### ⚠️ Aggiornamento a v0.4.1
-
-Se aggiorni da versione precedente:
-
+### 2. Composer Autoload
 ```bash
-# 1. Backup database
-wp db export backup-$(date +%Y%m%d).sql
-
-# 2. Aggiorna plugin (via WordPress admin o manuale)
-
-# 3. Migra chiavi API (una volta)
-php tools/migrate-api-keys.php
-
-# 4. Verifica crittografia
-wp db query "SELECT option_value FROM wp_options WHERE option_name='fpml_settings'" | grep "ENC:"
+cd wp-content/plugins/FP-Multilanguage
+composer install
 ```
 
-**Vedi**: [`RELEASE_NOTES_v0.4.1.md`](RELEASE_NOTES_v0.4.1.md) per guida completa aggiornamento.
+### 3. Configurazione Base
+1. Vai in **FP Multilanguage → Dashboard**
+2. Inserisci OpenAI API key in **Impostazioni → Provider**
+3. Configura opzioni traduzione
+4. Salva
+
+### 4. Test Iniziale
+1. Crea un post italiano
+2. Verifica che job traduzione venga accodato
+3. Esegui coda: `wp fpml queue run` (o attendi cron)
 
 ---
 
-## 🔧 Utilizzo
+## 🚀 Quick Start
 
-### Utilizzo Base
+### 1. Traduzione Singolo Post
+```php
+// WordPress Editor
+1. Crea/modifica post in italiano
+2. Salva
+3. Plugin accoda automaticamente job traduzione
+4. Post EN viene creato/aggiornato in background
+```
 
-1. **Crea/Modifica** contenuto italiano
-2. **Plugin** automaticamente accoda job traduzione
-3. **Coda** processa job incrementalmente  
-4. **Contenuto inglese** rimane sincronizzato
+### 2. Traduzione Bulk
+```php
+// Dashboard → Bulk Translate
+1. Seleziona tipo contenuto (Post, Page, Product)
+2. Scegli posts da tradurre
+3. Click "Traduci Selezionati"
+4. Monitora progresso in Dashboard
+```
 
-### Configurazione
-
-Configura tramite **Impostazioni → FP Multilanguage**:
-
-- **Provider** - Scegli e configura provider traduzione (OpenAI, DeepL, Google, LibreTranslate)
-- **Chiavi API** - Inserisci chiavi API (crittografate automaticamente)
-- **Coda** - Batch size, limiti caratteri, priorità
-- **Cleanup** - Policy retention (giorni da mantenere job completati)
-- **Routing** - `/en/` URL structure o query-string
-- **SEO** - Hreflang, canonical, sitemap
-- **Tipi Contenuto** - Seleziona post types e tassonomie da tradurre
-
-### Monitoraggio
-
-Accedi a **Diagnostici** via **Impostazioni → FP Multilanguage → Diagnostici**:
-
-- 📊 Dimensione coda e KPI job
-- 🔌 Test connettività provider
-- 💰 Stima costi traduzioni
-- 📝 Log attività recenti
-- ⚡ Metriche performance
-
-### 🌐 Selettore Lingua (Language Switcher)
-
-Il plugin include un **selettore di lingua** completo con bandierine 🇮🇹 🇬🇧 per il frontend.
-
-#### ⚡ Integrazione Automatica Menu (NUOVO!)
-
-Il plugin **rileva automaticamente** il tuo tema e aggiunge le bandierine al menu principale!
-
-**Temi supportati:** Salient, Astra, GeneratePress, OceanWP, Kadence, Neve, Divi, Avada, Enfold, e altri.
-
-**Configurazione:**
-1. Vai in **Impostazioni → FP Multilanguage → General**
-2. Attiva **"Integrazione automatica menu"**
-3. Scegli stile (inline/dropdown), bandierine, e posizione
-4. **Fatto!** Le bandierine appaiono automaticamente nel menu
-
-#### Altri Metodi di Integrazione:
-
-1. **Widget WordPress**
-   - Vai in **Aspetto → Widget**
-   - Aggiungi il widget **"Selettore Lingua FP"**
-
-2. **Shortcode**
-   ```php
-   [fp_lang_switcher style="inline" show_flags="1"]
-   ```
-
-3. **Codice PHP**
-   ```php
-   <?php echo do_shortcode('[fp_lang_switcher style="inline" show_flags="1"]'); ?>
-   ```
-
-**Vedi**: [`fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md`](fp-multilanguage/docs/LANGUAGE-SWITCHER-GUIDE.md) per guida completa.
-
----
-
-## 🖥️ Comandi WP-CLI
-
-### Processing Coda
-
+### 3. WP-CLI
 ```bash
-# Esegui processing coda
+# Esegui coda traduzioni
 wp fpml queue run
 
-# Con barra progresso
-wp fpml queue run --progress
-
-# Batch size custom
-wp fpml queue run --batch=50
-
-# Dry run (simulazione)
-wp fpml queue run --dry-run
-```
-
-### Stato e Diagnostici
-
-```bash
-# Visualizza stato coda
+# Status coda
 wp fpml queue status
 
-# Stima costi traduzioni
+# Stima costi
 wp fpml queue estimate-cost
 
-# Stima con limite job
-wp fpml queue estimate-cost --max-jobs=100
-
-# Stima per stati specifici
-wp fpml queue estimate-cost --states=pending,retry
+# Cleanup vecchi job
+wp fpml queue cleanup --days=7
 ```
-
-### Pulizia e Manutenzione
-
-```bash
-# Pulisci job vecchi (default: 7 giorni)
-wp fpml queue cleanup
-
-# Pulisci con retention custom
-wp fpml queue cleanup --days=30
-
-# Pulisci stati specifici
-wp fpml queue cleanup --states=done,error --days=7
-
-# Cleanup versioni traduzioni (90+ giorni, mantieni min 5)
-wp eval 'FPML_Translation_Versioning::instance()->cleanup_old_versions();'
-```
-
-### Test Provider
-
-```bash
-# Testa connettività provider
-wp fpml test-provider --provider=openai
-wp fpml test-provider --provider=deepl
-wp fpml test-provider --provider=google
-wp fpml test-provider --provider=libretranslate
-```
-
-### Cron Events
-
-```bash
-# Visualizza eventi schedulati
-wp cron event list
-
-# Esegui eventi in scadenza
-wp cron event run --due-now
-
-# Esegui evento specifico
-wp cron event run fpml_process_queue
-```
-
----
-
-## 🔌 Hook e Filtri
-
-### Actions (Eventi)
-
-```php
-// Dopo accodamento job post
-do_action( 'fpml_post_jobs_enqueued', int $post_id, array $jobs );
-
-// Dopo completamento cleanup coda
-do_action( 'fpml_queue_after_cleanup', int $deleted, array $states, int $days );
-
-// Quando post tradotto
-do_action( 'fpml_post_translated', int $post_id, array $translations );
-
-// Quando termine tradotto
-do_action( 'fpml_term_translated', int $term_id, string $taxonomy, array $translations );
-
-// Quando voce menu tradotta
-do_action( 'fpml_menu_item_translated', int $item_id, string $field, string $translation );
-```
-
-### Filters (Filtri)
-
-```php
-// Personalizza post types traducibili
-add_filter( 'fpml_translatable_post_types', function( $types ) {
-    $types[] = 'my_custom_post_type';
-    return $types;
-});
-
-// Personalizza tassonomie traducibili
-add_filter( 'fpml_translatable_taxonomies', function( $taxonomies ) {
-    $taxonomies[] = 'my_custom_taxonomy';
-    return $taxonomies;
-});
-
-// Personalizza stati cleanup
-add_filter( 'fpml_queue_cleanup_states', function( $states ) {
-    return array( 'done', 'error', 'skipped' );
-});
-
-// Personalizza batch size cleanup
-add_filter( 'fpml_queue_cleanup_batch_size', function( $size ) {
-    return 1000; // Default: 500
-});
-
-// Personalizza target scanner stringhe
-add_filter( 'fpml_strings_scan_targets', function( $targets ) {
-    $targets[] = 'my_custom_strings_table';
-    return $targets;
-});
-```
-
-**Vedi**: [`docs/api-reference.md`](docs/api-reference.md) per riferimento API completo.
 
 ---
 
 ## 📚 Documentazione
 
-### 🎯 Quick Start (< 5 minuti)
-
-1. **[`📋_LEGGI_QUI.md`](📋_LEGGI_QUI.md)** - Overview rapida e primi passi
-2. **[`✅_IMPLEMENTAZIONE_COMPLETATA.md`](✅_IMPLEMENTAZIONE_COMPLETATA.md)** - Riepilogo funzionalità v0.4.1
-
 ### 📖 Guide Principali
+- **[Getting Started](docs/overview.md)** - Panoramica e configurazione
+- **[Architecture](docs/architecture.md)** - Architettura plugin
+- **[Developer Guide](docs/developer-guide.md)** - Guida sviluppatori
+- **[API Reference](docs/api-reference.md)** - Hook e filters
+- **[Comment Translation](docs/COMMENTS.md)** - Traduzione commenti e commenti annidati
 
-| Documento | Descrizione | Tempo Lettura |
-|-----------|-------------|---------------|
-| **[`QUICK_START.md`](QUICK_START.md)** | Guida rapida setup iniziale | 3 min |
-| **[`RIEPILOGO_FINALE_IMPLEMENTAZIONE.md`](RIEPILOGO_FINALE_IMPLEMENTAZIONE.md)** | Guida deployment completa | 15 min |
-| **[`NUOVE_FUNZIONALITA_E_CORREZIONI.md`](NUOVE_FUNZIONALITA_E_CORREZIONI.md)** | Dettagli implementazione v0.4.1 | 20 min |
-| **[`RACCOMANDAZIONI_PRIORITARIE.md`](RACCOMANDAZIONI_PRIORITARIE.md)** | Roadmap 2025 e raccomandazioni | 10 min |
+### 🔌 Integrazioni
+- **[WooCommerce Integration](docs/integrations/WOOCOMMERCE.md)** - E-commerce completo
+- **[Salient Theme](docs/integrations/SALIENT-THEME.md)** - Theme meta fields
+- **[Menu Navigation](docs/integrations/MENU-NAVIGATION.md)** - Menu sync
+- **[FP-SEO-Manager](docs/integrations/FP-SEO-MANAGER.md)** - SEO avanzato
 
-### 🔧 Documentazione Tecnica (`docs/`)
+### 🛠️ Utility
+- **[Troubleshooting](docs/troubleshooting.md)** - Risoluzione problemi
+- **[FAQ](docs/faq.md)** - Domande frequenti
+- **[Deployment Guide](docs/deployment-guide.md)** - Deploy in produzione
+- **[Performance](docs/performance-optimization.md)** - Ottimizzazioni
 
-| Documento | Contenuto |
-|-----------|-----------|
-| **[`docs/overview.md`](docs/overview.md)** | Panoramica funzionale e architettura |
-| **[`docs/architecture.md`](docs/architecture.md)** | Architettura interna, flussi dati, hook |
-| **[`docs/api-reference.md`](docs/api-reference.md)** | Riferimento API completo (hook, REST, WP-CLI) |
-| **[`docs/api-preview-endpoint.md`](docs/api-preview-endpoint.md)** | Documentazione endpoint anteprima REST |
-| **[`docs/developer-guide.md`](docs/developer-guide.md)** | Guida sviluppatore per estensioni |
-| **[`docs/deployment-guide.md`](docs/deployment-guide.md)** | Best practices deployment produzione |
-| **[`docs/performance-optimization.md`](docs/performance-optimization.md)** | Strategie ottimizzazione performance |
-| **[`docs/troubleshooting.md`](docs/troubleshooting.md)** | Guida risoluzione problemi comuni |
-| **[`docs/webhooks-guide.md`](docs/webhooks-guide.md)** | Setup notifiche webhook (Slack, Discord, Teams) |
-| **[`docs/migration-guide.md`](docs/migration-guide.md)** | Guida migrazione tra versioni |
-| **[`docs/faq.md`](docs/faq.md)** | Domande frequenti |
-| **[`docs/security-audit.md`](docs/security-audit.md)** | Report audit sicurezza |
-| **[`docs/examples/`](docs/examples/)** | Esempi codice pratici |
-
-### 📄 Changelog e Release
-
-- **[`CHANGELOG.md`](CHANGELOG.md)** - Cronologia completa modifiche
-- **[`RELEASE_NOTES_v0.4.1.md`](RELEASE_NOTES_v0.4.1.md)** - Note release v0.4.1
-
-### 🛠️ Build e Contributi
-
-- **[`README-BUILD.md`](README-BUILD.md)** - Guida build e release
-- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** - Guida contributi
+### 📊 Changelog & History
+- **[CHANGELOG.md](CHANGELOG.md)** - Changelog ufficiale
+- **[Changelog History](docs/CHANGELOG-HISTORY.md)** - Storico completo versioni
 
 ---
 
-## 🛠️ Sviluppo
+## 🔌 Integrazioni Disponibili
 
-### Setup Ambiente Sviluppo
+### 🛒 WooCommerce (v0.9.0+)
+- ✅ Tutti i tipi prodotto
+- ✅ Varianti e attributi (queue-based translation)
+- ✅ Gallerie e media
+- ✅ Upsell/Cross-sell
+- ✅ Downloadable files
+- ✅ Custom tabs
+- ✅ Tassonomie (cat, tag, brand)
+- ✅ Attributi custom con traduzione AI automatica
 
-```bash
-# 1. Clona repository
-git clone https://github.com/francescopasseri/FP-Multilanguage.git
-cd FP-Multilanguage
+**Coverage**: 98%
 
-# 2. Installa dipendenze
-composer install
-npm install
+### ✨ Salient Theme (v0.9.0+)
+- ✅ Page headers (26 campi)
+- ✅ Portfolio (12 campi)
+- ✅ Post formats (15 campi)
+- ✅ Page builder (18 campi)
+- ✅ Navigation (8 campi)
 
-# 3. Esegui test
-vendor/bin/phpunit
+**Coverage**: 98%
 
-# 4. Analisi statica
-vendor/bin/phpstan analyze
-vendor/bin/phpcs fp-multilanguage/ --standard=WordPress
-```
+### 🧭 Menu Navigation (v0.9.0+)
+- ✅ Auto-sync bidirezionale
+- ✅ Gerarchie parent/child
+- ✅ Custom fields Salient
+- ✅ Language switching frontend
+- ✅ Admin UI status
 
-### Workflow Sviluppo
+**Coverage**: 100%
 
-```bash
-# Sincronizza metadata autore
-npm run sync:author
-# Con applicazione modifiche
-APPLY=true npm run sync:author
+### 🔄 FP-SEO-Manager (v0.9.0+)
+- ✅ Core SEO (5 campi)
+- ✅ AI features (5 campi)
+- ✅ GEO & Freshness (4 campi)
+- ✅ Social meta (6 campi)
+- ✅ Schema.org (4 campi)
 
-# Genera/aggiorna CHANGELOG da commit convenzionali
-npm run changelog:from-git
+**Coverage**: 100%
 
-# Build produzione
-composer run build
+### 🎨 WPBakery Page Builder
+- ✅ Shortcodes translation
+- ✅ Translatable attributes
+- ✅ Nested shortcodes
 
-# Build completo con ZIP
-bash build.sh --bump=patch
-```
-
-### Testing
-
-```bash
-# Esegui tutti i test
-vendor/bin/phpunit
-
-# Test specifico
-vendor/bin/phpunit tests/phpunit/test-secure-settings.php
-
-# Con coverage
-vendor/bin/phpunit --coverage-html coverage/
-
-# Test integrazione
-vendor/bin/phpunit tests/phpunit/IntegrationTest.php
-```
-
-### Code Quality
-
-```bash
-# PHPStan (analisi statica)
-vendor/bin/phpstan analyze
-
-# PHPCS (code style)
-vendor/bin/phpcs fp-multilanguage/ --standard=WordPress
-
-# PHPCBF (auto-fix code style)
-vendor/bin/phpcbf fp-multilanguage/ --standard=WordPress
-
-# PHP CS Fixer
-vendor/bin/php-cs-fixer fix fp-multilanguage/
-```
-
-### Build Release
-
-```bash
-# Bump patch version (0.4.1 → 0.4.2)
-bash build.sh --bump=patch
-
-# Bump minor version (0.4.1 → 0.5.0)
-bash build.sh --bump=minor
-
-# Bump major version (0.4.1 → 1.0.0)
-bash build.sh --bump=major
-
-# Set versione esplicita
-bash build.sh --set-version=1.2.3
-
-# Genera ZIP con nome custom
-bash build.sh --bump=patch --zip-name=fp-multilanguage-custom.zip
-```
-
-Lo script genera ZIP in `build/` pronto per deployment.
-
-**Vedi**: [`README-BUILD.md`](README-BUILD.md) per dettagli completi.
+**Coverage**: 90%
 
 ---
 
-## 🤝 Contributi
+## 🎨 Features Principali
 
-Contributi benvenuti! Per favore:
+### 🤖 Traduzione AI
+- **Provider**: OpenAI GPT-5 nano (prestazioni ottimali)
+- **Context-aware**: Traduzione contestuale intelligente
+- **Quality**: Preserva formattazione, shortcodes, HTML
+- **Memory**: Translation memory per ridurre costi
 
-1. Fork del repository
-2. Crea feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit modifiche con [Conventional Commits](https://www.conventionalcommits.org/)
-4. Push al branch (`git push origin feature/amazing-feature`)
-5. Apri Pull Request
+### 📊 Dashboard Overview
+- Statistiche real-time (post tradotti, coda, costi)
+- Quick actions (Crea Post, Bulk Translate)
+- Weekly activity chart
+- Alerts API key e errori
+- System info
 
-**Vedi**: [`CONTRIBUTING.md`](CONTRIBUTING.md) per linee guida complete.
+### 🔄 Translation Queue
+- Processamento asincrono background
+- Prioritizzazione job
+- Retry automatico su errori
+- Cost estimation
+- Batch processing
 
-### Conventional Commits
+### 🧭 URL Routing
+- Pattern: `/en/slug-post` per versione inglese
+- SEO-friendly
+- Automatic language detection
+- Canonical URLs
 
-```bash
-# Nuova funzionalità
-git commit -m "feat: aggiungi supporto traduzioni PDF"
+### 🔐 Security
+- Nonce verification su tutti gli AJAX
+- Input sanitization completa
+- Output escaping
+- API keys encrypted (AES-256-CBC)
+- Role-based access control
 
-# Correzione bug
-git commit -m "fix: risolvi memory leak in batch processor"
+---
 
-# Documentazione
-git commit -m "docs: aggiorna guida API preview endpoint"
+## 🔌 Hook & API
 
-# Performance
-git commit -m "perf: ottimizza query database reindex"
+### Actions
+```php
+// Dopo creazione traduzione
+do_action( 'fpml_after_translation_saved', $translated_id, $original_id );
 
-# Test
-git commit -m "test: aggiungi test per encryption API keys"
+// Prima sync WooCommerce
+do_action( 'fpml_before_wc_sync', $translated_id, $original_id );
 
-# Refactoring
-git commit -m "refactor: migliora architettura provider adapter"
-
-# Chore
-git commit -m "chore: aggiorna dipendenze composer"
+// Prima sync menu
+do_action( 'fpml_before_menu_sync', $menu_id_it, $menu_id_en );
 ```
+
+### Filters
+```php
+// Aggiungi post types translatable
+add_filter( 'fpml_translatable_post_types', function( $types ) {
+    $types[] = 'my_custom_pt';
+    return $types;
+} );
+
+// Aggiungi meta fields da tradurre
+add_filter( 'fpml_meta_whitelist', function( $meta_keys ) {
+    $meta_keys[] = '_my_custom_field';
+    return $meta_keys;
+} );
+
+// Modifica prompt AI
+add_filter( 'fpml_ai_prompt', function( $prompt, $content ) {
+    return $prompt . ' Use formal tone.';
+}, 10, 2 );
+```
+
+**Vedi**: [API Reference](docs/api-reference.md) per lista completa
+
+---
+
+## 🎯 Roadmap
+
+### v0.10.0 (Q1 2025)
+- [ ] Elementor Page Builder integration
+- [ ] Polylang migration tool
+- [ ] Multi-language admin UI
+- [ ] Advanced Translation Memory
+
+### v1.0.0 (Q2 2025)
+- [ ] Supporto lingue aggiuntive (ES, FR, DE)
+- [ ] Real-time collaborative translation
+- [ ] Advanced SEO automation
+- [ ] Performance dashboard
 
 ---
 
 ## 🆘 Supporto
 
 ### Documentazione
+- 📖 [docs/](docs/) - Documentazione completa
+- ❓ [FAQ](docs/faq.md) - Domande frequenti
+- 🔧 [Troubleshooting](docs/troubleshooting.md) - Risoluzione problemi
 
-- **Quick troubleshooting**: [`docs/troubleshooting.md`](docs/troubleshooting.md)
-- **FAQ**: [`docs/faq.md`](docs/faq.md)
-- **Documentazione completa**: [`docs/`](docs/)
-
-### Comunità
-
-- **GitHub Issues**: [Apri issue](https://github.com/francescopasseri/FP-Multilanguage/issues)
-- **GitHub Discussions**: [Partecipa discussioni](https://github.com/francescopasseri/FP-Multilanguage/discussions)
-
-### Supporto Commerciale
-
-- **Sito Web**: [francescopasseri.com](https://francescopasseri.com)
-- **Email**: [info@francescopasseri.com](mailto:info@francescopasseri.com)
-- **Supporto Enterprise**: Contatta per assistenza dedicata
+### Community & Issues
+- 🐙 [GitHub Issues](https://github.com/francescopasseri/FP-Multilanguage/issues)
+- 📧 Email: [info@francescopasseri.com](mailto:info@francescopasseri.com)
 
 ---
 
-## 📊 Statistiche Progetto
+## 📊 Statistiche Plugin
 
-| Metrica | Valore |
-|---------|--------|
-| **Versione** | 0.4.1 |
-| **Linee Codice** | ~15,000 |
-| **Test Coverage** | ~50% |
-| **Test Unitari** | 61 |
-| **Classi** | 45+ |
-| **Documentazione** | 25+ file |
-
----
-
-## 🙏 Ringraziamenti
-
-Costruito con best practices WordPress e testato con:
-- PHP 8.0, 8.1, 8.2
-- WordPress 5.8 - 6.5
-- Configurazioni Multisite
-- Ambienti high-traffic
-
-### Tecnologie
-
-- **Framework**: WordPress Plugin API
-- **Testing**: PHPUnit
-- **Analisi Statica**: PHPStan
-- **Code Style**: WordPress Coding Standards
-- **Dependency Injection**: Custom Container
-- **Provider**: OpenAI, DeepL, Google Cloud, LibreTranslate
+- **Linee di codice**: ~15,000
+- **Classi**: 47+
+- **Integrazioni**: 5 (WooCommerce, Salient, Menu, FP-SEO, WPBakery)
+- **Meta fields supportati**: 150+
+- **Coverage traduzioni**: 98%
+- **Test superati**: 100%
+- **WordPress compatibility**: 5.8 - 6.4+
+- **PHP compatibility**: 8.0 - 8.3
 
 ---
 
-## 📝 Licenza
+## 📄 Licenza
 
 GPL-2.0-or-later - Vedi [LICENSE](LICENSE) per dettagli.
-
-**Questo significa**:
-- ✅ Uso commerciale
-- ✅ Modifica
-- ✅ Distribuzione
-- ✅ Uso privato
-- ⚠️ Stesso license per opere derivate
-- ⚠️ Divulgazione sorgente
-- ⚠️ Notifica licenza e copyright
 
 ---
 
 ## 👨‍💻 Autore
 
 **Francesco Passeri**
-
-- 🌐 Sito: [francescopasseri.com](https://francescopasseri.com)
-- 📧 Email: [info@francescopasseri.com](mailto:info@francescopasseri.com)
-- 🐙 GitHub: [@francescopasseri](https://github.com/francescopasseri)
-
----
-
-## 🚀 Roadmap 2025
-
-### Q1 2025
-- [ ] Manager traduzione massiva bulk
-- [ ] Dashboard analytics avanzata
-- [ ] Glossario context-aware
-
-### Q2 2025
-- [ ] Supporto traduzioni PDF/documenti
-- [ ] API v2 con GraphQL
-- [ ] Plugin marketplace integrations
-
-### Q3 2025
-- [ ] Machine learning quality scoring
-- [ ] Multi-language support (oltre IT-EN)
-- [ ] Advanced caching layer
-
-**Vedi**: [`RACCOMANDAZIONI_PRIORITARIE.md`](RACCOMANDAZIONI_PRIORITARIE.md) per dettagli roadmap completa.
+- 🌐 [francescopasseri.com](https://francescopasseri.com)
+- 📧 [info@francescopasseri.com](mailto:info@francescopasseri.com)
+- 🐙 [@francescopasseri](https://github.com/francescopasseri)
 
 ---
 
-<div align="center">
+## 🙏 Contributi
 
-**Made with ❤️ by Francesco Passeri**
+Contributi, issues e feature requests sono benvenuti!
 
-⭐ Se trovi utile questo progetto, lascia una stella!
+Vedi [CONTRIBUTING.md](CONTRIBUTING.md) per linee guida.
 
-[Documentazione](docs/) • [Changelog](CHANGELOG.md) • [Issues](https://github.com/francescopasseri/FP-Multilanguage/issues) • [Discussions](https://github.com/francescopasseri/FP-Multilanguage/discussions)
+---
 
-</div>
+## ⭐ Credits
+
+- **OpenAI** - GPT-5 nano AI translation
+- **WordPress** - CMS platform
+- **WooCommerce** - E-commerce platform
+- **Salient Theme** - Premium WordPress theme
+
+---
+
+**Ultimo aggiornamento**: Novembre 2025  
+**Versione corrente**: 0.9.1+  
+**Status**: Production Ready ✅
+
+### 🆕 Novità Recenti (v0.9.1+)
+- ✨ **Commenti Annidati** - Supporto completo commenti threaded con mapping parent automatico
+- 🛒 **Attributi WooCommerce** - Traduzione queue-based per attributi custom e opzioni
+- 🔧 **Miglioramenti** - Rimossi placeholder `[PENDING TRANSLATION]`, workflow ottimizzato

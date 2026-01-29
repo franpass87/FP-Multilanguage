@@ -6,6 +6,8 @@
 - [Performance Problems](#performance-problems)
 - [Provider Issues](#provider-issues)
 - [Database Issues](#database-issues)
+- [Comment Translation Issues](#comment-translation-issues)
+- [WooCommerce Issues](#woocommerce-issues)
 - [Common Error Messages](#common-error-messages)
 
 ---
@@ -354,7 +356,7 @@ curl https://api.openai.com/v1/models \
 #### Soluzioni
 1. Verifica key sia corretta (no spazi extra)
 2. Key non scaduta
-3. Key con permessi modelli GPT-4/GPT-3.5
+3. Key con permessi modelli GPT-5
 
 ---
 
@@ -399,11 +401,11 @@ Anche con una chiave API valida, se non hai crediti riceverai questo errore.
 ```
 
 **2. Costi Reali**
-Con gpt-4o-mini (modello consigliato):
-- ~$0.15 per 1000 caratteri tradotti
-- Con $5 puoi tradurre circa 33.000 caratteri
-- Con $10 puoi tradurre circa 66.000 caratteri
-- Con $20 puoi tradurre circa 133.000 caratteri
+Con gpt-5-nano (modello consigliato):
+- ~$0.10 per 1000 caratteri tradotti (50% più economico)
+- Con $5 puoi tradurre circa 50.000 caratteri
+- Con $10 puoi tradurre circa 100.000 caratteri
+- Con $20 puoi tradurre circa 200.000 caratteri
 
 Un articolo medio (1000 parole = ~6000 caratteri) costa circa $0.90.
 
@@ -536,6 +538,99 @@ wp fpml queue cleanup --days=7 --states=done,skipped
 ```sql
 OPTIMIZE TABLE wp_fpml_queue;
 ```
+
+---
+
+## Comment Translation Issues
+
+### I commenti non vengono tradotti
+
+#### Sintomi
+- Commenti su post IT non creano versioni EN
+- Nessun commento tradotto visibile su `/en/` posts
+
+#### Possibili Cause e Soluzioni
+
+##### 1. Post Non Ha Traduzione EN
+
+**Verifica:**
+```bash
+# Check if post has translation
+wp post meta get <POST_ID> _fpml_pair_id
+```
+
+**Soluzione:** Traduci prima il post
+1. Vai al post IT in editor
+2. Click "🚀 Traduci in Inglese ORA" nel metabox
+3. Attendi completamento traduzione
+4. I nuovi commenti verranno tradotti automaticamente
+
+##### 2. Commenti Annidati Perdono Gerarchia
+
+**Sintomi:**
+- Reply commenti non mantengono parent corretto
+- Gerarchia commenti persa tra IT e EN
+
+**Causa:** Parent comment non tradotto o validazione fallita
+
+**Soluzione:**
+1. Verifica che il parent comment sia stato tradotto
+2. Controlla meta `_fpml_pair_id` sul parent comment
+3. Il sistema valida automaticamente che il parent appartenga al post corretto
+
+**Debug:**
+```php
+// Check parent comment translation
+$parent_id = get_comment_meta( $comment_id, '_fpml_pair_id', true );
+$parent_translation = get_comment( $parent_id );
+```
+
+---
+
+## WooCommerce Issues
+
+### Attributi Prodotto Non Tradotti
+
+#### Sintomi
+- Attributi custom mostrano testo originale invece di traduzione
+- Placeholder `[PENDING TRANSLATION]` visibili (versione < 0.9.1)
+
+#### Possibili Cause e Soluzioni
+
+##### 1. Queue Non Processata
+
+**Verifica:**
+```bash
+wp fpml queue status
+# Check for pending jobs with field "meta:_product_attributes"
+```
+
+**Soluzione:** Esegui queue
+```bash
+wp fpml queue run --batch=50
+```
+
+##### 2. Attributi Custom Non Riconosciuti
+
+**Verifica:** Attributi devono essere custom (get_id() === 0)
+
+**Soluzione:** Il sistema accoda automaticamente attributi custom per traduzione. Verifica che:
+1. Attributo sia custom (non taxonomy-based)
+2. Queue sia attiva
+3. OpenAI API key configurata
+
+**Debug:**
+```php
+// Check if attributes are queued
+$queue = FPML_Queue::instance();
+$jobs = $queue->get_jobs( 'post', $product_id, 'meta:_product_attributes' );
+```
+
+##### 3. Hash Non Cambia (Attributi Non Aggiornati)
+
+**Causa:** Hash attributi identico, job non accodato
+
+**Soluzione:** Modifica attributi sul prodotto IT per triggerare nuovo hash
 
 ---
 
@@ -680,6 +775,6 @@ wp eval "FPML_Plugin::instance()->reindex_content();"
 
 ---
 
-**Last updated:** 2025-10-05  
-**Plugin version:** 0.3.2  
+**Last updated:** 2025-11-XX  
+**Plugin version:** 0.9.1+  
 **Maintainer:** Francesco Passeri

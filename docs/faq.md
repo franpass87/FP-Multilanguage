@@ -29,3 +29,9 @@ Yes. Authenticated administrators can use the REST endpoints exposed under `fpml
 
 ## What maintenance tasks should be scheduled?
 Schedule regular queue runs (`wp fpml queue run`) and, if retention is active, cleanup (`wp fpml queue cleanup`). Monitor Diagnostics for job age, retention status, and provider health.
+
+## Are comments translated automatically?
+Yes. When a comment is posted on an Italian post, FP Multilanguage automatically creates a translated comment on the corresponding English post. The comment content is queued for AI translation, and nested comments (replies) maintain their parent-child relationships across languages.
+
+## How are nested comments handled?
+The plugin fully supports comment threading. When a reply is posted, it automatically finds the translated parent comment and maintains the comment hierarchy. The system validates that the parent comment exists in the translated post before setting the `comment_parent` relationship.

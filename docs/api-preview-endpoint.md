@@ -81,7 +81,7 @@ X-WP-Nonce: abc123def456
 | `cached` | boolean | `true` se risultato dalla cache |
 | `elapsed` | float | Tempo di elaborazione in secondi (solo se non cached) |
 | `characters` | integer | Numero di caratteri del testo originale |
-| `estimated_cost` | float | Costo stimato in USD |
+| `estimated_cost` | float | Costo stimato in EUR |
 
 ### Risposta Cached
 
@@ -477,7 +477,7 @@ add_action('fpml_preview_cache_warm', function() {
 
 - **Minimo**: 1 carattere
 - **Massimo**: Dipende dal provider
-  - OpenAI: ~8000 caratteri (gpt-4o-mini)
+  - OpenAI: ~128000 caratteri (gpt-5-nano)
   - DeepL: ~5000 caratteri
   - Google: ~5000 caratteri
   - LibreTranslate: ~1000 caratteri

@@ -1,12 +1,6 @@
-/.github export-ignore
-/build export-ignore
-/dist export-ignore
 /tests export-ignore
-/test export-ignore
-/.vscode export-ignore
-/.idea export-ignore
+/docs export-ignore
+/.github export-ignore
+/node_modules export-ignore
 /.gitignore export-ignore
 /.gitattributes export-ignore
-/node_modules export-ignore
-/vendor export-ignore
-/docs export-ignore

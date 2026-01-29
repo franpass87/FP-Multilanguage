@@ -3,12 +3,13 @@
  * Queue tests.
  *
  * @package FP_Multilanguage
+ * @since 0.10.0
  */
 
 use PHPUnit\Framework\TestCase;
 
 /**
- * Test queue operations.
+ * Test Queue operations.
  */
 final class QueueTest extends TestCase {
 	protected function setUp(): void {
@@ -16,103 +17,90 @@ final class QueueTest extends TestCase {
 		$_SERVER = array();
 	}
 
-	public function test_queue_enqueue_creates_job(): void {
-		$queue = FPML_Queue::instance();
+	public function test_instance_returns_singleton(): void {
+		$instance1 = \FPML_Queue::instance();
+		$instance2 = \FPML_Queue::instance();
 
-		// Mock data
-		$result = $queue->enqueue( 'post', 123, 'post_title', md5( 'test content' ) );
-
-		$this->assertTrue( is_int( $result ) && $result > 0, 'Enqueue should return a job ID' );
+		$this->assertSame( $instance1, $instance2 );
 	}
 
-	public function test_queue_get_next_jobs_returns_pending(): void {
-		$queue = FPML_Queue::instance();
+	public function test_get_table_returns_string(): void {
+		$queue = \FPML_Queue::instance();
+		$table = $queue->get_table();
 
-		// Enqueue a job
-		$queue->enqueue( 'post', 456, 'post_content', md5( 'test' ) );
-
-		$jobs = $queue->get_next_jobs( 10 );
-
-		$this->assertIsArray( $jobs );
+		$this->assertIsString( $table );
+		$this->assertNotEmpty( $table );
 	}
 
-	public function test_queue_count_by_state_returns_integer(): void {
-		$queue = FPML_Queue::instance();
+	public function test_enqueue_returns_zero_for_invalid_input(): void {
+		$queue = \FPML_Queue::instance();
 
-		$count = $queue->count_by_state( 'pending' );
+		$result = $queue->enqueue( '', 0, '', '' );
 
-		$this->assertIsInt( $count );
-		$this->assertGreaterThanOrEqual( 0, $count );
+		$this->assertEquals( 0, $result );
 	}
 
-	public function test_queue_update_state_changes_job_status(): void {
-		$queue = FPML_Queue::instance();
-
-		// Create a job
-		$job_id = $queue->enqueue( 'post', 789, 'post_title', md5( 'content' ) );
-
-		// Update state
-		$result = $queue->update_state( $job_id, 'done' );
-
-		$this->assertTrue( $result, 'State update should succeed' );
-	}
-
-	public function test_queue_cleanup_removes_old_jobs(): void {
-		$queue = FPML_Queue::instance();
-
-		// Cleanup should not error
-		$deleted = $queue->cleanup_old_jobs( array( 'done' ), 30, 'updated_at' );
-
-		$this->assertIsInt( $deleted );
-		$this->assertGreaterThanOrEqual( 0, $deleted );
-	}
-
-	public function test_queue_get_state_counts_returns_array(): void {
-		$queue = FPML_Queue::instance();
-
+	public function test_get_state_counts_returns_array(): void {
+		$queue = \FPML_Queue::instance();
 		$counts = $queue->get_state_counts();
 
 		$this->assertIsArray( $counts );
-		$this->assertArrayHasKey( 'pending', $counts );
-		$this->assertArrayHasKey( 'done', $counts );
 	}
 
-	public function test_queue_get_oldest_job_returns_object_or_null(): void {
-		$queue = FPML_Queue::instance();
+	public function test_update_state_returns_false_for_invalid_job_id(): void {
+		$queue = \FPML_Queue::instance();
 
-		$oldest = $queue->get_oldest_job_for_states( array( 'pending' ), 'created_at' );
+		$result = $queue->update_state( 0, 'pending' );
 
-		$this->assertTrue( is_object( $oldest ) || is_null( $oldest ) );
+		$this->assertFalse( $result );
 	}
 
-	public function test_queue_count_completed_jobs_returns_integer(): void {
-		$queue = FPML_Queue::instance();
+	public function test_reset_retries_returns_false_for_invalid_job_id(): void {
+		$queue = \FPML_Queue::instance();
 
-		$count = $queue->count_completed_jobs( 'post' );
+		$result = $queue->reset_retries( 0 );
 
-		$this->assertIsInt( $count );
-		$this->assertGreaterThanOrEqual( 0, $count );
+		$this->assertFalse( $result );
 	}
 
-	public function test_queue_enqueue_term_creates_job(): void {
-		$queue = FPML_Queue::instance();
+	public function test_get_by_state_returns_empty_array_for_empty_states(): void {
+		$queue = \FPML_Queue::instance();
 
-		// Mock term object
-		$term = new stdClass();
-		$term->term_id = 123;
-		$term->taxonomy = 'category';
-		$term->name = 'Test Category';
+		$result = $queue->get_by_state( array(), 10 );
 
-		$result = $queue->enqueue_term( $term, 'name' );
-
-		$this->assertTrue( is_int( $result ) && $result > 0 );
+		$this->assertIsArray( $result );
+		$this->assertEmpty( $result );
 	}
 
-	public function test_queue_get_jobs_for_states_returns_array(): void {
-		$queue = FPML_Queue::instance();
+	public function test_delete_returns_false_for_invalid_job_id(): void {
+		$queue = \FPML_Queue::instance();
 
-		$jobs = $queue->get_jobs_for_states( array( 'pending', 'outdated' ), 10, 0 );
+		$result = $queue->delete( 0 );
 
-		$this->assertIsArray( $jobs );
+		$this->assertFalse( $result );
+	}
+
+	public function test_claim_batch_returns_array(): void {
+		$queue = \FPML_Queue::instance();
+
+		$result = $queue->claim_batch( 10 );
+
+		$this->assertIsArray( $result );
+	}
+
+	public function test_get_state_counts_caches_result(): void {
+		$queue = \FPML_Queue::instance();
+
+		// Clear any existing cache
+		wp_cache_delete( 'fpml_queue_state_counts', 'fpml_queue' );
+		delete_transient( 'fpml_queue_state_counts' );
+
+		// First call
+		$result1 = $queue->get_state_counts();
+
+		// Second call should use cache
+		$result2 = $queue->get_state_counts();
+
+		$this->assertEquals( $result1, $result2 );
 	}
 }

@@ -1,4 +1,4 @@
-# EditorConfig configuration
+# EditorConfig for FP Multilanguage
 # https://editorconfig.org
 
 root = true
@@ -22,9 +22,6 @@ trim_trailing_whitespace = false
 indent_style = space
 indent_size = 4
 
-[package.json]
+[{package.json,package-lock.json}]
 indent_style = space
 indent_size = 2
-
-[*.txt]
-insert_final_newline = false

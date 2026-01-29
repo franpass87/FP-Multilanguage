@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+      
+      - name: Install production dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader
+      
+      - name: Create release archive
+        run: |
+          zip -r fp-multilanguage-${{ github.ref_name }}.zip . \
+            -x "*.git*" \
+            -x "*node_modules*" \
+            -x "*tests*" \
+            -x "*.github*" \
+            -x "*phpunit.xml*" \
+            -x "*phpstan.neon*" \
+            -x "*.editorconfig" \
+            -x "*phpcs.xml" \
+            -x "*CONTRIBUTING.md" \
+            -x "*composer.json" \
+            -x "*composer.lock" \
+            -x "*package.json" \
+            -x "*package-lock.json"
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: fp-multilanguage-${{ github.ref_name }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

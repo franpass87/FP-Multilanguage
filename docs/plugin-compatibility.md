@@ -1,53 +1,142 @@
-# 🔌 Plugin Compatibility - Auto-Detection System
+# 🔌 Plugin Compatibility - Integrazioni Complete
+
+**Versione**: 0.9.0+  
+**Ultimo aggiornamento**: 2 Novembre 2025
 
 ## Panoramica
 
-FP Multilanguage include un **sistema di rilevamento automatico** che identifica i plugin installati e traduce automaticamente i loro campi personalizzati **senza configurazione manuale**.
+FP Multilanguage include **integrazioni native complete** per i plugin più popolari, con sincronizzazione automatica e copertura 98%+ dei casi d'uso.
 
-## Come Funziona
+## 🎯 Integrazioni Native Complete (v0.9.0)
 
-Il sistema:
-1. **Rileva automaticamente** i plugin WordPress comuni all'avvio
-2. **Registra i loro custom fields** nella whitelist di traduzione
-3. **Traduce i contenuti** senza intervento manuale
-4. **Mostra notifiche** quando rileva nuovi plugin compatibili
+### 🔄 FP-SEO-Manager - **100% Coverage**
 
-## Plugin Supportati
+**Status**: ✅ Integrazione Proprietaria Completa  
+**File**: `src/Integrations/FpSeoSupport.php`  
+**Documentazione**: [docs/integrations/FP-SEO-MANAGER.md](integrations/FP-SEO-MANAGER.md)
 
-### 🔍 SEO
+**Features**:
+- ✅ 25+ meta fields sincronizzati
+- ✅ Core SEO (title, description, keywords, focus keyword, canonical)
+- ✅ AI Features (auto-title, auto-description, SEO score)
+- ✅ GEO & Freshness (geo target, dates)
+- ✅ Social Meta (OG, Twitter Card)
+- ✅ Schema.org (type, properties)
+- ✅ UI hints per AI features
 
-| Plugin | Campi Auto-Rilevati | Note |
-|--------|-------------------|------|
-| **Yoast SEO** | Title, Description, Open Graph, Twitter Cards, Canonical | Supporto completo |
-| **Rank Math SEO** | Title, Description, Focus Keyword, Social Meta | Supporto completo |
-| **All in One SEO** | Title, Description, Open Graph, Twitter | Supporto completo |
-| **SEOPress** | Title, Description, Social Meta | Supporto completo |
+**Coverage**: **100%** - Integrazione più profonda disponibile
 
-**Campi tradotti automaticamente:**
-- Meta title e description
-- Open Graph (Facebook)
-- Twitter Cards
-- URL canonici
-- Focus keywords
+---
+
+### 🛒 WooCommerce - **98% Coverage**
+
+**Status**: ✅ Integrazione Completa  
+**File**: `src/Integrations/WooCommerceSupport.php`  
+**Documentazione**: [docs/integrations/WOOCOMMERCE.md](integrations/WOOCOMMERCE.md)
+
+**Prodotti Supportati**:
+- ✅ Simple Products
+- ✅ Variable Products (con varianti)
+- ✅ Grouped Products
+- ✅ External/Affiliate Products
+- ✅ Downloadable Products
+- ✅ Virtual Products
+
+**Features**:
+- ✅ Sincronizzazione varianti (attributi, prezzi, stock, immagini)
+- ✅ Gallerie prodotto (con ALT text tradotto)
+- ✅ Attributi globali e custom
+- ✅ Relazioni prodotto (upsell/cross-sell mapping automatico)
+- ✅ File scaricabili (nomi tradotti)
+- ✅ Tab prodotto personalizzati
+- ✅ Tassonomie (product_cat, product_tag, product_brand)
+
+**Coverage**: **98%** - Gestione completa e-commerce
+
+---
+
+### 🧭 Menu Navigation - **100% Coverage**
+
+**Status**: ✅ Integrazione Completa  
+**File**: `src/MenuSync.php`  
+**Documentazione**: [docs/integrations/MENU-NAVIGATION.md](integrations/MENU-NAVIGATION.md)
+
+**Features**:
+- ✅ Auto-sync bidirezionale menu IT ↔ EN
+- ✅ Mapping gerarchie parent/child preservato
+- ✅ Traduzione titoli, descrizioni, attributi
+- ✅ Custom fields Salient (icone, mega menu, button styles)
+- ✅ Auto-delete menu EN quando IT viene eliminato
+- ✅ Frontend language switching automatico
+- ✅ Admin UI con status menu e link rapidi
+
+**Coverage**: **100%** - Sincronizzazione completa menu
+
+---
+
+### ✨ Salient Theme - **98% Coverage**
+
+**Status**: ✅ Integrazione Completa  
+**File**: `src/Integrations/SalientThemeSupport.php`  
+**Documentazione**: [docs/integrations/SALIENT-THEME.md](integrations/SALIENT-THEME.md)
+
+**Meta Fields Sincronizzati**: 70+ campi
+
+**Categorie**:
+- ✅ Page Header Settings (26 campi) - Background, overlays, parallax, video
+- ✅ Portfolio Settings (12 campi) - Extra content, gallery, featured images
+- ✅ Post Format Settings (15 campi) - Quote, audio, video, gallery
+- ✅ Page Builder Settings (18 campi) - Visual Composer, layout, sidebar
+- ✅ Navigation Settings (8 campi) - Transparent header, color schemes
+
+**Custom Post Types**:
+- ✅ Portfolio
+- ✅ Team Members
+- ✅ Nectar Slider
+
+**Coverage**: **98%** - Supporto più completo per Salient
+
+---
+
+## 🔌 Integrazioni Parziali
 
 ### 🎨 Page Builders
 
-| Plugin | Supporto | Note |
-|--------|----------|------|
-| **Elementor** | ✅ Completo | JSON data parsing |
-| **WPBakery** | ✅ Completo | Shortcode parsing avanzato |
-| **Beaver Builder** | ✅ Completo | Data e draft |
-| **Oxygen Builder** | ✅ Completo | Shortcodes e JSON |
+| Plugin | Supporto | Coverage | Note |
+|--------|----------|----------|------|
+| **WPBakery** | ✅ Completo | 90% | Shortcodes + attributi translatable |
+| **Elementor** | ⚠️ Parziale | 40% | JSON data parsing basic |
+| **Beaver Builder** | ⚠️ Parziale | 40% | Data e draft |
+| **Oxygen Builder** | ⚠️ Parziale | 40% | Shortcodes e JSON |
 
-**Caratteristiche:**
-- Preserva la struttura del page builder
-- Traduce solo il contenuto testuale
-- Mantiene gli stili e le impostazioni
+**WPBakery** (v0.9.0):
+- ✅ Traduzione contenuto shortcodes
+- ✅ Attributi translatable (title, subtitle, caption, button_text)
+- ✅ Preservazione struttura shortcodes
+- ✅ Supporto nested shortcodes
 
-### 🛒 E-commerce
+**Altri Page Builders**: Supporto generico via parsing JSON/shortcodes
 
-| Plugin | Campi Auto-Rilevati | Note |
-|--------|-------------------|------|
+---
+
+### 🔍 SEO Plugins (Terze Parti)
+
+| Plugin | Supporto | Coverage | Note |
+|--------|----------|----------|------|
+| **FP-SEO-Manager** | ✅ Nativo | 100% | Integrazione proprietaria completa |
+| **Yoast SEO** | ⚠️ Basic | 30% | Title, Description via auto-detection |
+| **Rank Math SEO** | ⚠️ Basic | 30% | Title, Description, Focus Keyword |
+| **All in One SEO** | ⚠️ Basic | 30% | Title, Description, Open Graph |
+| **SEOPress** | ⚠️ Basic | 30% | Title, Description, Social Meta |
+
+**Raccomandazione**: Usa **FP-SEO-Manager** per integrazione completa (100% coverage)
+
+### 🛒 Altri E-commerce
+
+| Plugin | Supporto | Coverage | Note |
+|--------|----------|----------|------|
+| **WooCommerce** | ✅ Nativo | 98% | Integrazione completa (vedi sopra) |
+| **Easy Digital Downloads** | ⚠️ Basic | 40% | Download info, pricing |
 | **WooCommerce** | Prodotti, Attributi, Categorie, Tag | Supporto nativo completo |
 | **Easy Digital Downloads** | Price, Files, Instructions, Notes | Auto-rilevamento |
 

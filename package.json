@@ -1,6 +1,6 @@
 {
   "name": "fp-multilanguage",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.",
   "author": "Francesco Passeri <info@francescopasseri.com> (https://francescopasseri.com)",
   "homepage": "https://francescopasseri.com",
@@ -11,9 +11,14 @@
   "scripts": {
     "sync:author": "php tools/sync-author-metadata.php --apply=${APPLY:-false}",
     "sync:docs": "php tools/sync-author-metadata.php --docs --apply=${APPLY:-false}",
-    "changelog:from-git": "conventional-changelog -p angular -i CHANGELOG.md -s || true"
+    "changelog:from-git": "conventional-changelog -p angular -i CHANGELOG.md -s || true",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:qa": "php tools/qa-run-all.php"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "conventional-changelog-cli": "^3.0.0"
   }
 }

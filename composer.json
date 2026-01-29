@@ -6,9 +6,14 @@
         "php": ">=8.0"
     },
     "autoload": {
-        "classmap": [
-            "fp-multilanguage"
-        ]
+        "psr-4": {
+            "FP\\Multilanguage\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "FP\\Multilanguage\\Tests\\": "tests/"
+        }
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5",
@@ -21,12 +26,15 @@
             "php": "8.2.0"
         },
         "optimize-autoloader": true,
-        "sort-packages": true,
-        "vendor-dir": "fp-multilanguage/vendor"
+        "sort-packages": true
     },
     "scripts": {
+        "test": "vendor/bin/phpunit",
+        "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M",
+        "phpcs": "vendor/bin/phpcs --standard=WordPress src/",
+        "phpcbf": "vendor/bin/phpcbf --standard=WordPress src/",
         "build": [
-            "rm -rf fp-multilanguage/vendor",
+            "rm -rf vendor",
             "@composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader",
             "composer dump-autoload -o --classmap-authoritative"
         ],

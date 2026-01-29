@@ -318,8 +318,7 @@ add_action( 'save_post', function( $post_id, $post ) {
 
 | Provider | Best For | Speed | Cost | Quality |
 |----------|----------|-------|------|---------|
-| **OpenAI GPT-4** | Marketing, creative | 🐌 Slow | 💰💰💰 High | ⭐⭐⭐⭐⭐ |
-| **OpenAI GPT-3.5** | General content | 🚀 Fast | 💰 Low | ⭐⭐⭐⭐ |
+| **OpenAI GPT-5 nano** | All content types | 🚀 Fast | 💰 Low | ⭐⭐⭐⭐⭐ |
 | **DeepL** | Professional docs | ⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐⭐ |
 | **Google** | High volume | ⚡⚡ Fast | 💰 Low | ⭐⭐⭐ |
 | **LibreTranslate** | Privacy-sensitive | 🐌 Slow | Free | ⭐⭐ |
@@ -327,16 +326,16 @@ add_action( 'save_post', function( $post_id, $post ) {
 **Dynamic provider selection:**
 ```php
 add_filter( 'fpml_active_provider', function( $provider, $object_type, $field ) {
-    // Use GPT-4 for marketing content
+    // Use GPT-5 nano for all content (best quality + speed)
     if ( 'post' === $object_type && 'post_content' === $field ) {
         $post = get_post( $object_id );
         
         if ( has_category( 'marketing', $post ) ) {
-            return 'openai'; // GPT-4
+            return 'openai'; // GPT-5 nano
         }
     }
     
-    // Use DeepL for everything else (faster + cheaper)
+    // Use DeepL for technical docs
     return 'deepl';
 }, 10, 3 );
 ```
@@ -349,10 +348,10 @@ add_filter( 'fpml_active_provider', function( $provider, $object_type, $field ) 
 
 ```php
 // In Settings or wp-config.php
-define( 'FPML_MAX_CHARS_PER_CHUNK', 8000 ); // Default: 4500
+define( 'FPML_MAX_CHARS_PER_CHUNK', 128000 ); // Default: 4500
 
-// But verify provider limits:
-// OpenAI GPT-4: ~8000 safe
+// Provider limits:
+// OpenAI GPT-5 nano: ~128000 safe (massive context window)
 // DeepL: ~5000 safe
 // Google: ~5000 safe
 ```

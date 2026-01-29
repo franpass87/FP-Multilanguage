@@ -3,10 +3,31 @@
          colors="true"
          stopOnFailure="false"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         verbose="true">
     <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory suffix="Test.php">tests/Integration</directory>
+            <directory suffix="Test.php">tests/phpunit</directory>
+        </testsuite>
         <testsuite name="FP Multilanguage">
             <directory suffix="Test.php">tests/phpunit</directory>
         </testsuite>
     </testsuites>
+    <filter>
+        <whitelist>
+            <directory suffix=".php">src</directory>
+            <exclude>
+                <directory>src/Compatibility</directory>
+                <directory>src/Kernel</directory>
+            </exclude>
+        </whitelist>
+    </filter>
+    <logging>
+        <log type="coverage-html" target="tests/coverage"/>
+        <log type="coverage-text" target="php://stdout" showUncoveredFiles="false"/>
+    </logging>
 </phpunit>

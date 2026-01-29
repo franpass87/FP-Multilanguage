@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} - WP ${{ matrix.wordpress }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php: ['8.0', '8.1', '8.2', '8.3']
+        wordpress: ['6.4', '6.5', 'latest']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, mysqli
+          coverage: xdebug
+          tools: composer
+      
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      
+      - name: Run PHPUnit tests
+        run: composer test || vendor/bin/phpunit
+        env:
+          WP_VERSION: ${{ matrix.wordpress }}
+  
+  phpstan:
+    name: PHPStan Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+      
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      
+      - name: Run PHPStan
+        run: composer phpstan || vendor/bin/phpstan analyse
+  
+  phpcs:
+    name: PHPCS Code Standards
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer, cs2pr
+      
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      
+      - name: Run PHPCS
+        run: composer phpcs || vendor/bin/phpcs --standard=WordPress src/
+

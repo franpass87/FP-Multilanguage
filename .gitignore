@@ -1,4 +1,49 @@
+# Build artifacts
 /build/
 /dist/
 *.zip
-fp-multilanguage/vendor/
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Testing
+.phpunit.result.cache
+/coverage/
+/phpunit.xml
+
+# Code quality
+.phpcs.cache
+.php-cs-fixer.cache
+.phpstan.cache
+
+# Logs
+*.log
+debug.log
+
+# Temporary
+/tmp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# WordPress specific
+wp-config.php
+.htaccess

@@ -1,0 +1,389 @@
+/**
+ * Frontend styles for FP Multilanguage Language Switcher
+ * 
+ * @package FP_Multilanguage
+ * @since 0.4.1
+ */
+
+/* Language Switcher - Common styles */
+.fpml-switcher {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Inline Switcher */
+.fpml-switcher--inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2px;
+}
+
+.fpml-switcher__item {
+    color: #2c3338;
+    text-decoration: none;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 1px solid transparent;
+    min-width: auto;
+}
+
+.fpml-switcher__item:hover {
+    background-color: #f0f0f1;
+    color: #1d2327;
+    text-decoration: none;
+}
+
+.fpml-switcher__item--current {
+    background-color: #2271b1;
+    color: #ffffff;
+    font-weight: 600;
+    border-color: #2271b1;
+}
+
+.fpml-switcher__item--current:hover {
+    background-color: #135e96;
+    color: #ffffff;
+}
+
+.fpml-switcher__separator {
+    color: #646970;
+    user-select: none;
+}
+
+/* Flag emoji */
+.fpml-switcher__flag {
+    font-size: 18px;
+    line-height: 1;
+    display: inline-block;
+}
+
+/* Dropdown Switcher */
+.fpml-switcher--dropdown {
+    display: inline-block;
+}
+
+.fpml-switcher__select {
+    appearance: none;
+    background-color: #fff;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%206l5%205%205-5%202%201-7%207-7-7%202-1z%22%20fill%3D%22%23555%22%2F%3E%3C%2Fsvg%3E');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    color: #2c3338;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 6px 32px 6px 12px;
+    transition: border-color 0.2s ease;
+    min-width: 150px;
+}
+
+.fpml-switcher__select:hover {
+    border-color: #2271b1;
+}
+
+.fpml-switcher__select:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: 2px solid transparent;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .fpml-switcher__item {
+        color: #f0f0f1;
+    }
+    
+    .fpml-switcher__item:hover {
+        background-color: #2c3338;
+        color: #ffffff;
+    }
+    
+    .fpml-switcher__item--current {
+        background-color: #2271b1;
+        color: #ffffff;
+    }
+    
+    .fpml-switcher__separator {
+        color: #a7aaad;
+    }
+    
+    .fpml-switcher__select {
+        background-color: #1d2327;
+        border-color: #50575e;
+        color: #f0f0f1;
+    }
+    
+    .fpml-switcher__select:hover,
+    .fpml-switcher__select:focus {
+        border-color: #2271b1;
+    }
+}
+
+/* Responsive design */
+@media screen and (max-width: 782px) {
+    .fpml-switcher {
+        font-size: 14px;
+    }
+    
+    .fpml-switcher--inline {
+        gap: 2px;
+    }
+    
+    .fpml-switcher__item {
+        padding: 2px 4px;
+        min-width: auto;
+    }
+    
+    .fpml-switcher__flag {
+        font-size: 18px;
+    }
+    
+    .fpml-switcher__select {
+        font-size: 16px;
+        padding: 8px 32px 8px 16px;
+        min-width: 180px;
+    }
+}
+
+/* Accessibility improvements */
+.fpml-switcher__item:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+.fpml-switcher__select:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 0;
+}
+
+/* Optional: Compact style variant */
+.fpml-switcher--compact .fpml-switcher__item {
+    padding: 1px 2px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+.fpml-switcher--compact .fpml-switcher__flag {
+    font-size: 16px;
+}
+
+/* Optional: Pills style variant */
+.fpml-switcher--pills .fpml-switcher__item {
+    border-radius: 20px;
+    padding: 6px 16px;
+}
+
+/* Language Switcher Shortcode Styles */
+.fpml-language-switcher {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Dropdown style */
+.fpml-lang-select {
+    appearance: none;
+    background-color: #fff;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%206l5%205%205-5%202%201-7%207-7-7%202-1z%22%20fill%3D%22%23555%22%2F%3E%3C%2Fsvg%3E');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    color: #2c3338;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 6px 32px 6px 12px;
+    transition: border-color 0.2s ease;
+    min-width: 150px;
+    margin: 0;
+    vertical-align: middle;
+}
+
+.fpml-lang-select:hover {
+    border-color: #2271b1;
+}
+
+.fpml-lang-select:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: 2px solid transparent;
+}
+
+/* Links style */
+.fpml-lang-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    flex-wrap: wrap;
+}
+
+.fpml-lang-link {
+    color: #2c3338;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    min-width: 40px;
+    margin: 0;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.fpml-lang-link:hover {
+    background-color: #f0f0f1;
+    color: #1d2327;
+    text-decoration: none;
+}
+
+.fpml-lang-link.active {
+    background-color: #2271b1;
+    color: #ffffff;
+    font-weight: 600;
+    border-color: #2271b1;
+}
+
+.fpml-lang-link.active:hover {
+    background-color: #135e96;
+    color: #ffffff;
+}
+
+/* Flags style */
+.fpml-lang-flags {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    flex-wrap: wrap;
+}
+
+.fpml-flag {
+    font-size: 24px;
+    line-height: 1;
+    display: inline-block;
+    text-decoration: none;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+    margin: 0;
+    vertical-align: middle;
+}
+
+.fpml-flag:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+
+.fpml-flag.active {
+    opacity: 1;
+    background-color: rgba(34, 113, 177, 0.1);
+}
+
+/* Responsive improvements */
+@media screen and (max-width: 782px) {
+    .fpml-language-switcher {
+        font-size: 16px;
+    }
+    
+    .fpml-lang-select {
+        font-size: 16px;
+        padding: 8px 32px 8px 16px;
+        min-width: 180px;
+    }
+    
+    .fpml-lang-link {
+        padding: 8px 16px;
+        min-width: 48px;
+        font-size: 16px;
+    }
+    
+    .fpml-flag {
+        font-size: 28px;
+        padding: 6px;
+    }
+    
+    .fpml-lang-links,
+    .fpml-lang-flags {
+        gap: 6px;
+    }
+}
+
+/* Very small screens */
+@media screen and (max-width: 480px) {
+    .fpml-lang-links {
+        gap: 4px;
+    }
+    
+    .fpml-lang-link {
+        padding: 6px 10px;
+        font-size: 14px;
+        min-width: 36px;
+    }
+    
+    .fpml-flag {
+        font-size: 24px;
+        padding: 4px;
+    }
+    
+    .fpml-lang-select {
+        min-width: 140px;
+        font-size: 14px;
+    }
+}
+
+/* Ensure no unwanted margins */
+.fpml-language-switcher * {
+    box-sizing: border-box;
+}
+
+/* Fix for Salient theme integration */
+.fpml-salient-switcher {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.fpml-salient-switcher .fpml-switcher {
+    margin: 0;
+    padding: 0;
+}
+
+.fpml-salient-switcher .fpml-switcher--inline {
+    gap: 2px;
+    justify-content: flex-start;
+}
+
+.fpml-salient-switcher .fpml-switcher__item {
+    padding: 2px 4px;
+    min-width: auto;
+}
+
+.fpml-salient-switcher .fpml-switcher__flag {
+    font-size: 18px;
+}

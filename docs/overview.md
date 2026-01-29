@@ -3,11 +3,13 @@
 Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
 
 ## What It Does
-FP Multilanguage keeps an English mirror of Italian content synchronised across posts, pages, custom post types, WooCommerce product data, navigation menus, media metadata, and SEO/Open Graph/Twitter tags. It enforces `/en/` routing (or `?lang=` fallbacks), generates English sitemaps, applies hreflang/canonical tags, and performs browser language redirects. The queue processes only modified fragments, preserving Gutenberg blocks, ACF structures, and complex shortcodes.
+FP Multilanguage keeps an English mirror of Italian content synchronised across posts, pages, custom post types, WooCommerce product data, navigation menus, media metadata, comments (including nested comments), and SEO/Open Graph/Twitter tags. It enforces `/en/` routing (or `?lang=` fallbacks), generates English sitemaps, applies hreflang/canonical tags, and performs browser language redirects. The queue processes only modified fragments, preserving Gutenberg blocks, ACF structures, and complex shortcodes.
 
 ## Feature Highlights
 - Differential translation queue with prioritisation, retry logic, and job retention controls.
 - Provider adapters for OpenAI, DeepL, Google Cloud Translation, and LibreTranslate with configurable pricing to estimate costs.
+- **Nested Comments Support** - Full comment threading with automatic parent comment translation mapping.
+- **WooCommerce Attributes Translation** - Queue-based translation for product custom attributes and options.
 - Assisted mode that disables automatic duplication when WPML or Polylang is active while keeping glossary, overrides, and provider utilities.
 - Diagnostics dashboard showing queue KPIs, provider connectivity, log excerpts, and manual REST actions.
 - WP-CLI commands (`wp fpml queue run`, `cleanup`, `estimate-cost`, `status`) and REST endpoints for automation and observability.

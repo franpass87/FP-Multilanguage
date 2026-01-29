@@ -1,62 +1,278 @@
-# Architecture
+# FP Multilanguage - Architecture Documentation
 
-## High-Level Components
-- **FPML_Plugin** — Bootstrap singleton that wires admin UI, queue processor, translation providers, rewrites, and diagnostics.
-- **FPML_Admin** — Manages settings pages, diagnostics dashboards, and assists with provider testing, glossary, overrides, and routing configuration.
-- **FPML_Queue** — Owns the `{$wpdb->prefix}fpml_queue` table, handles schema upgrades, enqueues translation jobs, tracks retries, and orchestrates cleanup/retention.
-- **FPML_Processor** — Consumes queue jobs, runs differential translations using providers, updates posts/terms/menus/media, and triggers `fpml_*_translated` actions.
-- **FPML_Strings_Scanner / FPML_Strings_Override** — Index and override strings across plugins/themes for assisted translations.
-- **Provider adapters** — `FPML_Provider_OpenAI`, `FPML_Provider_DeepL`, `FPML_Provider_Google`, `FPML_Provider_LibreTranslate` implement `FPML_Translator_Interface` for consistent API calls and pricing metadata.
-- **FPML_REST_Admin** — Exposes REST endpoints for queue runs, provider tests, reindex, and cleanup (`fpml/v1/queue/run`, `/test-provider`, `/reindex`, `/queue/cleanup`).
-- **FPML_CLI_Queue_Command** — Mirrors REST automation through WP-CLI commands (`wp fpml queue run|cleanup|estimate-cost|status`).
+## Panoramica Architetturale
 
-## Data Flow
-1. Content changes trigger `FPML_Plugin::enqueue_post_translation()` or related helpers, which compute hashes of source data and enqueue jobs in the queue table.
-2. Scheduled events (`fpml_process_queue`, `fpml_cleanup_queue`) or manual CLI/REST calls invoke `FPML_Processor` to lock, translate, and persist target fields.
-3. Translated data is written to English posts/terms/menu items/media, with hooks like `fpml_post_translated`, `fpml_term_translated`, and `fpml_menu_item_translated` announcing updates.
-4. Queue cleanup runs after processing, using `FPML_Queue::cleanup_old_jobs()` filtered by `fpml_queue_cleanup_states` and `fpml_queue_cleanup_batch_size` to keep the table lean.
-5. Diagnostics aggregates queue metrics, provider status, estimated costs, and retention info for the admin dashboard and WP-CLI output.
+FP Multilanguage utilizza un'architettura modulare basata su:
+- **Service Provider Pattern** per la registrazione dei servizi
+- **Dependency Injection** tramite Container PSR-11
+- **Separation of Concerns** con moduli ben definiti
+- **PSR Standards** (PSR-3, PSR-4, PSR-11)
 
-## Database Schema
-`FPML_Queue` installs a custom table with the following notable columns:
-- `object_type`, `object_id`, `field` — Composite identifier for the content fragment being translated.
-- `hash_source` — Hash of the source payload used to detect changes and skip redundant work.
-- `state` — `pending`, `processing`, `done`, `skipped`, `error`.
-- `retries`, `last_error` — Track failure recovery.
-- `created_at`, `updated_at` — Support retention policies and diagnostics reporting.
-Indexes exist for object lookup, state filtering, and `(state, updated_at)` cleanup sweeps.
+## 🏗️ Struttura Architetturale
 
-## Cron & Scheduling
-- **`fpml_process_queue`** — Runs through pending jobs in batches (default 100, filterable via `fpml_estimate_batch_size`).
-- **`fpml_cleanup_queue`** — Daily cleanup of processed jobs when retention is enabled.
-- Hooks integrate with WP-Cron by default; system cron can invoke `wp cron event run --due-now` when `DISABLE_WP_CRON` is true.
+### Livello 1: Kernel
 
-## Routing & SEO
-- `FPML_Rewrites` registers `/en/` structures and fallbacks to `?lang=` query switches.
-- `FPML_SEO` handles hreflang tags, canonical URLs, Open Graph/Twitter meta duplication, and English sitemap generation.
-- Assisted mode detects WPML/Polylang and disables conflicting rewrite/queue features while keeping provider tooling available.
+Il kernel è il cuore del plugin, responsabile di:
+- Inizializzazione del container
+- Registrazione dei service providers
+- Bootstrap del plugin
 
-## Hooks Reference
-Key filters/actions exposed by the plugin:
-- `fpml_translatable_post_types`, `fpml_translatable_taxonomies` — Control which objects enter the queue.
-- `fpml_queue_cleanup_states`, `fpml_queue_cleanup_batch_size` — Tune cleanup retention.
-- `fpml_post_jobs_enqueued` — Observe new jobs for auditing.
-- `fpml_post_translated`, `fpml_term_translated`, `fpml_menu_item_translated` — React to translated data persistence.
-- `fpml_strings_scan_targets` — Extend strings scanning coverage for assisted translations.
+**File principali:**
+- `src/Kernel/Plugin.php` - Plugin kernel
+- `src/Kernel/Container.php` - Container PSR-11
+- `src/Kernel/ServiceProvider.php` - Interfaccia service provider
+- `src/Kernel/Bootstrap.php` - Bootstrap orchestrator
 
-## External Services
-The plugin integrates with:
-- **OpenAI** (ChatGPT / GPT models via API key)
-- **DeepL** (REST API key)
-- **Google Cloud Translation** (Service account or API key)
-- **LibreTranslate** (Self-hosted or public endpoints)
+### Livello 2: Foundation
 
-Providers expose pricing metadata used in Diagnostics to estimate translation costs per job/state.
+Servizi cross-cutting utilizzati da tutti i moduli:
 
-## Files & Entry Points
-- Main plugin file: [`fp-multilanguage/fp-multilanguage.php`](../fp-multilanguage/fp-multilanguage.php)
-- Admin bootstrap: [`fp-multilanguage/admin/class-admin.php`](../fp-multilanguage/admin/class-admin.php)
-- Queue logic: [`fp-multilanguage/includes/class-queue.php`](../fp-multilanguage/includes/class-queue.php)
-- Processor: [`fp-multilanguage/includes/class-processor.php`](../fp-multilanguage/includes/class-processor.php)
-- REST layer: [`fp-multilanguage/rest/class-rest-admin.php`](../fp-multilanguage/rest/class-rest-admin.php)
-- CLI commands: [`fp-multilanguage/cli/class-cli.php`](../fp-multilanguage/cli/class-cli.php)
+- **Logger** - Logging PSR-3 compatible
+- **Cache** - Caching abstraction (Transients, Object Cache)
+- **Options** - Gestione opzioni con defaults e validazione
+- **Validation** - Validazione dati
+- **Sanitization** - Sanitizzazione input
+- **Http** - HTTP client abstraction
+- **Environment** - Controlli ambiente e compatibilità
+
+### Livello 3: Core
+
+Logica di business principale:
+
+- **Queue** - Gestione coda traduzioni
+- **Translation** - Gestione traduzioni
+- **Content** - Handlers per post, term, media, comment
+- **Hook** - Gestione hook WordPress
+
+### Livello 4: Modules
+
+Moduli specializzati per contesti specifici:
+
+- **Admin** - Interfaccia amministrativa
+- **REST** - REST API endpoints
+- **Frontend** - Rendering frontend
+- **CLI** - WP-CLI commands
+- **Integrations** - Integrazioni terze parti
+
+## 🔄 Flusso di Bootstrap
+
+```
+1. fp-multilanguage.php
+   └─> Bootstrap::boot()
+       └─> Plugin::__construct()
+           └─> Container creato
+           └─> registerProviders()
+               └─> FoundationServiceProvider::register()
+               └─> CoreServiceProvider::register()
+               └─> AdminServiceProvider::register()
+               └─> RESTServiceProvider::register()
+               └─> FrontendServiceProvider::register()
+               └─> CLIServiceProvider::register()
+               └─> IntegrationServiceProvider::register()
+           └─> boot()
+               └─> Ogni provider esegue boot()
+```
+
+## 📦 Service Providers
+
+### FoundationServiceProvider
+
+**Responsabilità:**
+- Registra tutti i servizi Foundation
+- Disponibile in tutti i contesti
+
+**Servizi registrati:**
+- logger, cache, options, validator, sanitizer, http.client, environment.checker, compatibility.checker
+
+### CoreServiceProvider
+
+**Responsabilità:**
+- Registra servizi core business logic
+- Registra hook WordPress per content lifecycle
+- Registra cron events
+
+**Servizi registrati:**
+- queue, translation.manager, translation.job_enqueuer, content.indexer, content.post_handler, content.term_handler, hook.manager, translation.orchestrator, processor
+
+### AdminServiceProvider
+
+**Responsabilità:**
+- Registra servizi admin
+- Disponibile solo in contesto admin
+
+**Servizi registrati:**
+- admin, admin.page_renderer, admin.ajax_handlers, admin.post_handlers, admin.nonce_manager
+
+### RESTServiceProvider
+
+**Responsabilità:**
+- Registra REST API endpoints
+- Disponibile in admin e frontend
+
+**Servizi registrati:**
+- rest.admin, rest.route_registrar, rest.handlers.*
+
+### FrontendServiceProvider
+
+**Responsabilità:**
+- Registra servizi frontend
+- Disponibile solo in frontend
+
+**Servizi registrati:**
+- frontend.rewrites, frontend.language, frontend.language_resolver, frontend.url_filter
+
+### CLIServiceProvider
+
+**Responsabilità:**
+- Registra WP-CLI commands
+- Disponibile solo con WP-CLI
+
+**Servizi registrati:**
+- cli.command.queue, cli.command.utility
+
+### IntegrationServiceProvider
+
+**Responsabilità:**
+- Auto-detect integrazioni attive
+- Inizializza integrazioni se dipendenze presenti
+
+**Servizi registrati:**
+- integration.acf, integration.woocommerce, integration.fp_seo, integration.fp_experiences
+
+## 🔌 Dependency Injection
+
+### Container PSR-11
+
+Il container implementa `Psr\Container\ContainerInterface` e fornisce:
+
+- **bind()** - Registra un servizio
+- **get()** - Ottiene un servizio
+- **has()** - Verifica se un servizio esiste
+- **singleton()** - Registra un singleton
+- **alias()** - Crea un alias per un servizio
+
+### Risoluzione Dipendenze
+
+Il container risolve automaticamente le dipendenze:
+
+1. Controlla se il servizio è già istanziato (singleton)
+2. Controlla se esiste una factory
+3. Esegue la factory passando il container
+4. Cachea l'istanza se shared
+5. Restituisce l'istanza
+
+### Esempio
+
+```php
+$container->bind('my.service', function(Container $c) {
+    $logger = $c->get('logger');
+    $queue = $c->get('queue');
+    return new MyService($logger, $queue);
+}, true); // true = singleton
+```
+
+## 🧩 Classi Base
+
+### BaseHandler
+
+Classe base per tutti i REST handlers:
+
+- `checkPermission()` - Verifica permessi
+- `validateRequest()` - Valida richiesta
+- `logError()`, `logDebug()` - Logging
+- `success()`, `error()` - Response helpers
+- `sanitize()` - Sanitizzazione
+
+### BaseCommand
+
+Classe base per tutti i CLI commands:
+
+- `logError()`, `logWarning()`, `logInfo()`, `logDebug()` - Logging
+- `isAssistedMode()` - Verifica modalità assistita
+- `ensureQueueAvailable()` - Verifica disponibilità coda
+
+### BaseIntegration
+
+Classe base per tutte le integrazioni:
+
+- `checkDependencies()` - Verifica dipendenze
+- `init()` - Inizializza integrazione
+- `isActive()` - Verifica se attiva
+- `getName()` - Nome integrazione
+
+## 🔄 Lifecycle Hooks
+
+### Plugin Lifecycle
+
+- `fpml_activate` - Attivazione plugin
+- `fpml_deactivate` - Disattivazione plugin
+- `fpml_after_initialization` - Dopo inizializzazione
+
+### Service Provider Lifecycle
+
+1. **register()** - Registra servizi nel container
+2. **boot()** - Inizializza servizi e registra hook
+
+### Module Lifecycle
+
+Ogni modulo può registrare i propri hook nel metodo `boot()` del Service Provider.
+
+## 🧪 Testing
+
+### Unit Tests
+
+Test per singole classi in isolamento:
+- `tests/Unit/Foundation/` - Test Foundation services
+
+### Integration Tests
+
+Test per interazioni tra componenti:
+- `tests/Integration/` - Test Container, Service Providers, Backward Compatibility
+
+## 🔒 Security
+
+### Nonce Management
+
+Gestito da `Admin\NonceManager`:
+- Refresh automatico nonce scaduti
+- Redirect su nonce invalidi
+- Custom wp_die handler
+
+### Permission Checks
+
+Tutti i REST endpoints verificano:
+- `current_user_can('manage_options')`
+- Nonce validation
+- Request sanitization
+
+## 📈 Performance
+
+### Lazy Loading
+
+I servizi sono caricati solo quando richiesti:
+- Service Providers registrano factory, non istanze
+- Istanze create al primo `get()`
+
+### Caching
+
+- Container cachea istanze singleton
+- Cache service per dati frequenti
+- Options service con caching interno
+
+## 🔧 Estendibilità
+
+### Filtri WordPress
+
+- `fpml_service_providers` - Aggiungi Service Providers
+- `fpml_translatable_post_types` - Filtra post types traducibili
+- `fpml_translatable_taxonomies` - Filtra taxonomies traducibili
+
+### Hook Personalizzati
+
+- `fpml_activate` - Dopo attivazione
+- `fpml_deactivate` - Dopo disattivazione
+- `fpml_after_initialization` - Dopo inizializzazione
+
+---
+
+*Documentazione aggiornata: Fase 3 completata*
