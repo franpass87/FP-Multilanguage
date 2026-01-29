@@ -1050,49 +1050,60 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         return new \WP_Error( '\FPML_job_post_loop', __( 'Il job punta a un contenuto già tradotto.', 'fp-multilanguage' ) );
                 }
 
-                // Get translation ID - try to determine target language from all enabled languages
-                // Since jobs are enqueued for source_post but we need to find which translation to update,
-                // we check all enabled languages and find translations that need this field updated
-                $language_manager = fpml_get_language_manager();
-                if ( ! $language_manager ) {
-                        return new \WP_Error( '\FPML_job_post_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
-                }
-                $enabled_languages = $language_manager->get_enabled_languages();
-                
+                // Get translation ID - check if explicitly provided in job first
                 $target_id = 0;
                 $target_lang = null;
                 
-                // Try to find which translation needs this field updated by checking status flags
-                // This handles the case where we have multiple translations (EN, DE, FR, etc.)
-                $field_key = str_replace( ':', '_', $job->field );
-                $status_key = '_fpml_status_' . $field_key;
-                
-                foreach ( $enabled_languages as $lang ) {
-                        $translation_id = fpml_get_translation_id( $source_post->ID, $lang );
-                        if ( $translation_id ) {
-                                $translation_post = get_post( $translation_id );
-                                if ( $translation_post && get_post_meta( $translation_id, '_fpml_is_translation', true ) ) {
-                                        // Check if this translation has status flag indicating it needs this field
-                                        $status = get_post_meta( $translation_id, $status_key, true );
-                                        $translation_status = get_post_meta( $translation_id, '_fpml_translation_status', true );
-                                        
-                                        if ( 'needs_update' === $status || 'pending' === $translation_status ) {
-                                                $target_id = $translation_id;
-                                                $target_lang = $lang;
-                                                break;
+                // If target_id is explicitly provided in the job (e.g., from translate_post_directly), use it
+                if ( isset( $job->target_id ) && $job->target_id > 0 ) {
+                        $target_id = (int) $job->target_id;
+                        // Determine language from target post meta
+                        $target_lang = get_post_meta( $target_id, '_fpml_language', true );
+                        if ( empty( $target_lang ) ) {
+                                $target_lang = 'en'; // Fallback default
+                        }
+                } else {
+                        // Try to determine target language from all enabled languages
+                        // Since jobs are enqueued for source_post but we need to find which translation to update,
+                        // we check all enabled languages and find translations that need this field updated
+                        $language_manager = fpml_get_language_manager();
+                        if ( ! $language_manager ) {
+                                return new \WP_Error( '\FPML_job_post_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
+                        }
+                        $enabled_languages = $language_manager->get_enabled_languages();
+                        
+                        // Try to find which translation needs this field updated by checking status flags
+                        // This handles the case where we have multiple translations (EN, DE, FR, etc.)
+                        $field_key = str_replace( ':', '_', $job->field );
+                        $status_key = '_fpml_status_' . $field_key;
+                        
+                        foreach ( $enabled_languages as $lang ) {
+                                $translation_id = fpml_get_translation_id( $source_post->ID, $lang );
+                                if ( $translation_id ) {
+                                        $translation_post = get_post( $translation_id );
+                                        if ( $translation_post && get_post_meta( $translation_id, '_fpml_is_translation', true ) ) {
+                                                // Check if this translation has status flag indicating it needs this field
+                                                $status = get_post_meta( $translation_id, $status_key, true );
+                                                $translation_status = get_post_meta( $translation_id, '_fpml_translation_status', true );
+                                                
+                                                if ( 'needs_update' === $status || 'pending' === $translation_status ) {
+                                                        $target_id = $translation_id;
+                                                        $target_lang = $lang;
+                                                        break;
+                                                }
                                         }
                                 }
                         }
-                }
-                
-                // Fallback: if no specific translation found with needs_update status, use first enabled language
-                if ( ! $target_id ) {
-                        $target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
-                        $target_id = fpml_get_translation_id( $source_post->ID, $target_lang );
                         
-                        // Backward compatibility: check legacy _fpml_pair_id
-                        if ( ! $target_id && 'en' === $target_lang ) {
-                                $target_id = (int) get_post_meta( $source_post->ID, '_fpml_pair_id', true );
+                        // Fallback: if no specific translation found with needs_update status, use first enabled language
+                        if ( ! $target_id ) {
+                                $target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+                                $target_id = fpml_get_translation_id( $source_post->ID, $target_lang );
+                                
+                                // Backward compatibility: check legacy _fpml_pair_id
+                                if ( ! $target_id && 'en' === $target_lang ) {
+                                        $target_id = (int) get_post_meta( $source_post->ID, '_fpml_pair_id', true );
+                                }
                         }
                 }
 
@@ -1457,6 +1468,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                 'object_type' => 'post',
                                 'field'      => $field,
                                 'state'      => 'translating',
+                                'target_id'  => $target_post->ID,
                         );
 
                         $translation_result = $this->process_post_job( $fake_job );
