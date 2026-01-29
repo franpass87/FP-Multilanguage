@@ -161,6 +161,7 @@ class Admin {
 
         wp_enqueue_script( 'jquery' );
         wp_enqueue_style( 'fpml-admin', \FPML_PLUGIN_URL . 'assets/admin.css', array(), \FPML_PLUGIN_VERSION );
+        wp_enqueue_script( 'fpml-admin', \FPML_PLUGIN_URL . 'assets/admin.js', array( 'jquery' ), \FPML_PLUGIN_VERSION, true );
     }
 
     /**
