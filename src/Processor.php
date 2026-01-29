@@ -1471,14 +1471,32 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                 'target_id'  => $target_post->ID,
                         );
 
-                        $translation_result = $this->process_post_job( $fake_job );
+                        try {
+                                $translation_result = $this->process_post_job( $fake_job );
 
-                        if ( is_wp_error( $translation_result ) ) {
+                                if ( is_wp_error( $translation_result ) ) {
+                                        $result['errors']++;
+                                        // Log error but continue with next field
+                                        if ( $this->logger ) {
+                                                $this->logger->log( 'warning', sprintf( 'Translation error for field %s: %s', $field, $translation_result->get_error_message() ) );
+                                        }
+                                } elseif ( 'skipped' === $translation_result ) {
+                                        $result['skipped']++;
+                                } else {
+                                        $result['translated']++;
+                                }
+                        } catch ( \Exception $e ) {
                                 $result['errors']++;
-                        } elseif ( 'skipped' === $translation_result ) {
-                                $result['skipped']++;
-                        } else {
-                                $result['translated']++;
+                                if ( $this->logger ) {
+                                        $this->logger->log( 'error', sprintf( 'Exception translating field %s: %s', $field, $e->getMessage() ) );
+                                }
+                                // Continue with next field
+                        } catch ( \Error $e ) {
+                                $result['errors']++;
+                                if ( $this->logger ) {
+                                        $this->logger->log( 'error', sprintf( 'Fatal error translating field %s: %s', $field, $e->getMessage() ) );
+                                }
+                                // Continue with next field
                         }
                 }
 
@@ -2262,18 +2280,31 @@ private function translate_value_recursive( $value, array $context ) {
          * @return string|WP_Error
          */
         protected function attempt_translation_with_backoff( $translator, $text, $domain, $attempt ) {
-                $max_attempts = 4;
+                $max_attempts = 2; // Reduced from 4 to avoid long blocking
                 $delay        = 1;
+                $start_time   = time();
+                $max_time     = 45; // Maximum 45 seconds for all attempts
 
                 for ( $i = 0; $i < $max_attempts; $i++ ) {
-                        $result = $translator->translate( $text, 'it', 'en', $domain );
+                        // Check if we've exceeded max time
+                        if ( ( time() - $start_time ) > $max_time ) {
+                                return new \WP_Error( '\FPML_translation_timeout', __( 'Traduzione interrotta per timeout.', 'fp-multilanguage' ) );
+                        }
+
+                        try {
+                                $result = $translator->translate( $text, 'it', 'en', $domain );
+                        } catch ( \Exception $e ) {
+                                $result = new \WP_Error( '\FPML_translation_exception', $e->getMessage() );
+                        } catch ( \Error $e ) {
+                                $result = new \WP_Error( '\FPML_translation_error', $e->getMessage() );
+                        }
 
                         if ( ! is_wp_error( $result ) ) {
                                 return (string) $result;
                         }
 
-                        $delay = min( 30, $delay * 2 );
-                        $sleep = $delay + wp_rand( 0, 1000 ) / 1000;
+                        $delay = min( 5, $delay * 2 ); // Reduced max delay from 30s to 5s
+                        $sleep = $delay + wp_rand( 0, 500 ) / 1000;
 
                         if ( $i === $max_attempts - 1 ) {
                                 return $result;

@@ -169,8 +169,9 @@ class PostTranslationManager {
 			// Generate title and slug
 			$translation_title = $post->post_title;
 			$base_slug = $post->post_name ? $post->post_name : sanitize_title( $post->post_title );
-			$base_slug = preg_replace( '/^(it|en)[-_]/i', '', $base_slug );
-			$temp_slug = $base_slug;
+			$base_slug = preg_replace( '/^(it|en|de|fr|es)[-_]/i', '', $base_slug );
+			// Add language prefix to avoid slug conflicts with source post
+			$temp_slug = $target_lang . '-' . $base_slug;
 
 			// Create placeholder content
 			$placeholder_content = '';
