@@ -12,11 +12,11 @@ namespace FP\Multilanguage\Frontend\Routing;
 
 use FP\Multilanguage\Core\ContainerAwareTrait;
 use WP_Post;
-use FP\Multilanguage\Frontend\Routing\RewriteRules;
-use FP\Multilanguage\Frontend\Routing\QueryFilter;
-use FP\Multilanguage\Frontend\Routing\PostResolver;
-use FP\Multilanguage\Frontend\Routing\RequestHandler;
-use FP\Multilanguage\Frontend\Routing\AdjacentPostFilter;
+use FP\Multilanguage\Routing\RewriteRules;
+use FP\Multilanguage\Routing\QueryFilter;
+use FP\Multilanguage\Routing\PostResolver;
+use FP\Multilanguage\Routing\RequestHandler;
+use FP\Multilanguage\Routing\AdjacentPostFilter;
 use FP\Multilanguage\Admin\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {

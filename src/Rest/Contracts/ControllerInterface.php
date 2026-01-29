@@ -8,7 +8,7 @@
  * @since 1.0.0
  */
 
-namespace FP\Multilanguage\REST\Contracts;
+namespace FP\Multilanguage\Rest\Contracts;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

@@ -7,7 +7,7 @@
  * @link https://francescopasseri.com
  */
 
-namespace FP\Multilanguage\Frontend\Routing;
+namespace FP\Multilanguage\Routing;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
