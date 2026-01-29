@@ -4,7 +4,6 @@
 *.zip
 
 # Dependencies
-/vendor/
 /node_modules/
 
 # Environment
