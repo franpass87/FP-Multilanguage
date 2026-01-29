@@ -314,8 +314,6 @@ class MetaboxAssets {
                         }
                     });
                 }
-                
-                doTranslate(1);
             });
         });
         ";
