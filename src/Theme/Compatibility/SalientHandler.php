@@ -46,18 +46,16 @@ class SalientHandler {
 	}
 
 	/**
-	 * Output a switcher placeholder for Salient when no menu is assigned.
+	 * Output a switcher placeholder for Salient.
+	 * Always outputs the placeholder as a fallback for JS to use.
 	 *
 	 * @since 0.9.0
+	 * @since 0.9.3 Always output placeholder as fallback for empty menus.
 	 *
 	 * @return void
 	 */
 	public function render_salient_switcher_seed() {
 		if ( is_admin() ) {
-			return;
-		}
-
-		if ( has_nav_menu( $this->location_mapper->get_primary_menu_location() ) ) {
 			return;
 		}
 
@@ -67,6 +65,7 @@ class SalientHandler {
 			return;
 		}
 
+		// Always output the placeholder - JS will use it as fallback if menu is empty
 		echo '<div class="fpml-salient-switcher-placeholder" data-fpml-switcher-placeholder="true" style="display:none;" aria-hidden="true">' . $switcher . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
