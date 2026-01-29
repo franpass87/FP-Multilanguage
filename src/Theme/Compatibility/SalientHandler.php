@@ -35,6 +35,13 @@ class SalientHandler {
 	protected $markup_generator;
 
 	/**
+	 * Flag to track if placeholder was already rendered.
+	 *
+	 * @var bool
+	 */
+	protected $placeholder_rendered = false;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MenuLocationMapper      $location_mapper  Menu location mapper instance.
@@ -51,6 +58,7 @@ class SalientHandler {
 	 *
 	 * @since 0.9.0
 	 * @since 0.9.3 Always output placeholder as fallback for empty menus.
+	 * @since 0.9.4 Added flag to prevent duplicate rendering.
 	 *
 	 * @return void
 	 */
@@ -59,11 +67,18 @@ class SalientHandler {
 			return;
 		}
 
+		// Prevent duplicate rendering
+		if ( $this->placeholder_rendered ) {
+			return;
+		}
+
 		$switcher = $this->markup_generator->get_switcher_markup();
 
 		if ( empty( $switcher ) ) {
 			return;
 		}
+
+		$this->placeholder_rendered = true;
 
 		// Always output the placeholder - JS will use it as fallback if menu is empty
 		echo '<div class="fpml-salient-switcher-placeholder" data-fpml-switcher-placeholder="true" style="display:none;" aria-hidden="true">' . $switcher . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

@@ -174,7 +174,10 @@ class ThemeCompatibility {
 
         if ( $this->detector->is_salient() ) {
             add_action( 'wp_enqueue_scripts', array( $this->salient_handler, 'enqueue_salient_switcher_script' ), 20 );
+            // Try nectar hook first, fallback to wp_footer if needed
             add_action( 'nectar_hook_before_menu_items', array( $this->salient_handler, 'render_salient_switcher_seed' ), 5 );
+            // Always add to wp_footer as fallback for Salient themes that don't fire the nectar hook
+            add_action( 'wp_footer', array( $this->salient_handler, 'render_salient_switcher_seed' ), 5 );
         }
 
         // Add theme-specific CSS
