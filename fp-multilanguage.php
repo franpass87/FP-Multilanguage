@@ -3,7 +3,7 @@
  * Plugin Name: FP Multilanguage
  * Plugin URI: https://francescopasseri.com
  * Description: Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
- * Version: 0.9.9
+ * Version: 0.9.10
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * Text Domain: fp-multilanguage
@@ -114,7 +114,7 @@ if ( version_compare( PHP_VERSION, '8.0.0', '<' ) ) {
 	return;
 }
 
-define( 'FPML_PLUGIN_VERSION', '0.9.9' );
+define( 'FPML_PLUGIN_VERSION', '0.9.10' );
 define( 'FPML_PLUGIN_FILE', __FILE__ );
 define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -277,6 +277,23 @@ function fpml_ensure_translation_metabox() {
 	}
 }
 add_action( 'admin_init', 'fpml_ensure_translation_metabox', 5 );
+
+/**
+ * Ensure REST API routes are registered.
+ *
+ * This is a fallback to guarantee REST endpoints are always available.
+ *
+ * @since 0.9.10
+ * @return void
+ */
+function fpml_ensure_rest_api() {
+	// Check if RestAdmin exists and initialize if not already done
+	if ( class_exists( '\FP\Multilanguage\Rest\RestAdmin' ) ) {
+		// This call is idempotent - singleton ensures only one instance
+		\FP\Multilanguage\Rest\RestAdmin::instance();
+	}
+}
+add_action( 'plugins_loaded', 'fpml_ensure_rest_api', 15 );
 
 /**
  * Initialize theme compatibility for language switcher integration.
