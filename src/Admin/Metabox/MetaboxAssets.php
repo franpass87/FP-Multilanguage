@@ -50,8 +50,8 @@ class MetaboxAssets {
         jQuery(document).ready(function($) {
             // Salva automaticamente il provider di traduzione quando viene cambiato
             $('#fpml_translation_provider').on('change', function() {
-                const \\$select = $(this);
-                const provider = \\$select.val();
+                const \$select = $(this);
+                const provider = \$select.val();
                 const postId = $('#post_ID').val();
                 
                 if (!postId) {
@@ -71,10 +71,10 @@ class MetaboxAssets {
                     success: function(response) {
                         if (response.success) {
                             // Mostra un messaggio temporaneo
-                            const \\$notice = $('<div class=\"notice notice-success is-dismissible inline\" style=\"margin: 10px 0;\"><p>' + response.data.message + '</p></div>');
-                            \\$select.closest('.fpml-provider-selector').after(\\$notice);
+                            const \$notice = $('<div class=\"notice notice-success is-dismissible inline\" style=\"margin: 10px 0;\"><p>' + response.data.message + '</p></div>');
+                            \$select.closest('.fpml-provider-selector').after(\$notice);
                             setTimeout(function() {
-                                \\$notice.fadeOut(function() { $(this).remove(); });
+                                \$notice.fadeOut(function() { $(this).remove(); });
                             }, 3000);
                         }
                     }
