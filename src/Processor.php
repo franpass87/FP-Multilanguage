@@ -1204,15 +1204,19 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 			return 'skipped';
                         }
 
+                        $old_meta = get_post_meta( $target_post->ID, $meta_key, true );
                         update_post_meta( $target_post->ID, $meta_key, $translated_value );
 
 		// Save version for rollback
-		if ( class_exists( '\FP\Multilanguage\Versioning\TranslationVersioning' ) ) {
-			\FP\Multilanguage\Versioning\TranslationVersioning::save_version(
+		if ( class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
+			$version_provider = $this->translator instanceof \FPML_TranslatorInterface ? $this->translator->get_slug() : '';
+			\FP\Multilanguage\Core\TranslationVersioning::instance()->save_version(
+				'post',
 				$target_post->ID,
 				$field,
-				$translated_value,
-				$provider
+				(string) $old_meta,
+				(string) $translated_value,
+				$version_provider
 			);
 		}
 
@@ -1654,6 +1658,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 
                 switch ( $field ) {
                         case 'post_title':
+                                $old_title = $post->post_title;
                                 $this->safe_update_post(
                                         array(
                                                 'ID'         => $post->ID,
@@ -1661,16 +1666,19 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         )
                                 );
                                 // Save version for rollback
-                                if ( class_exists( '\FP\Multilanguage\Versioning\TranslationVersioning' ) ) {
-                                        \FP\Multilanguage\Versioning\TranslationVersioning::save_version(
+                                if ( class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
+                                        \FP\Multilanguage\Core\TranslationVersioning::instance()->save_version(
+                                                'post',
                                                 $post->ID,
                                                 'post_title',
+                                                (string) $old_title,
                                                 sanitize_text_field( $new_value ),
                                                 $provider
                                         );
                                 }
                                 return;
                         case 'post_excerpt':
+                                $old_excerpt = $post->post_excerpt;
                                 $this->safe_update_post(
                                         array(
                                                 'ID'           => $post->ID,
@@ -1678,10 +1686,12 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         )
                                 );
                                 // Save version for rollback
-                                if ( class_exists( '\FP\Multilanguage\Versioning\TranslationVersioning' ) ) {
-                                        \FP\Multilanguage\Versioning\TranslationVersioning::save_version(
+                                if ( class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
+                                        \FP\Multilanguage\Core\TranslationVersioning::instance()->save_version(
+                                                'post',
                                                 $post->ID,
                                                 'post_excerpt',
+                                                (string) $old_excerpt,
                                                 wp_kses_post( $new_value ),
                                                 $provider
                                         );
@@ -1701,7 +1711,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         $new_value
                                 );
                                 $new_value = trim( $new_value );
-                                
+                                $old_content = $post->post_content;
                                 $this->safe_update_post(
                                         array(
                                                 'ID'           => $post->ID,
@@ -1709,10 +1719,12 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         )
                                 );
                                 // Save version for rollback
-                                if ( class_exists( '\FP\Multilanguage\Versioning\TranslationVersioning' ) ) {
-                                        \FP\Multilanguage\Versioning\TranslationVersioning::save_version(
+                                if ( class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
+                                        \FP\Multilanguage\Core\TranslationVersioning::instance()->save_version(
+                                                'post',
                                                 $post->ID,
                                                 'post_content',
+                                                (string) $old_content,
                                                 wp_kses_post( $new_value ),
                                                 $provider
                                         );
