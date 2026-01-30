@@ -32,9 +32,28 @@ class PromptBuilder {
 		$prompt .= ' Maintain neutral, clear language suitable for a broad audience.';
 		$prompt .= ' IMPORTANT: Preserve brand names, company names, product names, and technical terms exactly as they appear. Do not translate proper nouns, brand names, or technical terminology unless they are clearly meant to be translated.';
 		
-		// Shortcode attribute handling
-		$prompt .= ' SHORTCODE ATTRIBUTES: Translate text content in these attributes: text, heading, subheading, title, subtitle, caption, h2, h4, message, content, quote, description, button_text, link_text, tab_title, accordion_title.';
-		$prompt .= ' Do NOT translate technical attributes like: css, css_class, el_class, el_id, link, url, image, icon, color, font_size, font_family, animation, delay, offset, width, height, id, name, type, style.';
+		// Shortcode attribute handling - comprehensive list for WPBakery and Salient/Nectar
+		$prompt .= ' SHORTCODE ATTRIBUTES TO TRANSLATE: ';
+		$prompt .= 'text, content, message, quote, excerpt, '; // Base text
+		$prompt .= 'title, heading, subheading, subtitle, h2, h4, h6, main_heading, sub_heading, '; // Headings
+		$prompt .= 'label, values, placeholder, alt, add_caption, '; // Labels
+		$prompt .= 'button_text, link_text, btn_title, cta_text, read_more_text, '; // Buttons
+		$prompt .= 'tab_title, toggle_title, section_title, accordion_title, panel_title, '; // Tabs/Accordions
+		$prompt .= 'caption, image_caption, video_caption, '; // Captions
+		$prompt .= 'author, job_position, job_title, role, testimonial, testimonial_name, '; // People (name excluded - often ID)
+		$prompt .= 'price_label, price_unit, currency, features, feature_text, '; // Pricing
+		$prompt .= 'milestone_content, counter_title, stat_title, '; // Stats
+		$prompt .= 'description, short_description, summary, intro_text, tagline, '; // Descriptions
+		$prompt .= 'field_label, submit_text, success_message, error_message, '; // Forms
+		$prompt .= 'tooltip, badge_text, ribbon_text, notice_text, before, after.'; // Others
+		$prompt .= ' DO NOT TRANSLATE these technical attributes: ';
+		$prompt .= 'css, css_class, el_class, el_id, extra_class, custom_css, '; // CSS
+		$prompt .= 'link, url, href, image, icon, video_url, source, '; // URLs
+		$prompt .= 'width, height, font_size, line_height, padding, margin, '; // Dimensions
+		$prompt .= 'color, bg_color, text_color, border_color, accent_color, '; // Colors
+		$prompt .= 'animation, delay, offset, duration, speed, '; // Animations
+		$prompt .= 'columns, gap, alignment, position, type, style, '; // Layout
+		$prompt .= 'id, name, post_id, category, tag, taxonomy.'; // IDs/References
 
 		if ( $marketing ) {
 			$prompt .= ' When possible, adopt a slightly promotional tone while remaining natural and trustworthy.';

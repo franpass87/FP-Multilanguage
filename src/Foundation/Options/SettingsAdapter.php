@@ -143,7 +143,7 @@ class SettingsAdapter {
 			'queue_retention_days'    => 14,
 			'meta_whitelist'          => '_thumbnail_id,seo_title,seo_desc,_wp_attachment_image_alt,_product_attributes',
 			'exclude_regex'           => '',
-			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section',
+			'excluded_shortcodes'     => 'vc_row,vc_column,vc_section,vc_row_inner,vc_column_inner,vc_tabs,vc_tab,vc_accordion,vc_accordion_tab,vc_tta_tabs,vc_tta_accordion,vc_tta_section,full_width_section,tabbed_section,tab,toggles,toggle',
 			'rate_openai'             => '0.00011',
 			'rate_google'             => '',
 			'remove_data'             => false,

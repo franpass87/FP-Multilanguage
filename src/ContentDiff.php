@@ -186,14 +186,53 @@ class ContentDiff {
                 $map = array();
 
                 // Structural shortcodes: only mask the tags, not the content inside
-                // These are WPBakery/Visual Composer container shortcodes
+                // These are container shortcodes from WPBakery and Salient/Nectar
                 $structural_shortcodes = array(
+                        // WPBakery row/column containers
                         'vc_row',
                         'vc_column',
                         'vc_section',
                         'vc_row_inner',
                         'vc_column_inner',
                         'vc_container',
+                        // WPBakery tabs/accordions (containers)
+                        'vc_tabs',
+                        'vc_tab',
+                        'vc_accordion',
+                        'vc_accordion_tab',
+                        'vc_tta_tabs',
+                        'vc_tta_accordion',
+                        'vc_tta_section',
+                        'vc_tta_tour',
+                        'vc_tta_pageable',
+                        // WPBakery grid containers
+                        'vc_basic_grid',
+                        'vc_media_grid',
+                        'vc_masonry_grid',
+                        'vc_masonry_media_grid',
+                        'vc_gitem',
+                        'vc_gitem_row',
+                        'vc_gitem_col',
+                        'vc_gitem_zone',
+                        'vc_gitem_zone_a',
+                        'vc_gitem_zone_b',
+                        'vc_gitem_zone_c',
+                        // Salient/Nectar containers
+                        'nectar_slider',
+                        'nectar_slide',
+                        'full_width_section',
+                        'tabbed_section',
+                        'tab',
+                        'toggles',
+                        'toggle',
+                        'carousel',
+                        'item',
+                        'pricing_table',
+                        'pricing_column',
+                        'clients',
+                        'client',
+                        'testimonial_slider',
+                        'testimonial',
                 );
 
                 // Helper function to generate unique placeholder
