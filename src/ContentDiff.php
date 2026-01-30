@@ -163,7 +163,13 @@ class ContentDiff {
         /**
          * Replace excluded shortcode instances with placeholders.
          *
+         * For structural shortcodes (WPBakery containers like vc_row, vc_column),
+         * only the opening and closing TAGS are masked, preserving internal content
+         * for translation. For other shortcodes, the entire shortcode including
+         * content is masked.
+         *
          * @since 0.2.1
+         * @since 0.9.14 Modified to preserve content inside structural shortcodes.
          *
          * @param string $content   Content to inspect.
          * @param array  $shortcodes Shortcode slugs to exclude.
@@ -177,38 +183,90 @@ class ContentDiff {
                         return array( $content, array() );
                 }
 
-                $map     = array();
-                $pattern = '/\[([a-zA-Z0-9_\-]+)([^\]]*)\](?:.*?\[\/\1\])?/s';
+                $map = array();
 
-                $masked = preg_replace_callback(
-                        $pattern,
-                        function( $matches ) use ( $shortcodes, &$map ) {
-                                $tag = strtolower( $matches[1] );
-
-                                if ( ! in_array( $tag, $shortcodes, true ) ) {
-                                        return $matches[0];
-                                }
-
-				$index       = count( $map );
-				$hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
-				$placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
-
-				$max_attempts = 1000;
-				$attempts     = 0;
-
-				while ( isset( $map[ $placeholder ] ) && $attempts < $max_attempts ) {
-					$index++;
-					$hash        = strtoupper( substr( md5( $matches[0] . '|' . $index ), 0, 12 ) );
-					$placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
-					$attempts++;
-				}
-
-                                $map[ $placeholder ] = $matches[0];
-
-                                return $placeholder;
-                        },
-                        $content
+                // Structural shortcodes: only mask the tags, not the content inside
+                // These are WPBakery/Visual Composer container shortcodes
+                $structural_shortcodes = array(
+                        'vc_row',
+                        'vc_column',
+                        'vc_section',
+                        'vc_row_inner',
+                        'vc_column_inner',
+                        'vc_container',
                 );
+
+                // Helper function to generate unique placeholder
+                $generate_placeholder = function( $original ) use ( &$map ) {
+                        $index       = count( $map );
+                        $hash        = strtoupper( substr( md5( $original . '|' . $index ), 0, 12 ) );
+                        $placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
+
+                        $max_attempts = 1000;
+                        $attempts     = 0;
+
+                        while ( isset( $map[ $placeholder ] ) && $attempts < $max_attempts ) {
+                                $index++;
+                                $hash        = strtoupper( substr( md5( $original . '|' . $index ), 0, 12 ) );
+                                $placeholder = self::SHORTCODE_PLACEHOLDER_PREFIX . $hash . '__';
+                                $attempts++;
+                        }
+
+                        $map[ $placeholder ] = $original;
+                        return $placeholder;
+                };
+
+                $masked = $content;
+
+                // PASS 1: For structural shortcodes, mask only opening and closing tags (not content)
+                foreach ( $shortcodes as $shortcode ) {
+                        if ( ! in_array( $shortcode, $structural_shortcodes, true ) ) {
+                                continue;
+                        }
+
+                        // Mask opening tags: [vc_row ...] or [vc_row]
+                        $opening_pattern = '/\[' . preg_quote( $shortcode, '/' ) . '(?:\s[^\]]*)?(?<!\/)?\]/i';
+                        $masked = preg_replace_callback(
+                                $opening_pattern,
+                                function( $matches ) use ( $generate_placeholder ) {
+                                        return $generate_placeholder( $matches[0] );
+                                },
+                                $masked
+                        );
+
+                        // Mask closing tags: [/vc_row]
+                        $closing_pattern = '/\[\/' . preg_quote( $shortcode, '/' ) . '\]/i';
+                        $masked = preg_replace_callback(
+                                $closing_pattern,
+                                function( $matches ) use ( $generate_placeholder ) {
+                                        return $generate_placeholder( $matches[0] );
+                                },
+                                $masked
+                        );
+                }
+
+                // PASS 2: For non-structural shortcodes, mask the entire shortcode including content
+                $non_structural = array_diff( $shortcodes, $structural_shortcodes );
+
+                if ( ! empty( $non_structural ) ) {
+                        // Build pattern for non-structural shortcodes
+                        $escaped_tags = array_map( function( $tag ) {
+                                return preg_quote( $tag, '/' );
+                        }, $non_structural );
+
+                        $tags_pattern = implode( '|', $escaped_tags );
+
+                        // Match entire shortcode with content: [tag ...]content[/tag] or self-closing [tag .../]
+                        $full_pattern = '/\[(' . $tags_pattern . ')(?:\s[^\]]*)?(?:\/\]|\](?:.*?\[\/\1\])?)/si';
+
+                        $masked = preg_replace_callback(
+                                $full_pattern,
+                                function( $matches ) use ( $generate_placeholder ) {
+                                        return $generate_placeholder( $matches[0] );
+                                },
+                                $masked
+                        );
+                }
 
                 if ( null === $masked ) {
                         return array( $content, $map );
