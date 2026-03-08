@@ -68,11 +68,13 @@ class Container {
 	 * @return void
 	 */
 	public static function register( $name, $factory ) {
-		_doing_it_wrong( 
-			'FP\Multilanguage\Core\Container::register()', 
-			'Core\Container is deprecated. Use Kernel\Container::bind() instead.', 
-			'1.0.0' 
-		);
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			_doing_it_wrong(
+				'FP\Multilanguage\Core\Container::register()',
+				'Core\Container is deprecated. Use Kernel\Container::bind() instead.',
+				'1.0.0'
+			);
+		}
 		
 		// Try to register in Kernel container first
 		$kernel_container = self::getKernelContainer();
@@ -173,9 +175,16 @@ class Container {
 	 * @return void
 	 */
 	public static function clear( $name ) {
-		// Kernel container doesn't support clearing individual services
-		// Only clear from legacy cache
 		unset( self::$instances[ $name ] );
+		// Kernel container does not support clearing individual services.
+		// Log a notice in debug mode so callers are aware of the limitation.
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			_doing_it_wrong(
+				'FP\Multilanguage\Core\Container::clear()',
+				'Clearing a service from Core\Container does not affect the Kernel container. The service may still be cached there.',
+				'1.0.0'
+			);
+		}
 	}
 
 	/**

@@ -70,7 +70,7 @@ class SitemapCollector {
 		// Terms
 		$entries = array_merge( $entries, $this->collect_term_entries() );
 
-		return apply_filters( '\FPML_sitemap_entries', $entries );
+		return apply_filters( 'fpml_sitemap_entries', $entries );
 	}
 
 	/**

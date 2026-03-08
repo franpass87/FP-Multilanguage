@@ -90,8 +90,11 @@ class MetaManager {
 				$lang = $matches[1];
 				$this->cache->clear_translation_id_cache( $post_id, $lang );
 			} else {
-				// Legacy _fpml_pair_id - clear for 'en'
-				$this->cache->clear_translation_id_cache( $post_id, 'en' );
+				// Legacy _fpml_pair_id — clear for all enabled languages to be safe
+				$enabled = function_exists( 'fpml_get_enabled_languages' ) ? fpml_get_enabled_languages() : array( 'en' );
+				foreach ( $enabled as $enabled_lang ) {
+					$this->cache->clear_translation_id_cache( $post_id, $enabled_lang );
+				}
 			}
 		}
 	}

@@ -119,7 +119,7 @@ class QueueTableManager {
 
 		dbDelta( $sql );
 
-		update_option( '\FPML_queue_schema_version', self::SCHEMA_VERSION, false );
+		update_option( 'fpml_queue_schema_version', self::SCHEMA_VERSION, false );
 	}
 
 	/**
@@ -130,7 +130,7 @@ class QueueTableManager {
 	 * @return void
 	 */
 	public function maybe_upgrade(): void {
-		$stored_version = get_option( '\FPML_queue_schema_version', '' );
+		$stored_version = get_option( 'fpml_queue_schema_version', get_option( '\FPML_queue_schema_version', '' ) );
 
 		if ( version_compare( (string) $stored_version, self::SCHEMA_VERSION, '>=' ) ) {
 			return;

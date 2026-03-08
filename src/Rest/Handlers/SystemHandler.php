@@ -32,11 +32,11 @@ class SystemHandler {
 	 */
 	public function handle_health_check( \WP_REST_Request $request ): \WP_REST_Response { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$queue = fpml_get_queue();
-		$processor = \FPML_fpml_get_processor();
+		$processor = \fpml_get_processor();
 		$plugin = function_exists( 'fpml_get_plugin' ) ? fpml_get_plugin() : \FPML_Plugin::instance();
 
 		global $wpdb;
-		$table = $wpdb->prefix . '\FPML_queue';
+		$table = $wpdb->prefix . 'fpml_queue';
 
 		// Check database accessibility
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -52,7 +52,7 @@ class SystemHandler {
 
 		$health = array(
 			'status' => 'ok',
-			'version' => defined( '\FPML_PLUGIN_VERSION' ) ? \FPML_PLUGIN_VERSION : 'unknown',
+			'version' => defined( 'FPML_PLUGIN_VERSION' ) ? FPML_PLUGIN_VERSION : 'unknown',
 			'checks' => array(
 				'database' => array(
 					'accessible' => false !== $db_check,
@@ -101,7 +101,7 @@ class SystemHandler {
 			'total_posts'        => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = 'publish'" ),
 			'translated_posts'   => (int) $wpdb->get_var( "SELECT COUNT(DISTINCT post_id) FROM {$wpdb->postmeta} WHERE meta_key = '_fpml_pair_id'" ),
 			'pending_translations' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id WHERE pm.meta_key = '_fpml_translation_status' AND pm.meta_value = 'pending'" ),
-			'queue_size'         => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}FPML_queue WHERE status = 'pending'" ),
+			'queue_size'         => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}fpml_queue WHERE state = 'pending'" ),
 		);
 
 		return rest_ensure_response( $stats );

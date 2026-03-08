@@ -14,6 +14,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Resolve a service from the DI container with an optional singleton fallback.
+ *
+ * @since 1.0.0
+ *
+ * @param string        $service_id  Container service identifier.
+ * @param callable|null $fallback    Callable that returns the fallback instance.
+ *
+ * @return mixed|null Service instance or null if unavailable.
+ */
+function fpml_resolve_service( string $service_id, ?callable $fallback = null ) {
+	$container = fpml_get_container();
+	if ( $container && $container->has( $service_id ) ) {
+		try {
+			return $container->get( $service_id );
+		} catch ( \Exception $e ) {
+			// Fall through to fallback
+		}
+	}
+	return $fallback ? $fallback() : null;
+}
+
+/**
  * Safely update a post without triggering problematic hooks.
  * Can be called from any class.
  *
@@ -220,7 +242,22 @@ function fpml_safe_update_term( $term_id, $taxonomy, $args = array() ) {
  */
 function fpml_get_current_language() {
 	if ( ! class_exists( '\FP\Multilanguage\Language' ) ) {
-		return 'it';
+		// Fallback: try to detect from REQUEST_URI before assuming source language
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		if ( $request_uri ) {
+			$lm = fpml_get_language_manager();
+			if ( $lm ) {
+				foreach ( $lm->get_enabled_languages() as $lc ) {
+					$info = $lm->get_language_info( $lc );
+					$slug = $info ? trim( $info['slug'], '/' ) : $lc;
+					if ( preg_match( '#^/' . preg_quote( $slug, '#' ) . '(/|$)#', $request_uri ) ) {
+						return $lc;
+					}
+				}
+			}
+		}
+		// Last resort: return the configured source language (never hardcode 'it').
+	return function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : '';
 	}
 	return \FP\Multilanguage\Language::instance()->get_current_language();
 }
@@ -235,7 +272,7 @@ function fpml_get_current_language() {
  * @return bool True if English, false if Italian.
  */
 function fpml_is_english() {
-	return ( 'en' === fpml_get_current_language() );
+	return fpml_is_target_language( fpml_get_current_language() );
 }
 
 /**
@@ -248,7 +285,7 @@ function fpml_is_english() {
  * @return bool True if Italian, false if English.
  */
 function fpml_is_italian() {
-	return ( 'it' === fpml_get_current_language() );
+	return ! fpml_is_target_language( fpml_get_current_language() );
 }
 
 /**
@@ -257,10 +294,13 @@ function fpml_is_italian() {
  * @since 0.10.0
  *
  * @param int    $post_id Source post ID.
- * @param string $target_lang Target language code. Default 'en'.
+ * @param string $target_lang Target language code. Defaults to the primary target language.
  * @return int|false Translation post ID, or false if not found.
  */
-function fpml_get_translation_id( $post_id, $target_lang = 'en' ) {
+function fpml_get_translation_id( $post_id, $target_lang = '' ) {
+	if ( '' === $target_lang ) {
+		$target_lang = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : '';
+	}
 	$manager = fpml_get_translation_manager();
 	if ( ! $manager ) {
 		return false;
@@ -294,7 +334,7 @@ function fpml_get_all_translations( $post_id ) {
 function fpml_get_enabled_languages() {
 	$manager = fpml_get_language_manager();
 	if ( ! $manager ) {
-		return array( 'en' );
+		return array();
 	}
 	return $manager->get_enabled_languages();
 }
@@ -313,6 +353,61 @@ function fpml_is_target_language( $lang ) {
 }
 
 /**
+ * Get the source (non-translated) language code for this site.
+ *
+ * @since 0.10.0
+ *
+ * @return string Source language code (e.g. 'it').
+ */
+function fpml_get_source_language() {
+	$language_manager = fpml_get_language_manager();
+	if ( $language_manager && method_exists( $language_manager, 'get_source_language' ) ) {
+		return (string) $language_manager->get_source_language();
+	}
+
+	// Fallback: read from settings
+	$settings = function_exists( 'fpml_resolve_service' ) ? fpml_resolve_service( 'options' ) : null;
+	if ( $settings && method_exists( $settings, 'get' ) ) {
+		$source = $settings->get( 'source_language', '' );
+		if ( ! empty( $source ) ) {
+			return (string) $source;
+		}
+	}
+
+	// Last resort: derive from WordPress locale
+	$locale = get_locale();
+	return strstr( $locale, '_', true ) ?: $locale;
+}
+
+/**
+ * Get the primary target language (first enabled non-source language).
+ *
+ * @since 1.0.0
+ *
+ * @return string Language code (e.g. 'en'), or empty string if none configured.
+ */
+function fpml_get_primary_target_language() {
+	$language_manager = fpml_get_language_manager();
+	if ( $language_manager ) {
+		$enabled = $language_manager->get_enabled_languages();
+		if ( ! empty( $enabled ) ) {
+			return (string) $enabled[0];
+		}
+	}
+
+	// Fallback: read from settings
+	$settings = fpml_get_settings();
+	if ( $settings && method_exists( $settings, 'get' ) ) {
+		$enabled = $settings->get( 'enabled_languages', array() );
+		if ( ! empty( $enabled ) ) {
+			return (string) $enabled[0];
+		}
+	}
+
+	return '';
+}
+
+/**
  * Check if a URL contains a target language path.
  *
  * @since 0.10.0
@@ -327,8 +422,7 @@ function fpml_url_contains_target_language( $url ) {
 	
 	$language_manager = fpml_get_language_manager();
 	if ( ! $language_manager ) {
-		// Fallback: check for /en/ if LanguageManager not available
-		return false !== strpos( $url, '/en/' );
+		return false;
 	}
 	
 	$enabled_languages = $language_manager->get_enabled_languages();
@@ -360,15 +454,15 @@ function fpml_get_language_slug( $lang_code = null ) {
 	
 	$language_manager = fpml_get_language_manager();
 	if ( ! $language_manager ) {
-		return 'en'; // Fallback
+		return $lang_code;
 	}
-	
+
 	$lang_info = $language_manager->get_language_info( $lang_code );
 	if ( $lang_info && ! empty( $lang_info['slug'] ) ) {
 		return trim( $lang_info['slug'], '/' );
 	}
-	
-	return 'en'; // Fallback
+
+	return $lang_code;
 }
 
 
@@ -913,17 +1007,3 @@ function fpml_get_export_import() {
 	return null;
 }
 
-/**
- * Alias for backward compatibility.
- * Use fpml_get_processor() instead.
- *
- * @since 1.0.0
- * @deprecated Use fpml_get_processor() instead.
- *
- * @return \FP\Multilanguage\Processor|null Processor instance or null if not available.
- */
-if ( ! function_exists( 'FPML_fpml_get_processor' ) ) {
-	function FPML_fpml_get_processor() {
-		return fpml_get_processor();
-	}
-}

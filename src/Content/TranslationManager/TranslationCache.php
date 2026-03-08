@@ -53,9 +53,11 @@ class TranslationCache {
 
 		// Validate target language
 		$language_manager = fpml_get_language_manager();
-		$available_languages = array_keys( $language_manager->get_all_languages() );
-		if ( ! in_array( $target_lang, $available_languages, true ) ) {
-			return false;
+		if ( $language_manager ) {
+			$available_languages = array_keys( $language_manager->get_all_languages() );
+			if ( ! in_array( $target_lang, $available_languages, true ) ) {
+				return false;
+			}
 		}
 
 		// Cache key for this lookup
@@ -115,7 +117,7 @@ class TranslationCache {
 		}
 
 		$language_manager = fpml_get_language_manager();
-		$available_languages = array_keys( $language_manager->get_all_languages() );
+		$available_languages = $language_manager ? array_keys( $language_manager->get_all_languages() ) : array();
 		$translations = array();
 
 		foreach ( $available_languages as $lang ) {

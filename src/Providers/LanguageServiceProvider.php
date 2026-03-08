@@ -42,12 +42,11 @@ class LanguageServiceProvider implements ServiceProvider {
 
 		// Language Manager
 		$container->bind( 'language.manager', function( Container $c ) {
-			if ( class_exists( '\FP\Multilanguage\MultiLanguage\LanguageManager' ) ) {
-				return fpml_get_language_manager();
+			if ( ! function_exists( 'fpml_get_language_manager' ) ) {
+				return null;
 			}
-			// Fallback to old namespace
-			if ( class_exists( '\FP\Multilanguage\LanguageManager' ) ) {
-				return \FP\Multilanguage\fpml_get_language_manager();
+			if ( class_exists( '\FP\Multilanguage\MultiLanguage\LanguageManager' ) || class_exists( '\FP\Multilanguage\LanguageManager' ) ) {
+				return fpml_get_language_manager();
 			}
 			return null;
 		}, true );

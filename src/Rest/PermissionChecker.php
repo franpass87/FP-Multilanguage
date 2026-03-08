@@ -39,7 +39,7 @@ class PermissionChecker {
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
-				'\FPML_rest_forbidden',
+				'fpml_rest_forbidden',
 				__( 'Permessi insufficienti.', 'fp-multilanguage' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
@@ -53,7 +53,7 @@ class PermissionChecker {
 
 		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return new \WP_Error(
-				'\FPML_rest_nonce_invalid',
+				'fpml_rest_nonce_invalid',
 				__( 'Nonce non valido.', 'fp-multilanguage' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
@@ -75,7 +75,7 @@ class PermissionChecker {
 	public function check_admin_permissions( \WP_REST_Request $request ): bool|\WP_Error { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
-				'\FPML_rest_forbidden',
+				'fpml_rest_forbidden',
 				__( 'Permessi insufficienti.', 'fp-multilanguage' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
@@ -99,7 +99,7 @@ class PermissionChecker {
 		// Do NOT require nonce validation since this endpoint is used to refresh nonces
 		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
-				'\FPML_rest_forbidden',
+				'fpml_rest_forbidden',
 				__( 'Permessi insufficienti.', 'fp-multilanguage' ),
 				array( 'status' => rest_authorization_required_code() )
 			);

@@ -120,19 +120,22 @@ class SitemapManager {
 			return;
 		}
 
-		if ( ! $this->settings->get( 'sitemap_en', true ) ) {
+		if ( ! $this->settings->get( 'sitemap_translations', true ) ) {
 			return;
 		}
 
-		$requested = get_query_var( '\FPML_sitemap' );
+		$requested = get_query_var( 'fpml_sitemap' );
 
-		if ( empty( $requested ) && isset( $_GET['\FPML_sitemap'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$requested = sanitize_key( wp_unslash( $_GET['\FPML_sitemap'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( empty( $requested ) && isset( $_GET['fpml_sitemap'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$requested = sanitize_key( wp_unslash( $_GET['fpml_sitemap'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		} else {
 			$requested = sanitize_key( (string) $requested );
 		}
 
-		if ( 'en' !== $requested ) {
+		// Accetta qualsiasi lingua target abilitata.
+		$lm_sitemap           = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+		$enabled_target_langs = $lm_sitemap ? $lm_sitemap->get_enabled_languages() : ( function_exists( 'fpml_get_enabled_languages' ) ? fpml_get_enabled_languages() : array() );
+		if ( empty( $requested ) || ! in_array( $requested, $enabled_target_langs, true ) ) {
 			return;
 		}
 
@@ -159,11 +162,19 @@ class SitemapManager {
 	 * @return string
 	 */
 	protected function get_sitemap_url(): string {
-		if ( ! $this->settings->get( 'sitemap_en', true ) ) {
+		if ( ! $this->settings->get( 'sitemap_translations', true ) ) {
 			return '';
 		}
 
-		return home_url( '/sitemap-en.xml' );
+		// Usa la prima lingua target abilitata per il nome del file sitemap.
+		$lm_url               = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+		$enabled_target_langs = $lm_url ? $lm_url->get_enabled_languages() : ( function_exists( 'fpml_get_enabled_languages' ) ? fpml_get_enabled_languages() : array() );
+		if ( empty( $enabled_target_langs ) ) {
+			return '';
+		}
+		$first_lang = $enabled_target_langs[0];
+
+		return home_url( '/sitemap-' . $first_lang . '.xml' );
 	}
 
 	/**
@@ -192,5 +203,62 @@ class SitemapManager {
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Inject English sitemap entry into Rank Math sitemap index.
+	 *
+	 * @since 0.10.0
+	 *
+	 * @param string $entries Existing sitemap index entries XML.
+	 * @return string
+	 */
+	public function inject_rankmath_sitemap_entry( string $entries ): string {
+		$url = $this->get_sitemap_url();
+
+		if ( '' === $url ) {
+			return $entries;
+		}
+
+		$lastmod = $this->collector->get_sitemap_lastmod_timestamp();
+		$entry   = "\n\t<sitemap>\n\t\t<loc>" . esc_url( $url ) . "</loc>\n\t\t<lastmod>" . esc_html( gmdate( 'c', $lastmod ) ) . "</lastmod>\n\t</sitemap>";
+
+		return $entries . $entry;
+	}
+
+	/**
+	 * Inject English sitemap entry into All in One SEO sitemap indexes.
+	 *
+	 * @since 0.10.0
+	 *
+	 * @param array $indexes Existing sitemap index entries.
+	 * @return array
+	 */
+	public function inject_aioseo_sitemap_entry( $indexes ): array {
+		$url = $this->get_sitemap_url();
+
+		if ( '' === $url ) {
+			return (array) $indexes;
+		}
+
+		$indexes   = (array) $indexes;
+		$lastmod   = $this->collector->get_sitemap_lastmod_timestamp();
+		$indexes[] = array(
+			'loc'     => $url,
+			'lastmod' => gmdate( 'c', $lastmod ),
+		);
+
+		return $indexes;
+	}
+
+	/**
+	 * Invalidate the cached sitemap.
+	 *
+	 * @since 0.10.0
+	 *
+	 * @return void
+	 */
+	public function invalidate_sitemap_cache(): void {
+		delete_transient( $this->cache->get_cache_key() );
 	}
 }

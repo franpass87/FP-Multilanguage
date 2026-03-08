@@ -58,12 +58,12 @@ class RewriteRules {
         $enabled_languages = $language_manager->get_enabled_languages();
         $available_languages = $language_manager->get_all_languages();
 
-        add_rewrite_tag( '%\FPML_path%', '(.+)' );
+        add_rewrite_tag( '%fpml_path%', '(.+)' );
 
-        if ( $this->settings->get( 'sitemap_en', true ) ) {
+        if ( $this->settings->get( 'sitemap_translations', true ) ) {
             foreach ( $enabled_languages as $lang ) {
                 if ( isset( $available_languages[ $lang ] ) ) {
-                    add_rewrite_rule( '^sitemap-' . $lang . '\.xml$', 'index.php?\FPML_sitemap=' . $lang, 'top' );
+                    add_rewrite_rule( '^sitemap-' . $lang . '\.xml$', 'index.php?fpml_sitemap=' . $lang, 'top' );
                 }
             }
         }
@@ -79,8 +79,8 @@ class RewriteRules {
             }
             $lang_slug = trim( $lang_info['slug'], '/' );
 
-            add_rewrite_rule( '^' . $lang_slug . '/?$', 'index.php?\FPML_lang=' . $lang, 'top' );
-            add_rewrite_rule( '^' . $lang_slug . '/(.+)/?$', 'index.php?\FPML_lang=' . $lang . '&\FPML_path=$matches[1]', 'top' );
+            add_rewrite_rule( '^' . $lang_slug . '/?$', 'index.php?fpml_lang=' . $lang, 'top' );
+            add_rewrite_rule( '^' . $lang_slug . '/(.+)/?$', 'index.php?fpml_lang=' . $lang . '&fpml_path=$matches[1]', 'top' );
         }
     }
 
@@ -92,11 +92,9 @@ class RewriteRules {
      * @return array<string>
      */
     public function register_query_vars( array $vars ): array {
-        $vars[] = '\FPML_lang';
-        $vars[] = '\FPML_path';
         $vars[] = 'fpml_lang';
         $vars[] = 'fpml_path';
-        $vars[] = '\FPML_sitemap';
+        $vars[] = 'fpml_sitemap';
 
         return $vars;
     }

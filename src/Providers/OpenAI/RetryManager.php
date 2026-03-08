@@ -28,8 +28,16 @@ class RetryManager {
 	 * @return void
 	 */
 	public function backoff( int $attempt ): void {
-		$delay = min( 30, pow( 2, $attempt ) );
-		usleep( $delay * 1000000 );
+		$attempt = max( 1, absint( $attempt ) );
+		$delay   = min( pow( 2, $attempt - 1 ), 30 );
+		$jitter  = function_exists( 'wp_rand' ) ? wp_rand( 0, 1000 ) / 1000 : mt_rand( 0, 1000 ) / 1000;
+		$delay  += $jitter;
+
+		if ( function_exists( 'wp_sleep' ) ) {
+			wp_sleep( $delay );
+		} else {
+			usleep( (int) ( $delay * 1000000 ) );
+		}
 	}
 
 	/**

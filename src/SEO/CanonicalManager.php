@@ -62,8 +62,9 @@ class CanonicalManager {
      */
     public function get_canonical_url() {
         if ( is_front_page() || is_home() ) {
-            if ( \FPML_Language::TARGET === $this->language->get_current_language() ) {
-                return $this->language->get_url_for_language( \FPML_Language::TARGET );
+            $current_lang = $this->language->get_current_language();
+            if ( function_exists( 'fpml_is_target_language' ) && fpml_is_target_language( $current_lang ) ) {
+                return $this->language->get_url_for_language( $current_lang );
             }
 
             return home_url( '/' );

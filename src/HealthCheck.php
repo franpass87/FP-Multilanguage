@@ -155,8 +155,8 @@ class HealthCheck {
 	protected function __construct() {
 		$container = $this->getContainer();
 		$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : fpml_get_queue();
-		$this->processor = \FPML_fpml_get_processor();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+		$this->processor = \fpml_get_processor();
+		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
 
 		// Initialize modules

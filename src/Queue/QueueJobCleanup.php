@@ -74,7 +74,7 @@ class QueueJobCleanup {
 		 * @param int    $days       Retention window in days.
 		 * @param string $column     Date column used for comparison.
 		 */
-		$batch_size = (int) apply_filters( '\FPML_queue_cleanup_batch_size', 500, $states, $days, $column );
+		$batch_size = (int) apply_filters( 'fpml_queue_cleanup_batch_size', 500, $states, $days, $column );
 
 		$batch_size = max( 1, $batch_size );
 		$total      = 0;
@@ -94,7 +94,7 @@ class QueueJobCleanup {
 				$error = $wpdb->last_error ? $wpdb->last_error : __( 'Errore database sconosciuto.', 'fp-multilanguage' );
 
 				$container = $this->getContainer();
-				$logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : ( class_exists( '\FPML_Logger' ) ? \FPML_fpml_get_logger() : null );
+				$logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : ( class_exists( '\FPML_Logger' ) ? \fpml_get_logger() : null );
 				if ( $logger ) {
 					$logger->log(
 						'error',
@@ -110,8 +110,8 @@ class QueueJobCleanup {
 					\FP\Multilanguage\Logger::error( 'Queue cleanup failed', array( 'error' => $error ) );
 				}
 
-				return new \WP_Error(
-					'\FPML_queue_cleanup_failed',
+			return new \WP_Error(
+				'fpml_queue_cleanup_failed',
 					__( 'Impossibile completare la pulizia della coda.', 'fp-multilanguage' ),
 					array(
 						'states' => $states,
@@ -135,7 +135,7 @@ class QueueJobCleanup {
 		 * @param int    $total  Total deleted rows.
 		 * @param string $column Date column used for comparison.
 		 */
-		do_action( '\FPML_queue_after_cleanup', $states, $days, $total, $column );
+		do_action( 'fpml_queue_after_cleanup', $states, $days, $total, $column );
 
 		return $total;
 	}
@@ -177,8 +177,8 @@ class QueueJobCleanup {
 		$count = $wpdb->get_var( $sql );
 
 		if ( null === $count && $wpdb->last_error ) {
-			return new \WP_Error(
-				'\FPML_queue_count_failed',
+		return new \WP_Error(
+			'fpml_queue_count_failed',
 				__( 'Impossibile contare i job per la pulizia della coda.', 'fp-multilanguage' ),
 				array(
 					'states' => $states,

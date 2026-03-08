@@ -81,14 +81,21 @@ class RobotsManager {
     }
 
     /**
-     * Determine whether EN pages should be noindex.
+     * Determine whether target-language pages should be noindex.
      *
      * @since 0.10.0
      *
      * @return bool
      */
     public function should_noindex() {
-        return (bool) ( $this->settings->get( 'noindex_en', false ) && \FPML_Language::TARGET === $this->language->get_current_language() );
+        $current_lang = $this->language->get_current_language();
+        $is_target    = function_exists( 'fpml_is_target_language' ) ? fpml_is_target_language( $current_lang ) : false;
+        $enabled = $this->settings->get( 'noindex_translations', false );
+        // Backward compat: fall back to legacy keys if the canonical key is missing.
+        if ( false === $enabled ) {
+            $enabled = $this->settings->get( 'noindex_en', false );
+        }
+        return (bool) ( $enabled && $is_target );
     }
 }
 

@@ -80,7 +80,7 @@ class ProviderFallback {
 	protected function __construct() {
 		$container = $this->getContainer();
 		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 
 	// Hook per intercettare errori del provider.
 	add_filter( '\FPML_translate_error', array( $this, 'handle_translation_error' ), 10, 4 );

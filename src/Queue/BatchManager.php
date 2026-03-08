@@ -24,7 +24,7 @@ class BatchManager {
      *
      * @var string
      */
-    protected $lock_key = '\FPML_processor_lock';
+    protected $lock_key = 'fpml_processor_lock';
 
     /**
      * Lock time to live in seconds.
@@ -61,6 +61,21 @@ class BatchManager {
      */
     public function __construct( $settings ) {
         $this->settings = $settings;
+        // Register the cleanup hook so scheduled events actually execute.
+        add_action( 'fpml_cleanup_lock', array( $this, 'cleanup_lock_option' ) );
+    }
+
+    /**
+     * Delete a lock option created by acquire_lock().
+     * Hooked to the `fpml_cleanup_lock` WP-Cron event.
+     *
+     * @since 0.10.0
+     *
+     * @param string $option_key The option key to delete.
+     * @return void
+     */
+    public function cleanup_lock_option( string $option_key ): void {
+        delete_option( $option_key );
     }
 
     /**
@@ -71,13 +86,23 @@ class BatchManager {
      * @return bool
      */
     public function acquire_lock() {
-        $existing = get_transient( $this->lock_key );
+        // Use add_option for atomic lock acquisition (INSERT IGNORE on MySQL).
+        // add_option returns false if the option already exists, true if inserted.
+        $option_key = 'fpml_lock_' . $this->lock_key;
+        $acquired   = add_option( $option_key, time(), '', 'no' );
 
-        if ( false !== $existing ) {
-            return false;
+        if ( ! $acquired ) {
+            // Check if the existing lock has expired.
+            $existing = get_option( $option_key );
+            if ( false !== $existing && ( time() - (int) $existing ) < $this->lock_ttl ) {
+                return false;
+            }
+            // Expired lock: overwrite and claim it.
+            update_option( $option_key, time(), 'no' );
         }
 
-        set_transient( $this->lock_key, time(), $this->lock_ttl );
+        // Schedule automatic cleanup of the option lock.
+        wp_schedule_single_event( time() + $this->lock_ttl, 'fpml_cleanup_lock', array( $option_key ) );
 
         return true;
     }
@@ -90,7 +115,7 @@ class BatchManager {
      * @return void
      */
     public function release_lock() {
-        delete_transient( $this->lock_key );
+        delete_option( 'fpml_lock_' . $this->lock_key );
     }
 
     /**
@@ -101,7 +126,12 @@ class BatchManager {
      * @return bool
      */
     public function is_locked(): bool {
-        return false !== get_transient( $this->lock_key );
+        $option_key = 'fpml_lock_' . $this->lock_key;
+        $existing   = get_option( $option_key );
+        if ( false === $existing ) {
+            return false;
+        }
+        return ( time() - (int) $existing ) < $this->lock_ttl;
     }
 
     /**
@@ -145,6 +175,7 @@ class BatchManager {
      */
     public function add_job_characters( $chars ) {
         $this->current_batch_characters += (int) $chars;
+        $this->current_job_characters   += (int) $chars;
     }
 
     /**

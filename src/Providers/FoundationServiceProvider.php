@@ -63,11 +63,7 @@ class FoundationServiceProvider implements ServiceProvider {
 			// Return LoggerAdapter which provides static method compatibility
 			if ( class_exists( '\FP\Multilanguage\Foundation\Logger\LoggerAdapter' ) ) {
 				$adapter = \FP\Multilanguage\Foundation\Logger\LoggerAdapter::instance();
-				// Inject the logger into the adapter using reflection
-				$reflection = new \ReflectionClass( $adapter );
-				$property = $reflection->getProperty( 'logger' );
-				$property->setAccessible( true );
-				$property->setValue( $adapter, $core_logger );
+				$adapter->set_logger( $core_logger );
 				return $adapter;
 			}
 			

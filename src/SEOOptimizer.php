@@ -129,7 +129,7 @@ class SEOOptimizer {
 		$this->preview_renderer = new SeoPreviewRenderer( $this->meta_description, $this->focus_keyword );
 
 		// Hook after post translation
-		add_action( '\FPML_post_translated', array( $this, 'optimize_seo' ), 20, 4 );
+		add_action( 'fpml_post_translated', array( $this, 'optimize_seo' ), 20, 4 );
 
 		// Meta box for SEO preview
 		add_action( 'add_meta_boxes', array( $this, 'add_seo_preview_meta_box' ) );
@@ -189,9 +189,9 @@ class SEOOptimizer {
 		$post_types = get_post_types( array( 'public' => true ), 'names' );
 
 		foreach ( $post_types as $post_type ) {
-			add_meta_box(
-				'\FPML_seo_preview',
-				__( 'SEO Preview (EN)', 'fp-multilanguage' ),
+		add_meta_box(
+			'fpml_seo_preview',
+			__( 'SEO Preview', 'fp-multilanguage' ),
 				array( $this->preview_renderer, 'render' ),
 				$post_type,
 				'normal',

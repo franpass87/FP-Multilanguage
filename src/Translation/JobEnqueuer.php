@@ -60,13 +60,13 @@ class JobEnqueuer {
 		
 		// Use injected dependencies or get from container/singleton
 		if ( null === $queue ) {
-			$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : ( Container::get( 'queue' ) ?: fpml_get_queue() );
+			$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : ( function_exists( 'fpml_get_queue' ) ? fpml_get_queue() : null );
 		} else {
 			$this->queue = $queue;
 		}
 		
 		if ( null === $settings ) {
-			$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : ( Container::get( 'settings' ) ?: \FPML_Settings::instance() );
+			$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : ( class_exists( '\FPML_Settings' ) ? \FPML_Settings::instance() : null );
 		} else {
 			$this->settings = $settings;
 		}
@@ -106,6 +106,14 @@ class JobEnqueuer {
 	 * @return void
 	 */
 public function enqueue_post_jobs( $source_post, $target_post, $update ) {
+		if ( ! $this->queue ) {
+			\FP\Multilanguage\Logger::error( 'Queue non disponibile in JobEnqueuer::enqueue_post_jobs', array(
+				'source_id' => $source_post->ID,
+				'target_id' => $target_post->ID,
+			) );
+			return;
+		}
+
 		\FP\Multilanguage\Logger::debug( 'Enqueueing post jobs', array(
 			'source_id' => $source_post->ID,
 			'target_id' => $target_post->ID,
@@ -168,7 +176,7 @@ public function enqueue_post_jobs( $source_post, $target_post, $update ) {
 		 * @param WP_Post $target_post Target post.
 		 * @param bool    $update      Whether the post is being updated.
 		 */
-		do_action( '\FPML_post_jobs_enqueued', $source_post, $target_post, $update );
+		do_action( 'fpml_post_jobs_enqueued', $source_post, $target_post, $update );
 	}
 
 	/**
@@ -182,11 +190,18 @@ public function enqueue_post_jobs( $source_post, $target_post, $update ) {
 	 * @return void
 	 */
 	public function enqueue_term_jobs( $term, $target_term ) {
+		if ( ! $this->queue ) {
+			\FP\Multilanguage\Logger::error( 'Queue non disponibile in JobEnqueuer::enqueue_term_jobs', array(
+				'term_id' => $term->term_id,
+			) );
+			return;
+		}
 		$this->queue->enqueue_term( $term, 'name' );
 		$this->queue->enqueue_term( $term, 'description' );
 
 		update_term_meta( $target_term->term_id, '_fpml_status_name', 'needs_update' );
 		update_term_meta( $target_term->term_id, '_fpml_status_description', 'needs_update' );
+		update_term_meta( $target_term->term_id, '_fpml_translation_status', 'pending' );
 	}
 
 	/**
@@ -255,7 +270,7 @@ public function enqueue_post_jobs( $source_post, $target_post, $update ) {
 		 *
 		 * @param array $sanitized Current whitelist.
 		 */
-		$sanitized = apply_filters( '\FPML_meta_whitelist', array_unique( $sanitized ) );
+		$sanitized = apply_filters( 'fpml_meta_whitelist', array_unique( $sanitized ) );
 
 		$required_keys = array(
 			'_wp_attachment_image_alt',
@@ -305,7 +320,7 @@ public function enqueue_post_jobs( $source_post, $target_post, $update ) {
 		$value = (string) $value;
 
 		if ( '' === $value ) {
-			return md5( '' );
+			return '';
 		}
 
 		return md5( $value );

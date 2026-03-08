@@ -49,8 +49,10 @@ class CoreServiceProvider implements ServiceProvider {
 			return null;
 		}, true );
 
-		// Alias for QueueInterface
-		$container->alias( \FP\Multilanguage\Core\Queue\QueueInterface::class, 'queue' );
+		// Alias for QueueInterface (guard: interface may not exist in all environments)
+		if ( interface_exists( '\FP\Multilanguage\Core\Queue\QueueInterface' ) ) {
+			$container->alias( \FP\Multilanguage\Core\Queue\QueueInterface::class, 'queue' );
+		}
 
 		// Translation Manager - Create new instance with Logger dependency
 		$container->bind( 'translation.manager', function( Container $c ) {
@@ -120,10 +122,7 @@ class CoreServiceProvider implements ServiceProvider {
 
 		// Hook Manager
 		$container->bind( 'hook.manager', function( Container $c ) {
-			if ( class_exists( '\FP\Multilanguage\Core\Hook\HookManager' ) ) {
-				return \FP\Multilanguage\Core\Hook\fpml_get_hook_manager();
-			}
-			if ( class_exists( '\FP\Multilanguage\Core\HookManager' ) ) {
+			if ( function_exists( 'fpml_get_hook_manager' ) ) {
 				return fpml_get_hook_manager();
 			}
 			return null;
@@ -335,27 +334,29 @@ class CoreServiceProvider implements ServiceProvider {
 	protected function registerDomainServices( Container $container ): void {
 		// Translation Repository
 		$container->bind( 'domain.repository.translation', function( Container $c ) {
-			return new \FP\Multilanguage\Domain\Repositories\TranslationRepository();
+			if ( class_exists( '\FP\Multilanguage\Domain\Repositories\TranslationRepository' ) ) {
+				return new \FP\Multilanguage\Domain\Repositories\TranslationRepository();
+			}
+			return null;
 		}, true );
 
 		// Translation Service (uses existing provider system)
 		$container->bind( 'domain.service.translation', function( Container $c ) {
-			// This will be implemented to use existing provider system
-			// For now, return a placeholder that uses the existing translator
-			return new class implements \FP\Multilanguage\Domain\Services\TranslationServiceInterface {
-				public function translate( string $content, string $source_language, string $target_language, array $context = array() ): string {
-					// Use existing translator if available
-					if ( class_exists( '\FP\Multilanguage\Core\Container' ) ) {
-						$translator = \FP\Multilanguage\Core\Container::get( 'translator' );
-						if ( $translator && method_exists( $translator, 'translate' ) ) {
-							return $translator->translate( $content, $source_language, $target_language );
-						}
-					}
-					return $content; // Fallback
+			return new class( $c ) implements \FP\Multilanguage\Domain\Services\TranslationServiceInterface {
+				private Container $container;
+				public function __construct( Container $c ) {
+					$this->container = $c;
 				}
-
+				public function translate( string $content, string $source_language, string $target_language, array $context = array() ): string {
+					// Resolve translator from the Kernel container via the injected $c.
+					$translator = $this->container->has( 'translator' ) ? $this->container->get( 'translator' ) : null;
+					if ( $translator && method_exists( $translator, 'translate' ) ) {
+						return $translator->translate( $content, $source_language, $target_language );
+					}
+					return $content;
+				}
 				public function isAvailable(): bool {
-					return class_exists( '\FP\Multilanguage\Core\Container' );
+					return $this->container->has( 'translator' );
 				}
 			};
 		}, true );
@@ -471,16 +472,21 @@ class CoreServiceProvider implements ServiceProvider {
 	 * @return void
 	 */
 	protected function registerCronHooks( Container $container ): void {
-		$queue = $container->has( 'queue' ) ? $container->get( 'queue' ) : null;
+		$processor = $container->has( 'processor' ) ? $container->get( 'processor' ) : null;
 
-		if ( $queue ) {
-			// Register queue processing cron
-			add_action( 'fpml_process_queue', array( $queue, 'process_batch' ) );
+		if ( $processor && method_exists( $processor, 'run_queue' ) ) {
+			add_action( 'fpml_process_queue', array( $processor, 'run_queue' ) );
 
-			// Schedule cron if not already scheduled
-			if ( ! wp_next_scheduled( 'fpml_process_queue' ) ) {
-				wp_schedule_event( time(), 'fpml_queue_frequency', 'fpml_process_queue' );
-			}
+			// Schedule only after cron_schedules filter has run (on 'init' or later).
+			add_action(
+				'init',
+				static function () {
+					if ( ! wp_next_scheduled( 'fpml_process_queue' ) ) {
+						wp_schedule_event( time(), 'fpml_fifteen_minutes', 'fpml_process_queue' );
+					}
+				},
+				20
+			);
 		}
 	}
 

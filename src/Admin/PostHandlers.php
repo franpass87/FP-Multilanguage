@@ -43,11 +43,6 @@ class PostHandlers {
             $nonce_check = wp_verify_nonce( $_POST['fpml_settings_nonce'], 'fpml_save_settings' );
         }
         
-        if ( ! $nonce_check && isset( $_POST[ \FPML_Settings::OPTION_KEY ] ) ) {
-            \FP\Multilanguage\Logger::warning( 'Nonce expired for settings save, but allowing save to proceed' );
-            $nonce_check = true;
-        }
-
         if ( ! $nonce_check ) {
             wp_die( __( 'Errore di sicurezza. Riprova.', 'fp-multilanguage' ) );
         }
@@ -76,13 +71,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_scan_strings() {
-        check_admin_referer( 'fpml_scan_strings' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_scan_strings' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&strings-scanned=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&strings-scanned=true' ) );
         exit;
     }
 
@@ -93,13 +87,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_save_overrides() {
-        check_admin_referer( 'fpml_save_overrides' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_save_overrides' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-saved=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-saved=true' ) );
         exit;
     }
 
@@ -110,13 +103,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_import_overrides() {
-        check_admin_referer( 'fpml_import_overrides' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_import_overrides' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-imported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-imported=true' ) );
         exit;
     }
 
@@ -127,13 +119,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_export_overrides() {
-        check_admin_referer( 'fpml_export_overrides' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_export_overrides' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-exported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=strings&overrides-exported=true' ) );
         exit;
     }
 
@@ -144,13 +135,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_save_glossary() {
-        check_admin_referer( 'fpml_save_glossary' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_save_glossary' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-saved=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-saved=true' ) );
         exit;
     }
 
@@ -161,13 +151,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_import_glossary() {
-        check_admin_referer( 'fpml_import_glossary' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_import_glossary' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-imported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-imported=true' ) );
         exit;
     }
 
@@ -178,13 +167,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_export_glossary() {
-        check_admin_referer( 'fpml_export_glossary' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_export_glossary' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-exported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=glossary&glossary-exported=true' ) );
         exit;
     }
 
@@ -195,13 +183,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_export_state() {
-        check_admin_referer( 'fpml_export_state' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_export_state' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&state-exported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&state-exported=true' ) );
         exit;
     }
 
@@ -212,13 +199,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_import_state() {
-        check_admin_referer( 'fpml_import_state' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_import_state' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&state-imported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&state-imported=true' ) );
         exit;
     }
 
@@ -229,13 +215,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_export_logs() {
-        check_admin_referer( 'fpml_export_logs' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_export_logs' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&logs-exported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&logs-exported=true' ) );
         exit;
     }
 
@@ -246,13 +231,12 @@ class PostHandlers {
      * @return void
      */
     public function handle_import_logs() {
-        check_admin_referer( 'fpml_import_logs' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_import_logs' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&logs-imported=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&tab=export&logs-imported=true' ) );
         exit;
     }
 
@@ -263,16 +247,15 @@ class PostHandlers {
      * @return void
      */
     public function handle_clear_sandbox() {
-        check_admin_referer( 'fpml_clear_sandbox' );
-        
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Permessi insufficienti.', 'fp-multilanguage' ) );
         }
+        check_admin_referer( 'fpml_clear_sandbox' );
         
         delete_option( 'fpml_sandbox_mode' );
         delete_option( 'fpml_sandbox_posts' );
         
-        wp_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&sandbox-cleared=true' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=' . Admin::MENU_SLUG . '&sandbox-cleared=true' ) );
         exit;
     }
 }

@@ -38,7 +38,7 @@ class SitemapConfig {
 			$post_types[] = 'attachment';
 		}
 
-		$post_types = apply_filters( '\FPML_sitemap_post_types', $post_types );
+		$post_types = apply_filters( 'fpml_sitemap_post_types', $post_types );
 
 		return array_filter( array_map( 'sanitize_key', (array) $post_types ) );
 	}
@@ -58,7 +58,7 @@ class SitemapConfig {
 			'names'
 		);
 
-		$taxonomies = apply_filters( '\FPML_sitemap_taxonomies', $taxonomies );
+		$taxonomies = apply_filters( 'fpml_sitemap_taxonomies', $taxonomies );
 
 		return array_filter( array_map( 'sanitize_key', (array) $taxonomies ) );
 	}

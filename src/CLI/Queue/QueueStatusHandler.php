@@ -31,7 +31,7 @@ class QueueStatusHandler {
 	 */
 	public function display_status(): void {
 		$queue      = fpml_get_queue();
-		$processor  = \FPML_fpml_get_processor();
+		$processor  = \fpml_get_processor();
 		$state_data = $queue->get_state_counts();
 
 		$rows   = array();

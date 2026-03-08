@@ -15,6 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Centralized logging system with levels and rotation.
  *
+ * Uses an in-memory buffer that is flushed to the DB once on shutdown,
+ * avoiding a get_option + update_option pair for every single log entry.
+ *
  * @since 0.5.0
  */
 class Logger {
@@ -55,18 +58,28 @@ class Logger {
 	protected $option_name = 'fpml_logs';
 
 	/**
-	 * Get singleton instance (for backward compatibility).
+	 * In-memory buffer of pending log entries to be flushed on shutdown.
 	 *
-	 * @deprecated 1.0.0 Use dependency injection via container instead
+	 * @var array
+	 */
+	protected $buffer = array();
+
+	/**
+	 * Whether the shutdown flush hook has been registered.
+	 *
+	 * @var bool
+	 */
+	protected $flush_registered = false;
+
+	/**
+	 * Get singleton instance.
+	 *
+	 * Static methods delegate to this instance without emitting deprecation
+	 * notices. External callers should use DI when possible.
+	 *
 	 * @return self
 	 */
 	public static function instance() {
-		_doing_it_wrong( 
-			'FP\Multilanguage\Logger::instance()', 
-			'Logger::instance() is deprecated. Use dependency injection via container instead.', 
-			'1.0.0' 
-		);
-		
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
@@ -82,11 +95,10 @@ class Logger {
 	 * @param Settings|null $settings Optional settings instance for DI.
 	 */
 	public function __construct( $settings = null ) {
-		// Use injected settings or get from singleton (backward compatibility)
 		if ( null === $settings ) {
-			$settings = function_exists( 'fpml_get_settings' ) ? fpml_get_settings() : Settings::instance();
+			$settings = function_exists( 'fpml_get_settings' ) ? fpml_get_settings() : null;
 		}
-		
+
 		if ( $settings ) {
 			$this->min_level = $settings->get( 'log_level', defined( 'WP_DEBUG' ) && WP_DEBUG ? self::LEVEL_DEBUG : self::LEVEL_INFO );
 		} else {
@@ -108,7 +120,6 @@ class Logger {
 	public static function log( $level, $message, $context = array() ) {
 		$logger = self::instance();
 
-		// Check if we should log this level
 		if ( ! $logger->should_log( $level ) ) {
 			return;
 		}
@@ -122,9 +133,8 @@ class Logger {
 			'ip'        => isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '',
 		);
 
-		$logger->add_entry( $entry );
+		$logger->buffer_entry( $entry );
 
-		// Also log to error_log if error level
 		if ( self::LEVEL_ERROR === $level ) {
 			error_log( sprintf( '[FPML %s] %s', strtoupper( $level ), $message ) );
 		}
@@ -200,19 +210,39 @@ class Logger {
 	}
 
 	/**
-	 * Add log entry.
+	 * Add a log entry to the in-memory buffer and register the shutdown flush.
 	 *
 	 * @param array $entry Log entry.
 	 *
 	 * @return void
 	 */
-	protected function add_entry( $entry ) {
+	protected function buffer_entry( array $entry ): void {
+		$this->buffer[] = $entry;
+
+		if ( ! $this->flush_registered ) {
+			$this->flush_registered = true;
+			add_action( 'shutdown', array( $this, 'flush_buffer' ), 999 );
+		}
+	}
+
+	/**
+	 * Flush buffered log entries to the database (called once on shutdown).
+	 *
+	 * @return void
+	 */
+	public function flush_buffer(): void {
+		if ( empty( $this->buffer ) ) {
+			return;
+		}
+
 		$logs = get_option( $this->option_name, array() );
 
-		// Add new entry
-		$logs[] = $entry;
+		foreach ( $this->buffer as $entry ) {
+			$logs[] = $entry;
+		}
 
-		// Rotate if needed
+		$this->buffer = array();
+
 		if ( count( $logs ) > $this->max_entries ) {
 			$logs = array_slice( $logs, -$this->max_entries );
 		}

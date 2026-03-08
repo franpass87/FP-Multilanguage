@@ -24,7 +24,7 @@ class Settings {
 /**
  * Option key.
  */
-const OPTION_KEY = '\FPML_settings';
+const OPTION_KEY = 'fpml_settings';
 
 /**
  * Singleton instance (for backward compatibility).
@@ -72,6 +72,17 @@ public static function instance() {
 	public function __construct() {
 	// Load directly from database - no object cache to avoid persistence issues
 	$saved_settings = get_option( self::OPTION_KEY, array() );
+
+	// Migrate from legacy option key that had a backslash prefix.
+	if ( empty( $saved_settings ) ) {
+		$legacy = get_option( '\FPML_settings', array() );
+		if ( ! empty( $legacy ) ) {
+			update_option( self::OPTION_KEY, $legacy, false );
+			delete_option( '\FPML_settings' );
+			$saved_settings = $legacy;
+		}
+	}
+
 	$defaults = $this->get_defaults();
 	
 	// Use wp_parse_args if available, otherwise manual merge
@@ -81,15 +92,11 @@ public static function instance() {
 		$this->settings = is_array( $saved_settings ) ? array_merge( $defaults, $saved_settings ) : $defaults;
 	}
 	
-	// CRITICAL FIX: Force sandbox_mode to false to prevent content sync issues
-	// Ensures translations are always saved to posts, never skipped
-	$this->settings['sandbox_mode'] = false;
-	
 	// Registrazione impostazioni per Settings API
 	add_action( 'admin_init', array( $this, 'register_settings' ) );
 	add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 3 );
 	add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'invalidate_cache' ), 5, 3 );
-	add_filter( '\FPML_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
+	add_filter( 'fpml_translatable_taxonomies', array( $this, 'maybe_include_woocommerce_taxonomies' ) );
 }
 
 /**
@@ -114,9 +121,6 @@ public function invalidate_cache( $old_value, $value, $option ) {
 		$this->settings = is_array( $saved_settings ) ? array_merge( $defaults, $saved_settings ) : $defaults;
 	}
 	
-	// CRITICAL FIX: Force sandbox_mode to false to prevent content sync issues
-	// Ensures translations are always saved to posts, never skipped
-	$this->settings['sandbox_mode'] = false;
 }
 
 /**
@@ -145,8 +149,8 @@ public function get_defaults() {
 			'preserve_html'           => true,
 		'translate_slugs'         => true,
 		'slug_redirect'           => true,
-			'noindex_en'              => false,
-			'sitemap_en'              => true,
+			'noindex_translations'    => false,
+			'sitemap_translations'    => true,
 			'sandbox_mode'            => false,
 			'anonymize_logs'          => false,
 			'glossary_case_sensitive' => false,
@@ -333,8 +337,17 @@ $data['marketing_tone']          = ! empty( $data['marketing_tone'] );
 $data['preserve_html']           = ! empty( $data['preserve_html'] );
 $data['translate_slugs']         = ! empty( $data['translate_slugs'] );
 $data['slug_redirect']           = ! empty( $data['slug_redirect'] );
-$data['noindex_en']              = ! empty( $data['noindex_en'] );
-$data['sitemap_en']              = ! empty( $data['sitemap_en'] );
+// Migrate legacy keys noindex_en / sitemap_en to generic names.
+if ( isset( $data['noindex_en'] ) && ! isset( $data['noindex_translations'] ) ) {
+    $data['noindex_translations'] = $data['noindex_en'];
+    unset( $data['noindex_en'] );
+}
+if ( isset( $data['sitemap_en'] ) && ! isset( $data['sitemap_translations'] ) ) {
+    $data['sitemap_translations'] = $data['sitemap_en'];
+    unset( $data['sitemap_en'] );
+}
+$data['noindex_translations']    = ! empty( $data['noindex_translations'] );
+$data['sitemap_translations']    = ! empty( $data['sitemap_translations'] );
 $data['sandbox_mode']            = ! empty( $data['sandbox_mode'] );
 $data['anonymize_logs']          = ! empty( $data['anonymize_logs'] );
         $data['glossary_case_sensitive'] = ! empty( $data['glossary_case_sensitive'] );
@@ -374,18 +387,22 @@ $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shor
 	$data['menu_switcher_show_flags']     = ! empty( $data['menu_switcher_show_flags'] );
 	$data['menu_switcher_position']       = in_array( $data['menu_switcher_position'], array( 'start', 'end' ), true ) ? $data['menu_switcher_position'] : $defaults['menu_switcher_position'];
 
-	// Sanitize enabled_languages
-	$available_languages = array( 'en', 'de', 'fr', 'es' );
+	// Sanitize enabled_languages — accept any valid ISO 639-1 code (2 lowercase letters).
 	$enabled_languages = isset( $data['enabled_languages'] ) && is_array( $data['enabled_languages'] ) ? $data['enabled_languages'] : array();
-	// Filter to only include valid language codes
-	$enabled_languages = array_intersect( $enabled_languages, $available_languages );
-	// Ensure at least one language is enabled (default to 'en' if empty)
+	$enabled_languages = array_values(
+		array_unique(
+			array_filter(
+				array_map( 'sanitize_key', $enabled_languages ),
+				static function ( $code ) {
+					return (bool) preg_match( '/^[a-z]{2}(-[a-z]{2})?$/', $code );
+				}
+			)
+		)
+	);
 	if ( empty( $enabled_languages ) ) {
 		$enabled_languages = array( 'en' );
 	}
-	$data['enabled_languages'] = array_values( array_unique( $enabled_languages ) );
-
-	update_option( '\FPML_remove_data', $data['remove_data'] );
+	$data['enabled_languages'] = $enabled_languages;
 
 	$this->settings = $data;
 

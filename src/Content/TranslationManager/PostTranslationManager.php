@@ -117,6 +117,12 @@ class PostTranslationManager {
 	public function create_post_translation( \WP_Post $post, string $target_lang = 'en', string $post_status = 'draft' ): \WP_Post|false {
 		// Validate target language
 		$language_manager = fpml_get_language_manager();
+		if ( ! $language_manager ) {
+			if ( $this->logger ) {
+				$this->logger->log( 'error', 'Language manager non disponibile', array( 'post_id' => $post->ID ) );
+			}
+			return false;
+		}
 		$available_languages = array_keys( $language_manager->get_all_languages() );
 		if ( ! in_array( $target_lang, $available_languages, true ) ) {
 			if ( $this->logger ) {
@@ -149,8 +155,10 @@ class PostTranslationManager {
 		}
 
 		// Set flags to prevent loops
-		$this->creating_translation = true;
+		$this->creating_translation          = true;
 		$GLOBALS['fpml_creating_translation'] = true;
+
+		$target_post = false;
 
 		try {
 			// Map parent to its translation if exists
@@ -169,7 +177,14 @@ class PostTranslationManager {
 			// Generate title and slug
 			$translation_title = $post->post_title;
 			$base_slug = $post->post_name ? $post->post_name : sanitize_title( $post->post_title );
-			$base_slug = preg_replace( '/^(it|en|de|fr|es)[-_]/i', '', $base_slug );
+			$lang_manager = fpml_get_language_manager();
+			if ( $lang_manager ) {
+				$all_lang_codes = array_keys( $lang_manager->get_all_languages() );
+				if ( ! empty( $all_lang_codes ) ) {
+					$lang_pattern = implode( '|', array_map( 'preg_quote', $all_lang_codes ) );
+					$base_slug    = preg_replace( '/^(' . $lang_pattern . ')[-_]/i', '', $base_slug ) ?? $base_slug;
+				}
+			}
 			// Add language prefix to avoid slug conflicts with source post
 			$temp_slug = $target_lang . '-' . $base_slug;
 
@@ -182,11 +197,9 @@ class PostTranslationManager {
 			$now = current_time( 'mysql' );
 			$now_gmt = current_time( 'mysql', 1 );
 			
-			// Determine post status
-			$new_status = 'draft';
-			if ( 'publish' === $post_status || ( 'draft' === $post_status && 'publish' === $post->post_status ) ) {
-				$new_status = 'publish';
-			}
+			// Determine post status: honour the explicit $post_status parameter.
+			// Only auto-publish if the caller explicitly requested 'publish'.
+			$new_status = ( 'publish' === $post_status ) ? 'publish' : 'draft';
 
 			$post_data = array(
 				'post_author' => $post->post_author,
@@ -274,23 +287,17 @@ class PostTranslationManager {
 			// Fire action with flag still active to prevent loops
 			$GLOBALS['fpml_creating_translation'] = true;
 			do_action( 'fpml_after_translation_saved', $target_post->ID, $post->ID );
-			$GLOBALS['fpml_creating_translation'] = false;
 
-			$this->creating_translation = false;
-			
 			if ( class_exists( '\FP\Multilanguage\Logger' ) ) {
-				\FP\Multilanguage\Logger::debug( 'Post translation created successfully', array( 
+				\FP\Multilanguage\Logger::debug( 'Post translation created successfully', array(
 					'target_id' => $target_id,
-					'source_id' => $post->ID 
+					'source_id' => $post->ID,
 				) );
 			}
 
-			return $target_post;
-
 		} catch ( \Exception $e ) {
-			$this->creating_translation = false;
-			$GLOBALS['fpml_creating_translation'] = false;
-			
+			$target_post = false;
+
 			if ( $this->logger ) {
 				$this->logger->log(
 					'error',
@@ -300,9 +307,12 @@ class PostTranslationManager {
 			} else {
 				error_log( sprintf( 'FPML: Failed to create translation for post #%d: %s', $post->ID, $e->getMessage() ) );
 			}
-
-			return false;
+		} finally {
+			$this->creating_translation          = false;
+			$GLOBALS['fpml_creating_translation'] = false;
 		}
+
+		return $target_post;
 	}
 }
 

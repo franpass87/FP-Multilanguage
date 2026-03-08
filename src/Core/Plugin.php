@@ -37,7 +37,7 @@ class PluginCore {
 	/**
 	 * Option tracking completed migrations.
 	 */
-	const OPTION_AUTOLOAD_MIGRATED = '\FPML_options_autoload_migrated';
+	const OPTION_AUTOLOAD_MIGRATED = 'fpml_options_autoload_migrated';
 
 	/**
 	 * Singleton instance.
@@ -119,6 +119,13 @@ class PluginCore {
 	protected $dependency_resolver = null;
 
 	/**
+	 * Loop protection service instance.
+	 *
+	 * @var \FP\Multilanguage\Core\Services\LoopProtectionService|null
+	 */
+	protected $loop_protection_service = null;
+
+	/**
 	 * Plugin constructor - TEST 5C: + define_hooks [CRITICO].
 	 * 
 	 * @deprecated 1.0.0 Use Kernel\Plugin instead
@@ -154,37 +161,31 @@ class PluginCore {
 			$this->translation_manager = $this->dependency_resolver->resolve( 'translation.manager', TranslationManager::class );
 			$this->job_enqueuer = $this->dependency_resolver->resolve( 'translation.job_enqueuer', JobEnqueuer::class );
 		} else {
-			// Fallback to old pattern
-			$this->settings = $container ? ( $container->has( 'options' ) ? $container->get( 'options' ) : null ) : null;
-			$this->settings = $this->settings ?: Container::get( 'settings' ) ?: Settings::instance();
-			
-			$this->queue = $container ? ( $container->has( 'queue' ) ? $container->get( 'queue' ) : null ) : null;
-			$this->queue = $this->queue ?: Container::get( 'queue' ) ?: fpml_get_queue();
-			
-			$this->logger = $container ? ( $container->has( 'logger' ) ? $container->get( 'logger' ) : null ) : null;
-			$this->logger = $this->logger ?: Container::get( 'logger' ) ?: fpml_get_logger();
-			
-			$this->translation_manager = $container ? ( $container->has( 'translation.manager' ) ? $container->get( 'translation.manager' ) : null ) : null;
-			$this->translation_manager = $this->translation_manager ?: Container::get( 'translation_manager' ) ?: ( class_exists( TranslationManager::class ) ? fpml_get_translation_manager() : null );
-			
-			$this->job_enqueuer = $container ? ( $container->has( 'translation.job_enqueuer' ) ? $container->get( 'translation.job_enqueuer' ) : null ) : null;
-			$this->job_enqueuer = $this->job_enqueuer ?: Container::get( 'job_enqueuer' ) ?: ( class_exists( JobEnqueuer::class ) ? fpml_get_job_enqueuer() : null );
+			// Fallback to old pattern — use container if available, then helper functions
+			$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : null;
+			$this->settings = $this->settings ?: fpml_resolve_service( 'options', array( 'Settings', 'instance' ) ) ?: Settings::instance();
+
+			$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : null;
+			$this->queue = $this->queue ?: fpml_resolve_service( 'queue' ) ?: fpml_get_queue();
+
+			$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : null;
+			$this->logger = $this->logger ?: fpml_resolve_service( 'logger' ) ?: fpml_get_logger();
+
+			$this->translation_manager = $container && $container->has( 'translation.manager' ) ? $container->get( 'translation.manager' ) : null;
+			$this->translation_manager = $this->translation_manager ?: fpml_resolve_service( 'translation.manager' ) ?: ( class_exists( TranslationManager::class ) ? fpml_get_translation_manager() : null );
+
+			$this->job_enqueuer = $container && $container->has( 'translation.job_enqueuer' ) ? $container->get( 'translation.job_enqueuer' ) : null;
+			$this->job_enqueuer = $this->job_enqueuer ?: fpml_resolve_service( 'translation.job_enqueuer' ) ?: ( class_exists( JobEnqueuer::class ) ? fpml_get_job_enqueuer() : null );
 		}
-		
+
 		// Initialize hook manager
 		$this->hook_manager = new HookManager( $this, $this->assisted_mode );
-		
-		// Initialize settings migration
-		$settings_migration = Container::get( 'settings_migration' );
-		if ( $settings_migration ) {
-			// Migration service is now initialized and will handle backup/restore
-		}
-		
-		// Initialize database migration
-		$database_migration = Container::get( 'database_migration' );
-		if ( $database_migration ) {
-			// Database migration service is now initialized and will check/run migrations on admin_init
-		}
+
+		// Initialize settings migration (resolved via container if available)
+		fpml_resolve_service( 'settings_migration' );
+
+		// Initialize database migration (resolved via container if available)
+		fpml_resolve_service( 'database_migration' );
 		
 		if ( $this->queue && method_exists( $this->queue, 'maybe_upgrade' ) ) {
 			$this->queue->maybe_upgrade();
@@ -197,6 +198,9 @@ class PluginCore {
 		
 		// Run setup if needed (includes rewrite rules registration)
 		add_action( 'init', array( $this, 'maybe_run_setup' ), 5 );
+
+		// Restore on_publish hooks after scheduled delay.
+		add_action( 'fpml_restore_on_publish', array( $this, 'restore_on_publish_hooks' ) );
 	}
 
 	/**
@@ -274,22 +278,22 @@ class PluginCore {
 			return;
 		}
 
-		// Fallback to old logic
-		// Check if setup is needed
-		if ( ! get_option( '\FPML_needs_setup' ) ) {
-			return;
-		}
+	// Fallback to old logic
+	// Check if setup is needed
+	if ( ! get_option( 'fpml_needs_setup' ) ) {
+		return;
+	}
 
-		// Check if already completed
-		if ( get_option( '\FPML_setup_completed' ) ) {
-			delete_option( '\FPML_needs_setup' );
-			return;
-		}
+	// Check if already completed
+	if ( get_option( 'fpml_setup_completed' ) ) {
+		delete_option( 'fpml_needs_setup' );
+		return;
+	}
 
 		// Now it's safe to run setup tasks
 		try {
-			// Trigger settings restoration after initialization
-			do_action( '\FPML_after_initialization' );
+		// Trigger settings restoration after initialization
+		do_action( 'fpml_after_initialization' );
 			
 			// Use AssistedModeService if available
 			$reason = '';
@@ -317,9 +321,9 @@ class PluginCore {
 				flush_rewrite_rules();
 			}
 
-			// Mark as completed
-			update_option( '\FPML_setup_completed', '1', false );
-			delete_option( '\FPML_needs_setup' );
+		// Mark as completed
+		update_option( 'fpml_setup_completed', '1', false );
+		delete_option( 'fpml_needs_setup' );
 		} catch ( \Exception $e ) {
 			// Log error but don't break the site
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -361,13 +365,13 @@ class PluginCore {
 			return;
 		}
 
-		// Fallback to old logic
-		// Trigger settings backup before activation
-		do_action( '\FPML_before_activation' );
-		
-		// SAFE ACTIVATION: Just set a flag, do nothing else
-		// Actual setup will happen on first use
-		update_option( '\FPML_needs_setup', '1', false );
+	// Fallback to old logic
+	// Trigger settings backup before activation
+	do_action( 'fpml_before_activation' );
+	
+	// SAFE ACTIVATION: Just set a flag, do nothing else
+	// Actual setup will happen on first use
+	update_option( 'fpml_needs_setup', '1', false );
 	}
 
 	/**
@@ -385,30 +389,30 @@ class PluginCore {
 			return;
 		}
 
-		// Fallback to old logic
-		// Clear all scheduled events
-		$events = array(
-			'\FPML_run_queue',
-			'\FPML_retry_failed',
-			'\FPML_resync_outdated',
-			'\FPML_cleanup_queue',
-			'\FPML_daily_content_scan',
-			'\FPML_health_check',
-		);
-		
-		foreach ( $events as $hook ) {
+	// Fallback to old logic
+	// Clear all scheduled events
+	$events = array(
+		'fpml_run_queue',
+		'fpml_retry_failed',
+		'fpml_resync_outdated',
+		'fpml_cleanup_queue',
+		'fpml_daily_content_scan',
+		'fpml_health_check',
+	);
+	
+	foreach ( $events as $hook ) {
+		$timestamp = wp_next_scheduled( $hook );
+		while ( false !== $timestamp ) {
+			wp_unschedule_event( $timestamp, $hook );
 			$timestamp = wp_next_scheduled( $hook );
-			while ( false !== $timestamp ) {
-				wp_unschedule_event( $timestamp, $hook );
-				$timestamp = wp_next_scheduled( $hook );
-			}
 		}
-		
-		// Clear single events with args (WordPress 5.1+)
-		if ( function_exists( 'wp_unschedule_hook' ) ) {
-			wp_unschedule_hook( '\FPML_reindex_post_type' );
-			wp_unschedule_hook( '\FPML_reindex_taxonomy' );
-		}
+	}
+	
+	// Clear single events with args (WordPress 5.1+)
+	if ( function_exists( 'wp_unschedule_hook' ) ) {
+		wp_unschedule_hook( 'fpml_reindex_post_type' );
+		wp_unschedule_hook( 'fpml_reindex_taxonomy' );
+	}
 		
 		flush_rewrite_rules();
 	}
@@ -784,7 +788,7 @@ class PluginCore {
 			return;
 		}
 
-		if ( ! $post instanceof WP_Post ) {
+		if ( ! $post instanceof \WP_Post ) {
 			unset( $processing[ $post_id ] );
 			return;
 		}

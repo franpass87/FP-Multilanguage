@@ -93,51 +93,51 @@ if ( ! class_exists( '\FPML_Plugin' ) ) {
 		class_alias( Plugin::class, '\FPML_Plugin' );
 	}
 }
-if ( ! class_exists( '\FPML_Secure_Settings' ) ) {
+if ( ! class_exists( '\FPML_Secure_Settings' ) && class_exists( '\FP\Multilanguage\Core\SecureSettings' ) ) {
 	class_alias( SecureSettings::class, '\FPML_Secure_Settings' );
 }
-if ( ! class_exists( '\FPML_Settings_Migration' ) ) {
+if ( ! class_exists( '\FPML_Settings_Migration' ) && class_exists( '\FP\Multilanguage\Core\SettingsMigration' ) ) {
 	class_alias( SettingsMigration::class, '\FPML_Settings_Migration' );
 }
-if ( ! class_exists( '\FPML_Simple_Settings' ) ) {
+if ( ! class_exists( '\FPML_Simple_Settings' ) && class_exists( '\FP\Multilanguage\Core\SimpleSettings' ) ) {
 	class_alias( SimpleSettings::class, '\FPML_Simple_Settings' );
 }
-if ( ! class_exists( '\FPML_Translation_Cache' ) ) {
+if ( ! class_exists( '\FPML_Translation_Cache' ) && class_exists( '\FP\Multilanguage\Core\TranslationCache' ) ) {
 	class_alias( TranslationCache::class, '\FPML_Translation_Cache' );
 }
-if ( ! class_exists( '\FPML_Translation_Versioning' ) ) {
+if ( ! class_exists( '\FPML_Translation_Versioning' ) && class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
 	class_alias( TranslationVersioning::class, '\FPML_Translation_Versioning' );
 }
 
 // Content aliases
-if ( ! class_exists( '\FPML_Content_Indexer' ) ) {
+if ( ! class_exists( '\FPML_Content_Indexer' ) && class_exists( '\FP\Multilanguage\Content\ContentIndexer' ) ) {
 	class_alias( ContentIndexer::class, '\FPML_Content_Indexer' );
 }
-if ( ! class_exists( '\FPML_Translation_Manager' ) ) {
+if ( ! class_exists( '\FPML_Translation_Manager' ) && class_exists( '\FP\Multilanguage\Content\TranslationManager' ) ) {
 	class_alias( TranslationManager::class, '\FPML_Translation_Manager' );
 }
 
 // Translation aliases
-if ( ! class_exists( '\FPML_Job_Enqueuer' ) ) {
+if ( ! class_exists( '\FPML_Job_Enqueuer' ) && class_exists( '\FP\Multilanguage\Translation\JobEnqueuer' ) ) {
 	class_alias( JobEnqueuer::class, '\FPML_Job_Enqueuer' );
 }
 
 // Provider aliases
-if ( ! class_exists( 'Translator_Interface' ) ) {
+if ( ! class_exists( 'Translator_Interface' ) && class_exists( '\FP\Multilanguage\Providers\TranslatorInterface' ) ) {
 	class_alias( TranslatorInterface::class, 'Translator_Interface' );
 }
-if ( ! class_exists( '\FPML_Provider_OpenAI' ) ) {
+if ( ! class_exists( '\FPML_Provider_OpenAI' ) && class_exists( '\FP\Multilanguage\Providers\ProviderOpenAI' ) ) {
 	class_alias( ProviderOpenAI::class, '\FPML_Provider_OpenAI' );
 }
-if ( ! class_exists( '\FPML_Base_Provider' ) ) {
+if ( ! class_exists( '\FPML_Base_Provider' ) && class_exists( '\FP\Multilanguage\Providers\BaseProvider' ) ) {
 	class_alias( BaseProvider::class, '\FPML_Base_Provider' );
 }
 
 // Diagnostic aliases
-if ( ! class_exists( '\FPML_Diagnostics' ) ) {
+if ( ! class_exists( '\FPML_Diagnostics' ) && class_exists( '\FP\Multilanguage\Diagnostics\Diagnostics' ) ) {
 	class_alias( Diagnostics::class, '\FPML_Diagnostics' );
 }
-if ( ! class_exists( '\FPML_Cost_Estimator' ) ) {
+if ( ! class_exists( '\FPML_Cost_Estimator' ) && class_exists( '\FP\Multilanguage\Diagnostics\CostEstimator' ) ) {
 	class_alias( CostEstimator::class, '\FPML_Cost_Estimator' );
 }
 
@@ -157,19 +157,19 @@ if ( ! class_exists( '\FPML_Logger' ) ) {
 		class_alias( Logger::class, '\FPML_Logger' );
 	}
 }
-if ( ! class_exists( '\FPML_Queue' ) ) {
+if ( ! class_exists( '\FPML_Queue' ) && class_exists( '\FP\Multilanguage\Queue' ) ) {
 	class_alias( Queue::class, '\FPML_Queue' );
 }
 if ( ! class_exists( '\FPML_Processor' ) && class_exists( Processor::class ) ) {
 	class_alias( Processor::class, '\FPML_Processor' );
 }
-if ( ! class_exists( '\FPML_Language' ) ) {
+if ( ! class_exists( '\FPML_Language' ) && class_exists( '\FP\Multilanguage\Language' ) ) {
 	class_alias( Language::class, '\FPML_Language' );
 }
-if ( ! class_exists( '\FPML_SEO' ) ) {
+if ( ! class_exists( '\FPML_SEO' ) && class_exists( '\FP\Multilanguage\SEO' ) ) {
 	class_alias( SEO::class, '\FPML_SEO' );
 }
-if ( ! class_exists( '\FPML_SEO_Optimizer' ) ) {
+if ( ! class_exists( '\FPML_SEO_Optimizer' ) && class_exists( '\FP\Multilanguage\SEOOptimizer' ) ) {
 	class_alias( SEOOptimizer::class, '\FPML_SEO_Optimizer' );
 }
 // Rewrites - support both old and new locations
@@ -182,19 +182,19 @@ if ( ! class_exists( '\FPML_Rewrites' ) ) {
 }
 
 // Routing classes - backward compatibility aliases
-if ( ! class_exists( '\FP\Multilanguage\Routing\RewriteRules' ) ) {
+if ( ! class_exists( '\FP\Multilanguage\Routing\RewriteRules' ) && class_exists( '\FP\Multilanguage\Frontend\Routing\RewriteRules' ) ) {
 	class_alias( \FP\Multilanguage\Frontend\Routing\RewriteRules::class, '\FP\Multilanguage\Routing\RewriteRules' );
 }
-if ( ! class_exists( '\FP\Multilanguage\Routing\QueryFilter' ) ) {
+if ( ! class_exists( '\FP\Multilanguage\Routing\QueryFilter' ) && class_exists( '\FP\Multilanguage\Frontend\Routing\QueryFilter' ) ) {
 	class_alias( \FP\Multilanguage\Frontend\Routing\QueryFilter::class, '\FP\Multilanguage\Routing\QueryFilter' );
 }
-if ( ! class_exists( '\FP\Multilanguage\Routing\PostResolver' ) ) {
+if ( ! class_exists( '\FP\Multilanguage\Routing\PostResolver' ) && class_exists( '\FP\Multilanguage\Frontend\Routing\PostResolver' ) ) {
 	class_alias( \FP\Multilanguage\Frontend\Routing\PostResolver::class, '\FP\Multilanguage\Routing\PostResolver' );
 }
-if ( ! class_exists( '\FP\Multilanguage\Routing\RequestHandler' ) ) {
+if ( ! class_exists( '\FP\Multilanguage\Routing\RequestHandler' ) && class_exists( '\FP\Multilanguage\Frontend\Routing\RequestHandler' ) ) {
 	class_alias( \FP\Multilanguage\Frontend\Routing\RequestHandler::class, '\FP\Multilanguage\Routing\RequestHandler' );
 }
-if ( ! class_exists( '\FP\Multilanguage\Routing\AdjacentPostFilter' ) ) {
+if ( ! class_exists( '\FP\Multilanguage\Routing\AdjacentPostFilter' ) && class_exists( '\FP\Multilanguage\Frontend\Routing\AdjacentPostFilter' ) ) {
 	class_alias( \FP\Multilanguage\Frontend\Routing\AdjacentPostFilter::class, '\FP\Multilanguage\Routing\AdjacentPostFilter' );
 }
 // SiteTranslations - support both old and new locations
@@ -205,46 +205,46 @@ if ( ! class_exists( '\FPML_Site_Translations' ) ) {
 		class_alias( SiteTranslations::class, '\FPML_Site_Translations' );
 	}
 }
-if ( ! class_exists( '\FPML_Auto_Translate' ) ) {
+if ( ! class_exists( '\FPML_Auto_Translate' ) && class_exists( '\FP\Multilanguage\AutoTranslate' ) ) {
 	class_alias( AutoTranslate::class, '\FPML_Auto_Translate' );
 }
-if ( ! class_exists( '\FPML_Auto_Detection' ) ) {
+if ( ! class_exists( '\FPML_Auto_Detection' ) && class_exists( '\FP\Multilanguage\AutoDetection' ) ) {
 	class_alias( AutoDetection::class, '\FPML_Auto_Detection' );
 }
-if ( ! class_exists( '\FPML_Auto_Relink' ) ) {
+if ( ! class_exists( '\FPML_Auto_Relink' ) && class_exists( '\FP\Multilanguage\AutoRelink' ) ) {
 	class_alias( AutoRelink::class, '\FPML_Auto_Relink' );
 }
-if ( ! class_exists( '\FPML_Glossary' ) ) {
+if ( ! class_exists( '\FPML_Glossary' ) && class_exists( '\FP\Multilanguage\Glossary' ) ) {
 	class_alias( Glossary::class, '\FPML_Glossary' );
 }
-if ( ! class_exists( '\FPML_Menu_Sync' ) ) {
+if ( ! class_exists( '\FPML_Menu_Sync' ) && class_exists( '\FP\Multilanguage\MenuSync' ) ) {
 	class_alias( MenuSync::class, '\FPML_Menu_Sync' );
 }
-if ( ! class_exists( '\FPML_Featured_Image_Sync' ) ) {
+if ( ! class_exists( '\FPML_Featured_Image_Sync' ) && class_exists( '\FP\Multilanguage\FeaturedImageSync' ) ) {
 	class_alias( FeaturedImageSync::class, '\FPML_Featured_Image_Sync' );
 }
-if ( ! class_exists( '\FPML_Media_Front' ) ) {
+if ( ! class_exists( '\FPML_Media_Front' ) && class_exists( '\FP\Multilanguage\MediaFront' ) ) {
 	class_alias( MediaFront::class, '\FPML_Media_Front' );
 }
-if ( ! class_exists( '\FPML_Export_Import' ) ) {
+if ( ! class_exists( '\FPML_Export_Import' ) && class_exists( '\FP\Multilanguage\ExportImport' ) ) {
 	class_alias( ExportImport::class, '\FPML_Export_Import' );
 }
-if ( ! class_exists( '\FPML_Strings_Scanner' ) ) {
+if ( ! class_exists( '\FPML_Strings_Scanner' ) && class_exists( '\FP\Multilanguage\StringsScanner' ) ) {
 	class_alias( StringsScanner::class, '\FPML_Strings_Scanner' );
 }
-if ( ! class_exists( '\FPML_Strings_Override' ) ) {
+if ( ! class_exists( '\FPML_Strings_Override' ) && class_exists( '\FP\Multilanguage\StringsOverride' ) ) {
 	class_alias( StringsOverride::class, '\FPML_Strings_Override' );
 }
-if ( ! class_exists( '\FPML_Content_Diff' ) ) {
+if ( ! class_exists( '\FPML_Content_Diff' ) && class_exists( '\FP\Multilanguage\ContentDiff' ) ) {
 	class_alias( ContentDiff::class, '\FPML_Content_Diff' );
 }
-if ( ! class_exists( '\FPML_Webhooks' ) ) {
+if ( ! class_exists( '\FPML_Webhooks' ) && class_exists( '\FP\Multilanguage\Webhooks' ) ) {
 	class_alias( Webhooks::class, '\FPML_Webhooks' );
 }
-if ( ! class_exists( '\FPML_Health_Check' ) ) {
+if ( ! class_exists( '\FPML_Health_Check' ) && class_exists( '\FP\Multilanguage\HealthCheck' ) ) {
 	class_alias( HealthCheck::class, '\FPML_Health_Check' );
 }
-if ( ! class_exists( '\FPML_Dashboard_Widget' ) ) {
+if ( ! class_exists( '\FPML_Dashboard_Widget' ) && class_exists( '\FP\Multilanguage\DashboardWidget' ) ) {
 	class_alias( DashboardWidget::class, '\FPML_Dashboard_Widget' );
 }
 // LanguageSwitcherWidget - use Frontend\Widgets location (old location removed)
@@ -253,27 +253,27 @@ if ( ! class_exists( '\FPML_Language_Switcher_Widget' ) ) {
 		class_alias( FrontendLanguageSwitcherWidget::class, '\FPML_Language_Switcher_Widget' );
 	}
 }
-if ( ! class_exists( '\FPML_Rush_Mode' ) ) {
+if ( ! class_exists( '\FPML_Rush_Mode' ) && class_exists( '\FP\Multilanguage\RushMode' ) ) {
 	class_alias( RushMode::class, '\FPML_Rush_Mode' );
 }
-if ( ! class_exists( '\FPML_Rate_Limiter' ) ) {
+if ( ! class_exists( '\FPML_Rate_Limiter' ) && class_exists( '\FP\Multilanguage\RateLimiter' ) ) {
 	class_alias( RateLimiter::class, '\FPML_Rate_Limiter' );
 }
-if ( ! class_exists( '\FPML_Provider_Fallback' ) ) {
+if ( ! class_exists( '\FPML_Provider_Fallback' ) && class_exists( '\FP\Multilanguage\ProviderFallback' ) ) {
 	class_alias( ProviderFallback::class, '\FPML_Provider_Fallback' );
 }
-if ( ! class_exists( '\FPML_ACF_Support' ) ) {
+if ( ! class_exists( '\FPML_ACF_Support' ) && class_exists( '\FP\Multilanguage\ACFSupport' ) ) {
 	class_alias( ACFSupport::class, '\FPML_ACF_Support' );
 }
-if ( ! class_exists( '\FPML_Plugin_Detector' ) ) {
+if ( ! class_exists( '\FPML_Plugin_Detector' ) && class_exists( '\FP\Multilanguage\PluginDetector' ) ) {
 	class_alias( PluginDetector::class, '\FPML_Plugin_Detector' );
 }
-if ( ! class_exists( '\FPML_Theme_Compatibility' ) ) {
+if ( ! class_exists( '\FPML_Theme_Compatibility' ) && class_exists( '\FP\Multilanguage\ThemeCompatibility' ) ) {
 	class_alias( ThemeCompatibility::class, '\FPML_Theme_Compatibility' );
 }
 
 // Component aliases
-if ( ! class_exists( '\FPML_Admin' ) ) {
+if ( ! class_exists( '\FPML_Admin' ) && class_exists( '\FP\Multilanguage\Admin\Admin' ) ) {
 	class_alias( Admin::class, '\FPML_Admin' );
 }
 // Admin sub-components - support both old and new locations
@@ -303,7 +303,7 @@ if ( ! class_exists( '\FPML_REST_Admin' ) ) {
 		class_alias( RestAdmin::class, '\FPML_REST_Admin' );
 	}
 }
-if ( ! class_exists( '\FPML_CLI' ) ) {
+if ( ! class_exists( '\FPML_CLI' ) && class_exists( '\FP\Multilanguage\CLI\CLI' ) ) {
 	class_alias( CLI::class, '\FPML_CLI' );
 }
 

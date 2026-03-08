@@ -41,11 +41,11 @@ class MetaBoxRenderer {
 
 		$auto_translate = get_post_meta( $post->ID, self::META_AUTO_TRANSLATE, true );
 
-		wp_nonce_field( '\FPML_auto_translate_meta', '\FPML_auto_translate_nonce' );
+		wp_nonce_field( 'fpml_auto_translate_meta', 'fpml_auto_translate_nonce' );
 		?>
 		<p>
 			<label>
-				<input type="checkbox" name="\FPML_auto_translate_on_publish" value="1" <?php checked( $auto_translate, '1' ); ?> />
+				<input type="checkbox" name="fpml_auto_translate_on_publish" value="1" <?php checked( $auto_translate, '1' ); ?> />
 				<?php esc_html_e( 'Traduci automaticamente alla pubblicazione', 'fp-multilanguage' ); ?>
 			</label>
 		</p>

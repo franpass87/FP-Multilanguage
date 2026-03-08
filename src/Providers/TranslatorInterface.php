@@ -43,7 +43,7 @@ interface TranslatorInterface {
          *
          * @return string|\WP_Error
          */
-        public function translate( string $text, string $source = 'it', string $target = 'en', string $domain = 'general' );
+        public function translate( string $text, string $source = '', string $target = '', string $domain = 'general' ): string|\WP_Error;
 
         /**
          * Determine if the provider is ready to be used.
@@ -126,7 +126,7 @@ abstract class BaseProvider implements TranslatorInterface {
                  * @param string              $domain Context domain.
                  * @param \FPML_Base_Provider $provider Provider instance.
                  */
-                return apply_filters( '\FPML_glossary_pre_translate', $text, $source, $target, $domain, $this );
+                return apply_filters( 'fpml_glossary_pre_translate', $text, $source, $target, $domain, $this );
         }
 
         /**
@@ -153,7 +153,7 @@ abstract class BaseProvider implements TranslatorInterface {
                  * @param string              $domain Context domain.
                  * @param \FPML_Base_Provider $provider Provider instance.
                  */
-                return apply_filters( '\FPML_glossary_post_translate', $text, $source, $target, $domain, $this );
+                return apply_filters( 'fpml_glossary_post_translate', $text, $source, $target, $domain, $this );
         }
 
         /**
@@ -254,7 +254,7 @@ abstract class BaseProvider implements TranslatorInterface {
         protected function find_breakpoint( string $slice ): int {
                 $length = mb_strlen( $slice, 'UTF-8' );
 
-                $candidates = array( '\n\n', '\n', '. ', ' ', '\t' );
+                $candidates = array( "\n\n", "\n", '. ', ' ', "\t" );
                 foreach ( $candidates as $candidate ) {
                         $pos = mb_strrpos( $slice, $candidate, 0, 'UTF-8' );
                         if ( false !== $pos && $pos > 0 ) {
@@ -331,7 +331,7 @@ abstract class BaseProvider implements TranslatorInterface {
                  * @param float               $rate       Rate per 1000 characters.
                  * @param \FPML_Base_Provider $provider   Provider instance.
                  */
-                return (float) apply_filters( '\FPML_translate_estimated_cost', $cost, $characters, $rate, $this );
+                return (float) apply_filters( 'fpml_translate_estimated_cost', $cost, $characters, $rate, $this );
         }
 }
 

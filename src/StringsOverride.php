@@ -23,7 +23,7 @@ class StringsOverride {
         /**
          * Option storing overrides.
          */
-        const OPTION_KEY = '\FPML_strings_overrides';
+        const OPTION_KEY = 'fpml_strings_overrides';
 
         /**
          * Singleton instance.
@@ -40,11 +40,33 @@ class StringsOverride {
         protected $overrides = array();
 
         /**
+         * Source-to-target lookup index for O(1) gettext lookups.
+         *
+         * @var array<string, string>
+         */
+        protected $overrides_index = array();
+
+        /**
          * Constructor.
          */
         protected function __construct() {
                 $this->overrides = $this->load_overrides();
+                $this->build_overrides_index();
                 $this->register_filters();
+        }
+
+        /**
+         * Build the source-to-target lookup index from $overrides.
+         *
+         * @return void
+         */
+        protected function build_overrides_index(): void {
+                $this->overrides_index = array();
+                foreach ( $this->overrides as $row ) {
+                        if ( isset( $row['source'], $row['target'] ) ) {
+                                $this->overrides_index[ $row['source'] ] = $row['target'];
+                        }
+                }
         }
 
         /**
@@ -91,6 +113,7 @@ class StringsOverride {
         protected function save_overrides( $overrides ) {
                 update_option( self::OPTION_KEY, $overrides, false );
                 $this->overrides = $overrides;
+                $this->build_overrides_index();
         }
 
         /**
@@ -143,7 +166,7 @@ class StringsOverride {
 
                         $this->overrides[ $hash ]['target']     = $target;
                         $this->overrides[ $hash ]['context']    = $context;
-                        $this->overrides[ $hash ]['updated_at'] = current_time( 'timestamp' );
+                        $this->overrides[ $hash ]['updated_at'] = time();
                 }
 
                 $this->save_overrides( $this->overrides );
@@ -174,7 +197,7 @@ class StringsOverride {
                         'source'     => $source,
                         'target'     => $target,
                         'context'    => $context,
-                        'updated_at' => current_time( 'timestamp' ),
+                        'updated_at' => time(),
                 );
                 $this->save_overrides( $this->overrides );
         }
@@ -339,10 +362,8 @@ class StringsOverride {
                         return $translation;
                 }
 
-                foreach ( $this->overrides as $row ) {
-                        if ( $row['source'] === $text ) {
-                                return $row['target'];
-                        }
+                if ( isset( $this->overrides_index[ $text ] ) ) {
+                        return $this->overrides_index[ $text ];
                 }
 
                 return $translation;
@@ -372,14 +393,9 @@ class StringsOverride {
                         return $translation;
                 }
 
-                foreach ( $this->overrides as $row ) {
-                        if ( 1 === (int) $number && $row['source'] === $single ) {
-                                return $row['target'];
-                        }
-
-                        if ( 1 !== (int) $number && $row['source'] === $plural ) {
-                                return $row['target'];
-                        }
+                $lookup = 1 === (int) $number ? $single : $plural;
+                if ( isset( $this->overrides_index[ $lookup ] ) ) {
+                        return $this->overrides_index[ $lookup ];
                 }
 
                 return $translation;

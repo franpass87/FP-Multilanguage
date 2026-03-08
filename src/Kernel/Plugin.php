@@ -98,7 +98,12 @@ class Plugin {
 				continue;
 			}
 
-			$provider = new $provider_class();
+			try {
+				$provider = new $provider_class();
+			} catch ( \Throwable $e ) {
+				error_log( 'FPML: Provider ' . $provider_class . ' failed to instantiate: ' . $e->getMessage() );
+				continue;
+			}
 			if ( $provider instanceof ServiceProvider ) {
 				$provider->register( $this->container );
 				$this->providers[] = $provider;
@@ -116,9 +121,8 @@ class Plugin {
 			$provider->boot( $this->container );
 		}
 		
-		// Trigger initialization hooks (new and legacy for backward compatibility)
+		// Trigger initialization hook.
 		do_action( 'fpml_after_initialization' );
-		do_action( '\FPML_after_initialization' );
 	}
 
 	/**
@@ -180,11 +184,11 @@ class Plugin {
 	 */
 	public function activate(): void {
 		// Trigger settings backup before activation
-		do_action( '\FPML_before_activation' );
+		do_action( 'fpml_before_activation' );
 		
 		// SAFE ACTIVATION: Just set a flag, do nothing else
 		// Actual setup will happen on first use via PluginServiceProvider
-		update_option( '\FPML_needs_setup', '1', false );
+		update_option( 'fpml_needs_setup', '1', false );
 		
 		// CRITICAL: Flush rewrites per /en/ routing
 		// Deve essere fatto DOPO che le regole sono registrate
@@ -202,26 +206,32 @@ class Plugin {
 	public function deactivate(): void {
 		// Clear all scheduled events
 		$events = array(
-			'\FPML_run_queue',
-			'\FPML_retry_failed',
-			'\FPML_resync_outdated',
-			'\FPML_cleanup_queue',
-			'\FPML_daily_content_scan',
-			'\FPML_health_check',
+			'fpml_run_queue',
+			'fpml_retry_failed',
+			'fpml_resync_outdated',
+			'fpml_cleanup_queue',
+			'fpml_daily_content_scan',
+			'fpml_health_check',
+			'fpml_process_queue',
 		);
 		
 		foreach ( $events as $hook ) {
-			$timestamp = wp_next_scheduled( $hook );
-			while ( false !== $timestamp ) {
-				wp_unschedule_event( $timestamp, $hook );
+			if ( function_exists( 'wp_unschedule_hook' ) ) {
+				wp_unschedule_hook( $hook );
+			} else {
 				$timestamp = wp_next_scheduled( $hook );
+				$max_iterations = 20;
+				while ( false !== $timestamp && $max_iterations-- > 0 ) {
+					wp_unschedule_event( $timestamp, $hook );
+					$timestamp = wp_next_scheduled( $hook );
+				}
 			}
 		}
 		
 		// Clear single events with args (WordPress 5.1+)
 		if ( function_exists( 'wp_unschedule_hook' ) ) {
-			wp_unschedule_hook( '\FPML_reindex_post_type' );
-			wp_unschedule_hook( '\FPML_reindex_taxonomy' );
+			wp_unschedule_hook( 'fpml_reindex_post_type' );
+			wp_unschedule_hook( 'fpml_reindex_taxonomy' );
 		}
 		
 		flush_rewrite_rules();

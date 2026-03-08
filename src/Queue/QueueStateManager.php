@@ -40,12 +40,14 @@ class QueueStateManager {
 	 *
 	 * @since 0.2.0
 	 *
-	 * @param int    $job_id Job ID.
-	 * @param string $state New state.
-	 * @param string $error Error message (optional).
+	 * @param int    $job_id          Job ID.
+	 * @param string $state           New state.
+	 * @param string $error           Error message (optional).
+	 * @param bool   $preserve_retries When true, the retries counter is not reset even for 'pending'/'done'.
+	 *                                 Use when re-queuing due to batch limits, not for intentional resets.
 	 * @return bool True if updated, false otherwise.
 	 */
-	public function update_state( int $job_id, string $state, string $error = '' ): bool {
+	public function update_state( int $job_id, string $state, string $error = '', bool $preserve_retries = false ): bool {
 		global $wpdb;
 
 		$job_id = absint( $job_id );
@@ -65,7 +67,7 @@ class QueueStateManager {
 
 		$retries = $current ? (int) $current->retries : 0;
 
-		if ( in_array( $state, array( 'pending', 'done' ), true ) ) {
+		if ( ! $preserve_retries && in_array( $state, array( 'pending', 'done' ), true ) ) {
 			$retries = 0;
 		} elseif ( 'error' === $state ) {
 			$retries++; // count failures.

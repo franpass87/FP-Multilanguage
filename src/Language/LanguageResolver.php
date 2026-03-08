@@ -24,7 +24,7 @@ class LanguageResolver {
     /**
      * Cookie key for language preference.
      */
-    const COOKIE_NAME = '\FPML_lang_pref';
+    const COOKIE_NAME = 'fpml_lang_pref';
 
     /**
      * Cookie lifetime (30 days).
@@ -32,16 +32,16 @@ class LanguageResolver {
     const COOKIE_TTL = 2592000;
 
     /**
-     * Source language slug.
+     * Source language slug fallback (used only if settings are not yet available).
      */
     const SOURCE = 'it';
 
     /**
-     * Current language code (it|en).
+     * Current language code.
      *
      * @var string
      */
-    protected $current = self::SOURCE;
+    protected $current = '';
 
     /**
      * Cached settings instance.
@@ -57,6 +57,28 @@ class LanguageResolver {
      */
     public function __construct( $settings ) {
         $this->settings = $settings;
+        $this->current  = $this->get_source_language();
+    }
+
+    /**
+     * Get the configured source language, falling back to the SOURCE constant.
+     *
+     * @return string
+     */
+    protected function get_source_language(): string {
+        if ( $this->settings && method_exists( $this->settings, 'get' ) ) {
+            $src = $this->settings->get( 'source_language', '' );
+            if ( ! empty( $src ) ) {
+                return (string) $src;
+            }
+        }
+        if ( function_exists( 'fpml_get_source_language' ) ) {
+            $src = fpml_get_source_language();
+            if ( ! empty( $src ) ) {
+                return (string) $src;
+            }
+        }
+        return self::SOURCE;
     }
 
     /**
@@ -73,17 +95,17 @@ class LanguageResolver {
             return;
         }
 
-        $lang = self::SOURCE;
+        $lang = $this->get_source_language();
 
         // Get enabled languages
-        $language_manager = fpml_get_language_manager();
-        $enabled_languages = $language_manager->get_enabled_languages();
+        $language_manager = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        if ( ! $language_manager ) {
+            return;
+        }
+        $enabled_languages   = $language_manager->get_enabled_languages();
         $available_languages = $language_manager->get_all_languages();
 
-        $requested = $query->get( '\FPML_lang' );
-        if ( empty( $requested ) ) {
-            $requested = $query->get( 'fpml_lang' );
-        }
+        $requested = $query->get( 'fpml_lang' );
 
         if ( is_string( $requested ) ) {
             $requested = sanitize_key( $requested );
@@ -134,7 +156,6 @@ class LanguageResolver {
             do_action( 'fpml_language_determined', $lang, $previous_lang );
         }
 
-        $query->set( '\FPML_lang', $lang );
         $query->set( 'fpml_lang', $lang );
     }
 
@@ -205,13 +226,22 @@ class LanguageResolver {
      * @return string
      */
     protected function get_current_path() {
-        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
         if ( empty( $request_uri ) ) {
             return '';
         }
 
         $parsed = wp_parse_url( $request_uri );
-        return isset( $parsed['path'] ) ? $parsed['path'] : '';
+        $path   = isset( $parsed['path'] ) ? $parsed['path'] : '';
+
+        // Strip WP installation subdir so callers get a path relative to home_url
+        $home_path = wp_parse_url( home_url(), PHP_URL_PATH );
+        if ( $home_path && '/' !== $home_path ) {
+            $home_path = rtrim( $home_path, '/' );
+            $path      = preg_replace( '#^' . preg_quote( $home_path, '#' ) . '#', '', $path );
+        }
+
+        return $path ?: '/';
     }
 
     /**

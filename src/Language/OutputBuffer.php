@@ -41,7 +41,7 @@ class OutputBuffer {
      * @since 0.9.4
      */
     public function start_output_buffer() {
-        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $request_uri     = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
         $is_english_path = fpml_url_contains_target_language( $request_uri );
         
         if ( ! $is_english_path ) {
@@ -80,62 +80,35 @@ class OutputBuffer {
      * @return string HTML corretto.
      */
     public function fix_duplicate_urls_in_output( $html ) {
-        // Pattern principale: trova href con URL duplicati
-        $html = preg_replace_callback(
-            '#href=["\'](http[s]?://[^/]+)/en/http[s]?://([^"\']+)["\']#i',
-            function( $matches ) {
-                if ( ! strpos( $matches[2], '/' ) ) {
-                    return 'href="' . $matches[1] . '/en/"';
+        // Build a pattern that matches any enabled language slug
+        $lang_slugs = array();
+        $lm = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        if ( $lm ) {
+            foreach ( $lm->get_enabled_languages() as $lang ) {
+                $info = $lm->get_language_info( $lang );
+                $slug = $info ? trim( $info['slug'], '/' ) : $lang;
+                if ( $slug ) {
+                    $lang_slugs[] = preg_quote( $slug, '#' );
                 }
-                
-                if ( preg_match( '#^[^/]+(/.*)$#', $matches[2], $path_match ) ) {
-                    $path = $path_match[1];
-                    if ( preg_match( '#http[s]?://[^/]+(/.*)$#', $path, $final_path_match ) ) {
-                        $path = $final_path_match[1];
-                    }
-                    return 'href="' . $matches[1] . $path . '"';
-                }
-                
-                return $matches[0];
+            }
+        }
+        if ( empty( $lang_slugs ) ) {
+            // No language manager available yet; skip URL-fix to avoid false positives.
+            return $html;
+        }
+        $lang_pattern = '(?:' . implode( '|', $lang_slugs ) . ')';
+
+        // Fix href="/lang/https?://..." duplicates in any attribute value
+        $attrs = 'href|src|action|data-url|data-href';
+        $html  = preg_replace_callback(
+            '#(' . $attrs . ')=(["\'])([^"\']*/' . $lang_pattern . '/)http[s]?://[^/]+(/[^"\']*)\2#i',
+            static function ( $m ) {
+                // Keep the base up to and including /lang/, then append only the path
+                return $m[1] . '=' . $m[2] . $m[3] . $m[4] . $m[2];
             },
             $html
         );
-        
-        // Pattern alternativo più aggressivo
-        $html = preg_replace_callback(
-            '#href=["\']([^"\']*)/en/http[s]?://([^"\']+)["\']#i',
-            function( $matches ) {
-                $bad_url = $matches[1] . '/en/' . $matches[2];
-                
-                $last_http_pos = strrpos( $bad_url, 'http://' );
-                $last_https_pos = strrpos( $bad_url, 'https://' );
-                $last_pos = false;
-                
-                if ( $last_http_pos !== false && $last_https_pos !== false ) {
-                    $last_pos = max( $last_http_pos, $last_https_pos );
-                } elseif ( $last_http_pos !== false ) {
-                    $last_pos = $last_http_pos;
-                } elseif ( $last_https_pos !== false ) {
-                    $last_pos = $last_https_pos;
-                }
-                
-                if ( $last_pos !== false ) {
-                    $clean_url = substr( $bad_url, $last_pos );
-                    if ( preg_match( '#^http[s]?://([^/]+)(/.*)$#', $clean_url, $url_match ) ) {
-                        $domain = $url_match[1];
-                        $path = $url_match[2];
-                        if ( preg_match( '#http[s]?://[^/]+(/.*)$#', $path, $final_path_match ) ) {
-                            $path = $final_path_match[1];
-                        }
-                        return 'href="http' . ( strpos( $clean_url, 'https://' ) === 0 ? 's' : '' ) . '://' . $domain . $path . '"';
-                    }
-                }
-                
-                return $matches[0];
-            },
-            $html
-        );
-        
+
         return $html;
     }
 }

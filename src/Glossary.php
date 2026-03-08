@@ -152,7 +152,7 @@ class Glossary {
                                 'source'     => sanitize_text_field( $entry['source'] ),
                                 'target'     => sanitize_text_field( $entry['target'] ),
                                 'context'    => isset( $entry['context'] ) ? sanitize_text_field( $entry['context'] ) : '',
-                                'updated_at' => current_time( 'timestamp' ),
+                                'updated_at' => time(),
                         );
                 }
 
@@ -184,7 +184,7 @@ class Glossary {
                         'source'     => $source,
                         'target'     => $target,
                         'context'    => $context,
-                        'updated_at' => current_time( 'timestamp' ),
+                        'updated_at' => time(),
                 );
                 $this->save_entries( $this->entries );
         }

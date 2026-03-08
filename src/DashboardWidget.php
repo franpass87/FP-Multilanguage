@@ -66,7 +66,7 @@ class DashboardWidget {
 	protected function __construct() {
 		$container = $this->getContainer();
 		$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : fpml_get_queue();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 
 		add_action( 'wp_dashboard_setup', array( $this, 'add_dashboard_widget' ) );
 	}

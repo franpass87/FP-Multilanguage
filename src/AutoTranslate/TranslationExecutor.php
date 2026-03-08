@@ -90,19 +90,25 @@ class TranslationExecutor {
 			return;
 		}
 
-		// Enqueue job with priority
-		if ( class_exists( '\FPML_Plugin' ) ) {
-			$plugin = function_exists( 'fpml_get_plugin' ) ? fpml_get_plugin() : \FPML_Plugin::instance();
-			if ( method_exists( $plugin, 'enqueue_post_jobs' ) ) {
-				$plugin->enqueue_post_jobs( $post, $target_post, false );
+		// Enqueue translation job via JobEnqueuer.
+		if ( function_exists( 'fpml_get_job_enqueuer' ) ) {
+			$job_enqueuer = fpml_get_job_enqueuer();
+			if ( $job_enqueuer && method_exists( $job_enqueuer, 'enqueue_post_jobs' ) ) {
+				$job_enqueuer->enqueue_post_jobs( $post, $target_post, false );
 			}
 		}
 
-		// Force immediate queue execution (max 10 seconds)
-		$this->run_queue_with_timeout( 10 );
+		// Schedule async queue run instead of blocking PHP for up to 10 seconds.
+		// This prevents browser timeouts on save_post/publish_post hooks.
+		if ( ! wp_next_scheduled( 'fpml_run_queue' ) ) {
+			wp_schedule_single_event( time(), 'fpml_run_queue' );
+		}
 
-		// Publish translated post if translation is complete
-		$this->maybe_publish_translation( $target_post );
+		// Re-fetch target post to get the latest DB state before publishing check.
+		$fresh_target = get_post( $target_post->ID );
+		if ( $fresh_target instanceof \WP_Post ) {
+			$this->maybe_publish_translation( $fresh_target );
+		}
 
 		$this->logger->log(
 			'info',
@@ -126,9 +132,14 @@ class TranslationExecutor {
 		$start_time = time();
 		$processed  = 0;
 
+		// Resolve processor once, outside the loop
+		$processor = function_exists( 'fpml_get_processor' ) ? fpml_get_processor() : null;
+		if ( ! $processor ) {
+			return;
+		}
+
 		while ( ( time() - $start_time ) < $timeout_seconds ) {
-			$processor = class_exists( '\FPML_Processor' ) ? \FPML_fpml_get_processor() : null;
-			$result = $processor ? $processor->run_queue() : null;
+			$result = $processor->run_queue();
 
 			if ( is_wp_error( $result ) ) {
 				break;

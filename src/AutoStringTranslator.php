@@ -102,14 +102,27 @@ class AutoStringTranslator {
 	}
 
 	/**
-	 * Check if current language is English.
+	 * Get current language code.
+	 *
+	 * @return string Language code (e.g. 'en', 'de', 'fr') or empty string if source language.
+	 */
+	protected function get_current_target_language(): string {
+		$lang_instance = function_exists( 'fpml_get_language' ) ? fpml_get_language() : ( class_exists( '\FPML_Language' ) ? \FPML_Language::instance() : null );
+		if ( ! $lang_instance ) {
+			return '';
+		}
+		$current = $lang_instance->get_current_language();
+	$source  = ( class_exists( '\FPML_Language' ) && defined( 'FPML_Language::SOURCE' ) ) ? \FPML_Language::SOURCE : ( function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it' );
+	return ( $current && $current !== $source ) ? $current : '';
+	}
+
+	/**
+	 * Check if current language is a target language (not source).
 	 *
 	 * @return bool
 	 */
 	protected function is_english_language() {
-		// Verifica se siamo in lingua inglese
-		$current_lang = ( function_exists( 'fpml_get_language' ) ? fpml_get_language() : \FPML_Language::instance() )->get_current_language();
-		return 'en' === $current_lang || 'en_US' === $current_lang;
+		return '' !== $this->get_current_target_language();
 	}
 
 	/**
@@ -324,6 +337,10 @@ class AutoStringTranslator {
 	/**
 	 * Get translation for a string (with cache).
 	 *
+	 * If the translation is not cached, schedules an async job and returns the
+	 * original text immediately to avoid blocking the request with a synchronous
+	 * HTTP call to the AI provider.
+	 *
 	 * @param string $text    Text to translate.
 	 * @param string $domain  Text domain.
 	 * @param string $context Context (optional).
@@ -331,7 +348,8 @@ class AutoStringTranslator {
 	 * @return string
 	 */
 	protected function get_translation( $text, $domain = 'default', $context = '' ) {
-		$cache_key = 'string_' . md5( $text . $domain . $context );
+		$target_lang = $this->get_current_target_language();
+		$cache_key   = 'string_' . md5( $text . $domain . $context . $target_lang );
 
 		// Verifica cache runtime
 		if ( isset( $this->cache[ $cache_key ] ) ) {
@@ -340,60 +358,116 @@ class AutoStringTranslator {
 
 		// Verifica cache persistente usando transients
 		$transient_key = 'fpml_string_' . $cache_key;
-		$cached = get_transient( $transient_key );
+		$cached        = get_transient( $transient_key );
 		if ( false !== $cached ) {
 			$this->cache[ $cache_key ] = $cached;
 			return $cached;
 		}
 
-		// Traduci usando il processor
-		$this->translating = true;
-		$translation = $this->translate_with_ai( $text, $domain, $context );
-		$this->translating = false;
+		// Traduzione non in cache: schedula un job asincrono e ritorna il testo originale.
+		// Questo evita chiamate HTTP sincrone durante il rendering della pagina.
+		$this->schedule_async_translation( $text, $domain, $context, $target_lang, $transient_key );
 
-		if ( is_wp_error( $translation ) ) {
-			return $text; // Fallback: ritorna testo originale
-		}
-
-		// Salva in cache runtime
-		$this->cache[ $cache_key ] = $translation;
-
-		// Salva in cache persistente usando transients (24 ore)
-		set_transient( $transient_key, $translation, DAY_IN_SECONDS );
-
-		return $translation;
+		return $text;
 	}
 
 	/**
-	 * Translate text using AI.
+	 * Schedule an asynchronous translation job via WP-Cron.
 	 *
-	 * @param string $text    Text to translate.
-	 * @param string $domain  Text domain.
-	 * @param string $context Context.
+	 * @param string $text          Text to translate.
+	 * @param string $domain        Text domain.
+	 * @param string $context       Context.
+	 * @param string $target_lang   Target language code.
+	 * @param string $transient_key Transient key to store the result.
 	 *
-	 * @return string
+	 * @return void
 	 */
-	protected function translate_with_ai( $text, $domain, $context ) {
+	protected function schedule_async_translation( string $text, string $domain, string $context, string $target_lang, string $transient_key ): void {
+		$lock_key = $transient_key . '_pending';
+
+		// Evita di schedulare lo stesso job più volte
+		if ( get_transient( $lock_key ) ) {
+			return;
+		}
+
+		set_transient( $lock_key, 1, HOUR_IN_SECONDS );
+
+		$args = array(
+			'text'          => $text,
+			'domain'        => $domain,
+			'context'       => $context,
+			'target_lang'   => $target_lang,
+			'transient_key' => $transient_key,
+			'lock_key'      => $lock_key,
+		);
+
+		wp_schedule_single_event( time() + 5, 'fpml_translate_string_async', array( $args ) );
+
+		if ( ! has_action( 'fpml_translate_string_async', array( $this, 'handle_async_translation' ) ) ) {
+			add_action( 'fpml_translate_string_async', array( $this, 'handle_async_translation' ) );
+		}
+	}
+
+	/**
+	 * Handle an async translation job (called via WP-Cron).
+	 *
+	 * @param array $args Job arguments.
+	 *
+	 * @return void
+	 */
+	public function handle_async_translation( array $args ): void {
+		$text          = $args['text'] ?? '';
+		$domain        = $args['domain'] ?? 'default';
+		$context       = $args['context'] ?? '';
+		$target_lang   = $args['target_lang'] ?? ( function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : '' );
+		$transient_key = $args['transient_key'] ?? '';
+		$lock_key      = $args['lock_key'] ?? '';
+
+		if ( '' === $text || '' === $transient_key ) {
+			return;
+		}
+
+		$translation = $this->translate_with_ai( $text, $domain, $context, $target_lang );
+
+		if ( ! is_wp_error( $translation ) && $translation !== $text ) {
+			set_transient( $transient_key, $translation, DAY_IN_SECONDS );
+		}
+
+		if ( $lock_key ) {
+			delete_transient( $lock_key );
+		}
+	}
+
+	/**
+	 * Translate text using AI provider.
+	 *
+	 * @param string $text        Text to translate.
+	 * @param string $domain      Text domain.
+	 * @param string $context     Context.
+	 * @param string $target_lang Target language code.
+	 *
+	 * @return string|\WP_Error
+	 */
+	protected function translate_with_ai( string $text, string $domain, string $context, string $target_lang = 'en' ) {
 		if ( ! $this->processor ) {
-			$this->processor = \FPML_fpml_get_processor();
+			$this->processor = fpml_get_processor();
 		}
 
 		if ( ! $this->processor ) {
-			return $text; // Fallback: ritorna testo originale
+			return $text;
 		}
 
-		// Usa il translator del processor
 		$translator = $this->processor->get_translator_instance();
 
 		if ( ! $translator || is_wp_error( $translator ) ) {
-			return $text; // Fallback: ritorna testo originale
+			return $text;
 		}
 
-		// Traduci direttamente usando il translator
-		$result = $translator->translate( $text, 'it', 'en', 'general' );
+	$source = ( class_exists( '\FPML_Language' ) && defined( 'FPML_Language::SOURCE' ) ) ? \FPML_Language::SOURCE : ( function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it' );
+	$result = $translator->translate( $text, $source, $target_lang, 'general' );
 
 		if ( is_wp_error( $result ) ) {
-			return $text; // Fallback: ritorna testo originale
+			return $text;
 		}
 
 		return $result;

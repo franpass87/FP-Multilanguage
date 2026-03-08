@@ -55,6 +55,14 @@ class QueueProcessor {
     protected $assisted_mode = false;
 
     /**
+     * Optional callable to handle individual jobs.
+     * When set, this callable is invoked instead of the default stub.
+     *
+     * @var callable|null
+     */
+    protected $job_handler = null;
+
+    /**
      * Constructor.
      *
      * @param \FPML_Queue      $queue         Queue instance.
@@ -72,6 +80,17 @@ class QueueProcessor {
     }
 
     /**
+     * Set a callable that handles individual job processing.
+     *
+     * @param callable $handler Callable receiving a job object, returning true|'skipped'|\WP_Error.
+     *
+     * @return void
+     */
+    public function set_job_handler( callable $handler ): void {
+        $this->job_handler = $handler;
+    }
+
+    /**
      * Process the translation queue.
      *
      * @since 0.2.0
@@ -80,11 +99,15 @@ class QueueProcessor {
      */
     public function run_queue() {
         if ( $this->assisted_mode ) {
-            return new \WP_Error( '\FPML_assisted_mode', __( 'La coda interna è disabilitata in modalità assistita.', 'fp-multilanguage' ) );
+            return new \WP_Error( 'fpml_assisted_mode', __( 'La coda interna è disabilitata in modalità assistita.', 'fp-multilanguage' ) );
         }
 
         if ( ! $this->batch_manager->acquire_lock() ) {
-            return new \WP_Error( '\FPML_processor_locked', __( 'La coda è già in esecuzione.', 'fp-multilanguage' ) );
+            return new \WP_Error( 'fpml_processor_locked', __( 'La coda è già in esecuzione.', 'fp-multilanguage' ) );
+        }
+
+        if ( ! $this->queue ) {
+            return new \WP_Error( 'fpml_queue_unavailable', __( 'Queue non disponibile.', 'fp-multilanguage' ) );
         }
 
         $summary = array(
@@ -114,7 +137,7 @@ class QueueProcessor {
                 $job = $jobs[ $index ];
 
                 if ( $this->batch_manager->should_skip_job_due_to_limit() ) {
-                    $this->queue->update_state( $job->id, 'pending' );
+                    $this->queue->update_state( $job->id, 'pending', '', true );
                     unset( $jobs[ $index ] );
                     continue;
                 }
@@ -145,8 +168,10 @@ class QueueProcessor {
 
                     if ( $this->batch_manager->should_skip_job_due_to_limit() ) {
                         for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                            $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                            unset( $jobs[ $j ] );
+                            if ( isset( $jobs[ $j ] ) ) {
+                                $this->queue->update_state( $jobs[ $j ]->id, 'pending', '', true );
+                                unset( $jobs[ $j ] );
+                            }
                         }
                         break;
                     }
@@ -161,8 +186,10 @@ class QueueProcessor {
 
                 if ( $this->batch_manager->should_skip_job_due_to_limit() ) {
                     for ( $j = $index + 1; $j < $total_jobs; $j++ ) {
-                        $this->queue->update_state( $jobs[ $j ]->id, 'pending' );
-                        unset( $jobs[ $j ] );
+                        if ( isset( $jobs[ $j ] ) ) {
+                            $this->queue->update_state( $jobs[ $j ]->id, 'pending', '', true );
+                            unset( $jobs[ $j ] );
+                        }
                     }
                     break;
                 }
@@ -201,26 +228,16 @@ class QueueProcessor {
      */
     protected function process_job( $job ) {
         if ( empty( $job->object_type ) ) {
-            return new \WP_Error( '\FPML_job_invalid', __( 'Job non valido.', 'fp-multilanguage' ) );
+            return new \WP_Error( 'fpml_job_invalid', __( 'Job non valido.', 'fp-multilanguage' ) );
         }
 
         $this->batch_manager->reset_job_characters();
 
-        // This will delegate to Processor class methods
-        // For now, return skipped as placeholder
-        switch ( $job->object_type ) {
-            case 'post':
-            case 'term':
-            case 'menu':
-            case 'comment':
-            case 'widget':
-                // These will be handled by Processor class
-                return 'skipped';
-            case 'string':
-                return 'skipped';
+        if ( null !== $this->job_handler ) {
+            return ( $this->job_handler )( $job );
         }
 
-        return new \WP_Error( '\FPML_job_type_unsupported', sprintf( __( 'Tipo di job %s non supportato.', 'fp-multilanguage' ), $job->object_type ) );
+        return new \WP_Error( 'fpml_job_type_unsupported', sprintf( __( 'Tipo di job %s non supportato.', 'fp-multilanguage' ), $job->object_type ) );
     }
 }
 

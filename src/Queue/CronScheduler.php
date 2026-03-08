@@ -54,12 +54,12 @@ class CronScheduler {
      * @return array<string, array{interval: int, display: string}>
      */
     public function register_schedules( array $schedules ): array {
-        $schedules['\FPML_five_minutes'] = array(
+        $schedules['fpml_five_minutes'] = array(
             'interval' => 5 * MINUTE_IN_SECONDS,
             'display'  => __( 'Ogni 5 minuti (FP Multilanguage)', 'fp-multilanguage' ),
         );
 
-        $schedules['\FPML_fifteen_minutes'] = array(
+        $schedules['fpml_fifteen_minutes'] = array(
             'interval' => 15 * MINUTE_IN_SECONDS,
             'display'  => __( 'Ogni 15 minuti (FP Multilanguage)', 'fp-multilanguage' ),
         );
@@ -78,14 +78,14 @@ class CronScheduler {
         $frequency = $this->settings ? $this->settings->get( 'cron_frequency', '15min' ) : '15min';
 
         if ( '5min' === $frequency ) {
-            return '\FPML_five_minutes';
+            return 'fpml_five_minutes';
         }
 
         if ( 'hourly' === $frequency ) {
             return 'hourly';
         }
 
-        return '\FPML_fifteen_minutes';
+        return 'fpml_fifteen_minutes';
     }
 
     /**
@@ -101,30 +101,30 @@ class CronScheduler {
         }
 
         if ( $this->settings && $this->settings->get( 'manual_translation_mode', false ) ) {
-            $this->clear_scheduled_event( '\FPML_run_queue' );
+            $this->clear_scheduled_event( 'fpml_run_queue' );
             return;
         }
 
-        if ( ! wp_next_scheduled( '\FPML_run_queue' ) ) {
-            wp_schedule_event( time() + MINUTE_IN_SECONDS, $this->get_schedule_from_settings(), '\FPML_run_queue' );
+        if ( ! wp_next_scheduled( 'fpml_run_queue' ) ) {
+            wp_schedule_event( time() + MINUTE_IN_SECONDS, $this->get_schedule_from_settings(), 'fpml_run_queue' );
         }
 
-        if ( ! wp_next_scheduled( '\FPML_retry_failed' ) ) {
-            wp_schedule_event( time() + ( 5 * MINUTE_IN_SECONDS ), 'hourly', '\FPML_retry_failed' );
+        if ( ! wp_next_scheduled( 'fpml_retry_failed' ) ) {
+            wp_schedule_event( time() + ( 5 * MINUTE_IN_SECONDS ), 'hourly', 'fpml_retry_failed' );
         }
 
-        if ( ! wp_next_scheduled( '\FPML_resync_outdated' ) ) {
-            wp_schedule_event( time() + ( 10 * MINUTE_IN_SECONDS ), 'hourly', '\FPML_resync_outdated' );
+        if ( ! wp_next_scheduled( 'fpml_resync_outdated' ) ) {
+            wp_schedule_event( time() + ( 10 * MINUTE_IN_SECONDS ), 'hourly', 'fpml_resync_outdated' );
         }
 
         $retention = $this->settings ? (int) $this->settings->get( 'queue_retention_days', 0 ) : 0;
 
         if ( $retention > 0 ) {
-            if ( ! wp_next_scheduled( '\FPML_cleanup_queue' ) ) {
-                wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', '\FPML_cleanup_queue' );
+            if ( ! wp_next_scheduled( 'fpml_cleanup_queue' ) ) {
+                wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'fpml_cleanup_queue' );
             }
         } else {
-            $this->clear_scheduled_event( '\FPML_cleanup_queue' );
+            $this->clear_scheduled_event( 'fpml_cleanup_queue' );
         }
     }
 
@@ -143,8 +143,8 @@ class CronScheduler {
             return;
         }
 
-        $this->clear_scheduled_event( '\FPML_run_queue' );
-        $this->clear_scheduled_event( '\FPML_cleanup_queue' );
+        $this->clear_scheduled_event( 'fpml_run_queue' );
+        $this->clear_scheduled_event( 'fpml_cleanup_queue' );
         
         $this->maybe_schedule_events();
     }

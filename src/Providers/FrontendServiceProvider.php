@@ -82,8 +82,8 @@ class FrontendServiceProvider implements ServiceProvider {
 		// Language Resolver
 		$container->bind( 'frontend.language_resolver', function( Container $c ) {
 			if ( class_exists( '\FP\Multilanguage\Language\LanguageResolver' ) ) {
-				$rewrites = $c->has( 'frontend.rewrites' ) ? $c->get( 'frontend.rewrites' ) : null;
-				return new \FP\Multilanguage\Language\LanguageResolver( $rewrites );
+				$settings = $c->has( 'options' ) ? $c->get( 'options' ) : fpml_get_settings();
+				return new \FP\Multilanguage\Language\LanguageResolver( $settings );
 			}
 			return null;
 		}, true );

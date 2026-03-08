@@ -46,7 +46,7 @@ class ErrorHandler {
 			$error_message .= "\n\n" . __( '💬 Messaggio da OpenAI:', 'fp-multilanguage' ) . "\n" . wp_kses_post( $api_message );
 		}
 		
-		return new \WP_Error( '\FPML_openai_quota_exceeded', $error_message );
+		return new \WP_Error( 'fpml_openai_quota_exceeded', $error_message );
 	}
 
 	/**
@@ -93,7 +93,7 @@ class ErrorHandler {
 		
 		$error_message .= "\n\n" . sprintf( __( '⚠️ Tentativo %d/%d fallito. Il sistema ha ritentato automaticamente con backoff esponenziale.', 'fp-multilanguage' ), $max_attempts, $max_attempts );
 		
-		return new \WP_Error( '\FPML_openai_rate_limit', $error_message );
+		return new \WP_Error( 'fpml_openai_rate_limit', $error_message );
 	}
 
 	/**
@@ -106,16 +106,14 @@ class ErrorHandler {
 	 * @return \WP_Error
 	 */
 	public function handle_client_error( int $code, string $api_message = '' ): \WP_Error {
-		$error_code = '\FPML_openai_client_error';
+		$error_code = 'fpml_openai_client_error';
 		$error_message = '';
 
 		if ( 401 === $code || 403 === $code ) {
-			$error_code = '\FPML_openai_auth_error';
-			$error_message = sprintf(
-				__( 'Errore di autenticazione OpenAI: La chiave API non è valida o non ha i permessi necessari. Verifica la tua chiave su https://platform.openai.com/api-keys', 'fp-multilanguage' )
-			);
+			$error_code = 'fpml_openai_auth_error';
+			$error_message = __( 'Errore di autenticazione OpenAI: La chiave API non è valida o non ha i permessi necessari. Verifica la tua chiave su https://platform.openai.com/api-keys', 'fp-multilanguage' );
 		} elseif ( 400 === $code ) {
-			$error_code = '\FPML_openai_invalid_request';
+			$error_code = 'fpml_openai_invalid_request';
 			$error_message = sprintf(
 				__( 'Richiesta non valida: %s', 'fp-multilanguage' ),
 				wp_kses_post( $api_message )

@@ -64,11 +64,7 @@ class SlugManager {
             return;
         }
 
-        if ( false !== strpos( $translated, ' ' ) ) {
-            $slug_candidate = sanitize_title( $translated );
-        } else {
-            $slug_candidate = sanitize_title( $translated );
-        }
+        $slug_candidate = sanitize_title( $translated );
 
         if ( '' === $slug_candidate ) {
             return;
@@ -106,7 +102,9 @@ class SlugManager {
         update_post_meta( $post->ID, '_fpml_status_slug', 'automatic' );
 
         if ( $this->settings->get( 'slug_redirect', false ) && '' !== $old_slug ) {
-            $this->register_slug_redirect( $post->ID, $old_slug, $slug_candidate );
+            $lang = get_post_meta( $post->ID, '_fpml_language', true );
+            $lang = ( is_string( $lang ) && '' !== $lang ) ? $lang : 'en';
+            $this->register_slug_redirect( $post->ID, $old_slug, $slug_candidate, $lang );
         }
     }
 
@@ -120,10 +118,11 @@ class SlugManager {
      * @param string $new_slug New slug.
      * @return void
      */
-    protected function register_slug_redirect( $post_id, $old_slug, $new_slug ) {
+    protected function register_slug_redirect( $post_id, $old_slug, $new_slug, $lang = 'en' ) {
         $post_id  = absint( $post_id );
         $old_slug = sanitize_title( $old_slug );
         $new_slug = sanitize_title( $new_slug );
+        $lang     = sanitize_key( $lang );
 
         if ( $post_id <= 0 || '' === $old_slug || '' === $new_slug || $old_slug === $new_slug ) {
             return;
@@ -151,7 +150,7 @@ class SlugManager {
             'post_id'   => $post_id,
             'old_slug'  => $old_slug,
             'new_slug'  => $new_slug,
-            'lang'      => 'en',
+            'lang'      => $lang,
             'timestamp' => time(),
         );
 

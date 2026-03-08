@@ -58,34 +58,25 @@ class RequestHandler {
             $lang = strtolower( $lang );
 
             if ( in_array( $lang, $enabled_languages, true ) ) {
-                $request['\FPML_lang'] = $lang;
+                $request['fpml_lang'] = $lang;
             }
 
             unset( $request['lang'] );
         }
 
-        if ( isset( $request['fpml_lang'] ) && ! isset( $request['\FPML_lang'] ) ) {
-            $request['\FPML_lang'] = $request['fpml_lang'];
+        if ( isset( $request['fpml_lang'] ) ) {
+            $request['fpml_lang'] = sanitize_key( $request['fpml_lang'] );
         }
 
-        if ( isset( $request['fpml_path'] ) && ! isset( $request['\FPML_path'] ) ) {
-            $request['\FPML_path'] = $request['fpml_path'];
-        }
-
-        if ( isset( $request['\FPML_lang'] ) ) {
-            $request['\FPML_lang'] = sanitize_key( $request['\FPML_lang'] );
-        }
-
-        if ( empty( $request['\FPML_lang'] ) || ! in_array( $request['\FPML_lang'], $enabled_languages, true ) ) {
+        if ( empty( $request['fpml_lang'] ) || ! in_array( $request['fpml_lang'], $enabled_languages, true ) ) {
             return $request;
         }
 
-        $current_lang = $request['\FPML_lang'];
+        $current_lang = $request['fpml_lang'];
 
-        if ( isset( $request['\FPML_path'] ) ) {
-            $mapped = $this->post_resolver->map_path_to_query( $request['\FPML_path'], $current_lang );
+        if ( isset( $request['fpml_path'] ) ) {
+            $mapped = $this->post_resolver->map_path_to_query( $request['fpml_path'], $current_lang );
 
-            unset( $request['\FPML_path'] );
             unset( $request['fpml_path'] );
 
             if ( ! empty( $mapped ) ) {
@@ -123,10 +114,7 @@ class RequestHandler {
             return;
         }
 
-        $lang = get_query_var( '\FPML_lang' );
-        if ( empty( $lang ) ) {
-            $lang = get_query_var( 'fpml_lang' );
-        }
+        $lang = get_query_var( 'fpml_lang' );
 
         if ( empty( $lang ) ) {
             $lang = $current_lang;
@@ -139,7 +127,6 @@ class RequestHandler {
             return;
         }
 
-        $query->set( '\FPML_lang', $lang );
         $query->set( 'fpml_lang', $lang );
     }
 }

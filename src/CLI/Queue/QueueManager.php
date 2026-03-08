@@ -30,7 +30,7 @@ class QueueManager {
 	 * @return void
 	 */
 	public function reset(): void {
-		$processor = \FPML_fpml_get_processor();
+		$processor = \fpml_get_processor();
 		$queue     = fpml_get_queue();
 
 		$processor->force_release_lock();
@@ -53,7 +53,7 @@ class QueueManager {
 	 * @return void
 	 */
 	public function resync(): void {
-		$processor = \FPML_fpml_get_processor();
+		$processor = \fpml_get_processor();
 		$updated   = $processor->resync_outdated_jobs();
 
 		\WP_CLI::success(

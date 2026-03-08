@@ -41,7 +41,7 @@ class ReindexHandler {
 
 		if ( $plugin->is_assisted_mode() ) {
 			return new \WP_Error(
-				'\FPML_assisted_mode',
+				'fpml_assisted_mode',
 				__( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ),
 				array( 'status' => 409 )
 			);
@@ -83,7 +83,7 @@ class ReindexHandler {
 
 		if ( $plugin->is_assisted_mode() ) {
 			return new \WP_Error(
-				'\FPML_assisted_mode',
+				'fpml_assisted_mode',
 				__( 'Modalità assistita attiva: il reindex automatico è disabilitato.', 'fp-multilanguage' ),
 				array( 'status' => 409 )
 			);

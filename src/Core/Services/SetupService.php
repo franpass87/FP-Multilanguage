@@ -40,7 +40,6 @@ class SetupService {
 		$completed = get_option( 'fpml_setup_completed' ) || get_option( '\FPML_setup_completed' );
 		if ( $completed ) {
 			delete_option( 'fpml_needs_setup' );
-			delete_option( '\FPML_needs_setup' );
 			return;
 		}
 
@@ -86,11 +85,9 @@ class SetupService {
 				flush_rewrite_rules();
 			}
 
-			// Mark as completed (update both option names for backward compatibility)
-			update_option( 'fpml_setup_completed', '1', false );
-			update_option( '\FPML_setup_completed', '1', false );
-			delete_option( 'fpml_needs_setup' );
-			delete_option( '\FPML_needs_setup' );
+		// Mark as completed.
+		update_option( 'fpml_setup_completed', '1', false );
+		delete_option( 'fpml_needs_setup' );
 		} catch ( \Exception $e ) {
 			// Log error but don't break the site
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -118,7 +115,6 @@ class SetupService {
 	 */
 	public function markAsNeeded(): void {
 		update_option( 'fpml_needs_setup', '1', false );
-		update_option( '\FPML_needs_setup', '1', false );
 	}
 
 	/**

@@ -20,6 +20,26 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class HreflangManager {
     /**
+     * BCP 47 locale map for known language codes.
+     *
+     * @var array<string, string>
+     */
+    const LOCALE_MAP = array(
+        'it' => 'it-IT',
+        'en' => 'en-US',
+        'de' => 'de-DE',
+        'fr' => 'fr-FR',
+        'es' => 'es-ES',
+        'pt' => 'pt-PT',
+        'nl' => 'nl-NL',
+        'pl' => 'pl-PL',
+        'ru' => 'ru-RU',
+        'zh' => 'zh-CN',
+        'ja' => 'ja-JP',
+        'ar' => 'ar-SA',
+    );
+
+    /**
      * Language helper instance.
      *
      * @var \FPML_Language
@@ -54,27 +74,22 @@ class HreflangManager {
             $enabled_languages = $language_manager->get_enabled_languages();
             $all_languages = $language_manager->get_all_languages();
 
-            // Map of language codes to BCP 47 locales
-            $locale_map = array(
-                'it' => 'it-IT',
-                'en' => 'en-US',
-                'de' => 'de-DE',
-                'fr' => 'fr-FR',
-                'es' => 'es-ES',
-            );
+            $locale_map = self::LOCALE_MAP;
 
-            // Add Italian (source) link
-            $italian = home_url( '/' );
-            if ( $italian ) {
+            // Add source language link (dynamic, not hardcoded to 'it-IT')
+            $source_lang      = fpml_get_source_language();
+            $source_locale    = isset( $locale_map[ $source_lang ] ) ? $locale_map[ $source_lang ] : $source_lang;
+            $source_home_url  = home_url( '/' );
+            if ( $source_home_url ) {
                 $links[] = array(
-                    'lang' => 'it-IT',
-                    'url'  => $italian,
+                    'lang' => $source_locale,
+                    'url'  => $source_home_url,
                 );
             }
 
             // Add links for all enabled languages
             foreach ( $enabled_languages as $lang_code ) {
-                if ( ! isset( $locale_map[ $lang_code ] ) || ! isset( $all_languages[ $lang_code ] ) ) {
+                if ( ! isset( $all_languages[ $lang_code ] ) ) {
                     continue;
                 }
 
@@ -83,28 +98,23 @@ class HreflangManager {
                     continue;
                 }
 
-                $lang_url = home_url( $lang_info['slug'] );
+                // Use LOCALE_MAP if available, otherwise fall back to the lang code itself
+                $lang_locale = isset( $locale_map[ $lang_code ] ) ? $locale_map[ $lang_code ] : $lang_code;
+                $lang_url    = home_url( $lang_info['slug'] );
                 if ( $lang_url ) {
                     $links[] = array(
-                        'lang' => $locale_map[ $lang_code ],
+                        'lang' => $lang_locale,
                         'url'  => $lang_url,
                     );
                 }
             }
 
-            // Add x-default if filter allows
-            if ( ! empty( $links ) && apply_filters( '\FPML_output_xdefault', true ) ) {
-                // Use first enabled language or Italian as default
-                $default_url = $italian;
-                if ( ! empty( $enabled_languages ) && isset( $all_languages[ $enabled_languages[0] ] ) ) {
-                    $first_lang_info = $all_languages[ $enabled_languages[0] ];
-                    if ( is_array( $first_lang_info ) && ! empty( $first_lang_info['slug'] ) ) {
-                        $default_url = home_url( $first_lang_info['slug'] );
-                    }
-                }
+            // Add x-default if filter allows (points to source language homepage)
+            if ( ! empty( $links ) && apply_filters( 'fpml_output_xdefault', true ) ) {
+                $default_url = $source_home_url;
                 $links[] = array(
                     'lang' => 'x-default',
-                    'url'  => $default_url ? $default_url : $italian,
+                    'url'  => $default_url ?: home_url( '/' ),
                 );
             }
 
@@ -126,14 +136,7 @@ class HreflangManager {
             $enabled_languages = $language_manager->get_enabled_languages();
             $all_languages = $language_manager->get_all_languages();
 
-            // Map of language codes to BCP 47 locales
-            $locale_map = array(
-                'it' => 'it-IT',
-                'en' => 'en-US',
-                'de' => 'de-DE',
-                'fr' => 'fr-FR',
-                'es' => 'es-ES',
-            );
+            $locale_map = self::LOCALE_MAP;
 
             // Determine source post
             $source_post = null;
@@ -148,22 +151,23 @@ class HreflangManager {
                 $source_post = $object;
             }
 
-            // Add Italian (source) link
+            // Add source language link (dynamic)
+            $source_lang   = fpml_get_source_language();
+            $source_locale = isset( $locale_map[ $source_lang ] ) ? $locale_map[ $source_lang ] : $source_lang;
             if ( $source_post instanceof \WP_Post ) {
-                $italian_url = get_permalink( $source_post->ID );
-                if ( $italian_url ) {
+                $source_url = get_permalink( $source_post->ID );
+                if ( $source_url ) {
                     $links[] = array(
-                        'lang' => 'it-IT',
-                        'url'  => $italian_url,
+                        'lang' => $source_locale,
+                        'url'  => $source_url,
                     );
                 }
             }
 
             // Add links for all enabled languages
             foreach ( $enabled_languages as $lang_code ) {
-                if ( ! isset( $locale_map[ $lang_code ] ) ) {
-                    continue;
-                }
+                // Use LOCALE_MAP if available, otherwise fall back to the lang code itself
+                $lang_locale = isset( $locale_map[ $lang_code ] ) ? $locale_map[ $lang_code ] : $lang_code;
 
                 $translation_id = false;
                 if ( get_post_meta( $object->ID, '_fpml_is_translation', true ) ) {
@@ -189,11 +193,22 @@ class HreflangManager {
                         $translation_url = get_permalink( $translation_id );
                         if ( $translation_url ) {
                             $links[] = array(
-                                'lang' => $locale_map[ $lang_code ],
+                                'lang' => $lang_locale,
                                 'url'  => $translation_url,
                             );
                         }
                     }
+                }
+            }
+
+            // Add x-default pointing to the source post
+            if ( ! empty( $links ) && apply_filters( 'fpml_output_xdefault', true ) ) {
+                $source_url = $source_post instanceof \WP_Post ? get_permalink( $source_post->ID ) : '';
+                if ( $source_url ) {
+                    $links[] = array(
+                        'lang' => 'x-default',
+                        'url'  => $source_url,
+                    );
                 }
             }
 
@@ -215,14 +230,7 @@ class HreflangManager {
             $enabled_languages = $language_manager->get_enabled_languages();
             $all_languages = $language_manager->get_all_languages();
 
-            // Map of language codes to BCP 47 locales
-            $locale_map = array(
-                'it' => 'it-IT',
-                'en' => 'en-US',
-                'de' => 'de-DE',
-                'fr' => 'fr-FR',
-                'es' => 'es-ES',
-            );
+            $locale_map = self::LOCALE_MAP;
 
             // Determine source term
             $source_term = null;
@@ -233,22 +241,23 @@ class HreflangManager {
                 $source_term = $term;
             }
 
-            // Add Italian (source) link
+            // Add source language link (dynamic)
+            $source_lang   = fpml_get_source_language();
+            $source_locale = isset( $locale_map[ $source_lang ] ) ? $locale_map[ $source_lang ] : $source_lang;
             if ( $source_term instanceof \WP_Term ) {
-                $italian_link = get_term_link( $source_term );
-                if ( ! is_wp_error( $italian_link ) ) {
+                $source_term_link = get_term_link( $source_term );
+                if ( ! is_wp_error( $source_term_link ) ) {
                     $links[] = array(
-                        'lang' => 'it-IT',
-                        'url'  => $italian_link,
+                        'lang' => $source_locale,
+                        'url'  => $source_term_link,
                     );
                 }
             }
 
             // Add links for all enabled languages
             foreach ( $enabled_languages as $lang_code ) {
-                if ( ! isset( $locale_map[ $lang_code ] ) ) {
-                    continue;
-                }
+                // Use LOCALE_MAP if available, otherwise fall back to the lang code itself
+                $lang_locale = isset( $locale_map[ $lang_code ] ) ? $locale_map[ $lang_code ] : $lang_code;
 
                 $translation_term_id = false;
                 if ( get_term_meta( $term->term_id, '_fpml_is_translation', true ) ) {
@@ -280,11 +289,22 @@ class HreflangManager {
                         $translation_link = get_term_link( $translation_term );
                         if ( ! is_wp_error( $translation_link ) ) {
                             $links[] = array(
-                                'lang' => $locale_map[ $lang_code ],
+                                'lang' => $lang_locale,
                                 'url'  => $translation_link,
                             );
                         }
                     }
+                }
+            }
+
+            // Add x-default pointing to the source term
+            if ( ! empty( $links ) && apply_filters( 'fpml_output_xdefault', true ) ) {
+                $source_url = $source_term instanceof \WP_Term ? get_term_link( $source_term ) : '';
+                if ( $source_url && ! is_wp_error( $source_url ) ) {
+                    $links[] = array(
+                        'lang' => 'x-default',
+                        'url'  => $source_url,
+                    );
                 }
             }
         }

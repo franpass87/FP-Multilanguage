@@ -76,20 +76,24 @@ class TaxonomyIndexer {
 			update_meta_cache( 'term', $terms );
 		}
 
+		$language_manager   = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+		$enabled_languages  = $language_manager ? $language_manager->get_enabled_languages() : array();
+
 		foreach ( $terms as $term_id ) {
 			if ( get_term_meta( $term_id, '_fpml_is_translation', true ) ) {
 				continue;
 			}
 
 			$summary['terms_scanned']++;
-			
-			$target_term_id = $this->translation_manager->ensure_term_translation( $term_id, $taxonomy );
-			$target_term = $target_term_id ? get_term( $target_term_id, $taxonomy ) : null;
-			
-			if ( $target_term ) {
-				$term = get_term( $term_id, $taxonomy );
-				if ( $term && ! is_wp_error( $term ) ) {
-					$this->job_enqueuer->enqueue_term_jobs( $term, $target_term );
+
+			foreach ( $enabled_languages as $target_lang ) {
+				$target_term = $this->translation_manager->ensure_term_translation( $term_id, $taxonomy, $target_lang );
+
+				if ( $target_term instanceof \WP_Term ) {
+					$term = get_term( $term_id, $taxonomy );
+					if ( $term && ! is_wp_error( $term ) ) {
+						$this->job_enqueuer->enqueue_term_jobs( $term, $target_term );
+					}
 				}
 			}
 		}

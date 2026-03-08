@@ -182,8 +182,8 @@ class AutoTranslate {
 		$post_types = get_post_types( array( 'public' => true ), 'names' );
 
 		foreach ( $post_types as $post_type ) {
-			add_meta_box(
-				'\FPML_auto_translate',
+		add_meta_box(
+			'fpml_auto_translate',
 				__( 'Traduzione Automatica', 'fp-multilanguage' ),
 				array( $this->meta_box, 'render_meta_box' ),
 				$post_type,
@@ -204,7 +204,7 @@ class AutoTranslate {
 	 */
 	public function save_meta_box( int $post_id, \WP_Post $post ): void {
 		// Verify nonce
-		if ( ! isset( $_POST['\FPML_auto_translate_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['\FPML_auto_translate_nonce'] ) ), '\FPML_auto_translate_meta' ) ) {
+		if ( ! isset( $_POST['fpml_auto_translate_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['fpml_auto_translate_nonce'] ) ), 'fpml_auto_translate_meta' ) ) {
 			return;
 		}
 
@@ -219,7 +219,7 @@ class AutoTranslate {
 		}
 
 		// Save meta
-		$auto_translate = isset( $_POST['\FPML_auto_translate_on_publish'] ) ? '1' : '';
+		$auto_translate = isset( $_POST['fpml_auto_translate_on_publish'] ) ? '1' : '';
 		update_post_meta( $post_id, self::META_AUTO_TRANSLATE, $auto_translate );
 	}
 
@@ -233,7 +233,7 @@ class AutoTranslate {
 	 * @return void
 	 */
 	public function quick_edit_custom_box( string $column_name, string $post_type ): void {
-		if ( '\FPML_auto_translate' !== $column_name ) {
+		if ( 'fpml_auto_translate' !== $column_name ) {
 			return;
 		}
 
@@ -241,7 +241,7 @@ class AutoTranslate {
 		<fieldset class="inline-edit-col-right">
 			<div class="inline-edit-col">
 				<label>
-					<input type="checkbox" name="\FPML_auto_translate_on_publish" value="1" />
+					<input type="checkbox" name="fpml_auto_translate_on_publish" value="1" />
 					<span class="checkbox-title"><?php esc_html_e( 'Auto-Traduzione', 'fp-multilanguage' ); ?></span>
 				</label>
 			</div>

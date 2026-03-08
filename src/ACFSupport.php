@@ -143,10 +143,10 @@ class ACFSupport {
 		$this->flexible_processor = new FlexibleContentProcessor( $this->logger, $this->post_processor );
 
 		// Hook after translation to process relations
-		add_action( '\FPML_post_translated', array( $this, 'process_acf_relations' ), 40, 4 );
+		add_action( 'fpml_post_translated', array( $this, 'process_acf_relations' ), 40, 4 );
 
 		// Filter for meta whitelist - automatically add ACF fields
-		add_filter( '\FPML_meta_whitelist', array( $this, 'add_acf_fields_to_whitelist' ), 20, 2 );
+		add_filter( 'fpml_meta_whitelist', array( $this, 'add_acf_fields_to_whitelist' ), 20, 2 );
 	}
 
 	/**

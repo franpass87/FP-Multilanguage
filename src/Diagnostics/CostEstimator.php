@@ -87,7 +87,7 @@ class CostEstimator {
 	 * @return array<string,float|int>|WP_Error
 	 */
 	public function estimate( $states = null, $max_jobs = 500 ) {
-		$processor  = \FPML_fpml_get_processor();
+		$processor  = \fpml_get_processor();
 		$translator = $processor->get_translator_instance();
 
 		if ( is_wp_error( $translator ) ) {

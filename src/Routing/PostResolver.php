@@ -34,8 +34,19 @@ class PostResolver {
             return false;
         }
 
+        // Strip the WordPress installation subdir (if any) so the regex matches correctly.
+        // e.g. if WP is at /wp/, REQUEST_URI=/wp/en/slug → path to check = /en/slug
+        $home_path = wp_parse_url( home_url(), PHP_URL_PATH );
+        if ( $home_path && '/' !== $home_path ) {
+            $home_path   = rtrim( $home_path, '/' );
+            $request_uri = preg_replace( '#^' . preg_quote( $home_path, '#' ) . '#', '', $request_uri );
+        }
+
         $language_manager = fpml_get_language_manager();
-        $enabled_languages = $language_manager->get_enabled_languages();
+        if ( ! $language_manager ) {
+            return false;
+        }
+        $enabled_languages   = $language_manager->get_enabled_languages();
         $available_languages = $language_manager->get_all_languages();
 
         foreach ( $enabled_languages as $lang ) {
@@ -48,7 +59,7 @@ class PostResolver {
                 continue;
             }
             $lang_slug = trim( $lang_info['slug'], '/' );
-            
+
             if ( preg_match( '#^/' . preg_quote( $lang_slug, '#' ) . '(/|$)#', $request_uri ) ) {
                 return $lang;
             }
@@ -91,25 +102,36 @@ class PostResolver {
             }
         }
 
-        // Try with en- prefix
-        $en_slug = 'en-' . $slug;
-        $post_id = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT ID FROM {$wpdb->posts} 
-                WHERE post_name = %s 
-                AND post_type IN ('post','page') 
-                AND post_status = 'publish' 
-                LIMIT 1",
-                $en_slug
-            )
-        );
+        // Try with language-prefixed slug using the configured language slug (e.g. 'en-slug', 'de-slug')
+        if ( ! empty( $lang ) ) {
+            $language_manager = fpml_get_language_manager();
+            $lang_prefix      = $lang; // default: use lang code as prefix
+            if ( $language_manager ) {
+                $lang_info = $language_manager->get_language_info( $lang );
+                if ( $lang_info && ! empty( $lang_info['slug'] ) ) {
+                    $lang_prefix = trim( $lang_info['slug'], '/' );
+                }
+            }
 
-        if ( $post_id ) {
-            $post = get_post( $post_id );
-            if ( $post instanceof WP_Post && get_post_meta( $post_id, '_fpml_is_translation', true ) ) {
-                $target_lang = get_post_meta( $post_id, '_fpml_target_language', true );
-                if ( $target_lang === $lang ) {
-                    return $post;
+            $prefixed_slug = $lang_prefix . '-' . $slug;
+            $post_id       = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT ID FROM {$wpdb->posts}
+                    WHERE post_name = %s
+                    AND post_type IN ('post','page')
+                    AND post_status = 'publish'
+                    LIMIT 1",
+                    $prefixed_slug
+                )
+            );
+
+            if ( $post_id ) {
+                $post = get_post( $post_id );
+                if ( $post instanceof WP_Post && get_post_meta( $post_id, '_fpml_is_translation', true ) ) {
+                    $target_lang = get_post_meta( $post_id, '_fpml_target_language', true );
+                    if ( $target_lang === $lang ) {
+                        return $post;
+                    }
                 }
             }
         }

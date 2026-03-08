@@ -136,7 +136,7 @@ class Queue {
         public function __construct() {
                 global $wpdb;
 
-		$this->table = $wpdb->prefix . 'FPML_queue';
+		$this->table = $wpdb->prefix . 'fpml_queue';
 
                 // Initialize modules
                 $this->table_manager  = new QueueTableManager( $this->table );

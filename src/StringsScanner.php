@@ -10,6 +10,10 @@
 
 namespace FP\Multilanguage;
 
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+
 if ( ! defined( 'ABSPATH' ) ) {
         exit;
 }
@@ -23,12 +27,12 @@ class StringsScanner {
         /**
          * Option storing catalog data.
          */
-        const OPTION_KEY = '\FPML_strings_catalog';
+        const OPTION_KEY = 'fpml_strings_catalog';
 
         /**
          * Option storing last scan timestamp.
          */
-        const OPTION_LAST_SCAN = '\FPML_strings_last_scan';
+        const OPTION_LAST_SCAN = 'fpml_strings_last_scan';
 
         /**
          * Singleton instance.
@@ -201,7 +205,7 @@ class StringsScanner {
                  *
                  * @param array $targets Directories to scan.
                  */
-                return apply_filters( '\FPML_strings_scan_targets', $targets );
+                return apply_filters( 'fpml_strings_scan_targets', $targets );
         }
 
         /**

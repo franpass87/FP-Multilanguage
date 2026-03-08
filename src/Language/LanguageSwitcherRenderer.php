@@ -20,11 +20,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class LanguageSwitcherRenderer {
     /**
-     * Source language slug.
-     */
-    const SOURCE = 'it';
-
-    /**
      * Language resolver instance.
      *
      * @var LanguageResolver
@@ -38,6 +33,23 @@ class LanguageSwitcherRenderer {
      */
     public function __construct( LanguageResolver $resolver ) {
         $this->resolver = $resolver;
+    }
+
+    /**
+     * Get the configured source language code.
+     *
+     * @return string
+     */
+    protected function get_source_language(): string {
+        $manager = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        if ( $manager && method_exists( $manager, 'get_source_language' ) ) {
+            return (string) $manager->get_source_language();
+        }
+        $settings = function_exists( 'fpml_get_settings' ) ? fpml_get_settings() : null;
+        if ( $settings ) {
+            return (string) $settings->get( 'source_language', 'it' );
+        }
+        return 'it';
     }
 
     /**
@@ -62,9 +74,9 @@ class LanguageSwitcherRenderer {
         $show_flags = in_array( (string) $atts['show_flags'], array( '1', 'true', 'yes' ), true );
         $current    = $this->resolver->get_current_language();
 
-        $language_manager = fpml_get_language_manager();
-        $enabled_languages = $language_manager->get_enabled_languages();
-        $available_languages = $language_manager->get_all_languages();
+        $language_manager    = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        $enabled_languages   = $language_manager ? $language_manager->get_enabled_languages() : array();
+        $available_languages = $language_manager ? $language_manager->get_all_languages() : array();
 
         if ( ! is_array( $enabled_languages ) ) {
             $enabled_languages = array();
@@ -73,10 +85,15 @@ class LanguageSwitcherRenderer {
             $available_languages = array();
         }
 
+        $source_lang = $this->get_source_language();
+        $source_name = isset( $available_languages[ $source_lang ]['name'] )
+            ? $available_languages[ $source_lang ]['name']
+            : strtoupper( $source_lang );
+
         $languages = array(
-            self::SOURCE => array(
-                'label' => __( 'Italiano', 'fp-multilanguage' ),
-                'url'   => $this->get_url_for_language( self::SOURCE ),
+            $source_lang => array(
+                'label' => $source_name,
+                'url'   => $this->get_url_for_language( $source_lang ),
             ),
         );
 
@@ -133,16 +150,20 @@ class LanguageSwitcherRenderer {
                 $classes[] = 'fpml-switcher__item--current';
             }
 
+            $lang_label = esc_html( $language['label'] );
             if ( $show_flags ) {
-                $label = $this->maybe_prefix_flag( $code );
+                $flag = $this->maybe_prefix_flag( $code );
+                // Always include a visually-hidden language name for screen readers
+                $label = $flag . '<span class="screen-reader-text">' . $lang_label . '</span>';
             } else {
-                $label = esc_html( $language['label'] );
+                $label = $lang_label;
             }
 
             $items[] = sprintf(
-                '<a class="%1$s" href="%2$s" rel="nofollow">%3$s</a>',
+                '<a class="%1$s" href="%2$s" rel="nofollow" aria-label="%3$s">%4$s</a>',
                 esc_attr( implode( ' ', $classes ) ),
                 esc_url( $language['url'] ),
+                esc_attr( $language['label'] ),
                 $label
             );
         }
@@ -184,13 +205,15 @@ class LanguageSwitcherRenderer {
         }
 
         if ( ! wp_script_is( 'fpml-switcher-dropdown', 'registered' ) ) {
-            wp_register_script( 'fpml-switcher-dropdown', false, array(), \FPML_PLUGIN_VERSION, true );
+            wp_register_script( 'fpml-switcher-dropdown', false, array(), FPML_PLUGIN_VERSION, true );
         }
-
-        wp_enqueue_script( 'fpml-switcher-dropdown' );
-
-        $script = "document.addEventListener('change',function(event){var el=event.target;if(!el.classList.contains('fpml-switcher__select')){return;}var url=el.options[el.selectedIndex].getAttribute('data-url');if(url){window.location.href=url;}});";
-        wp_add_inline_script( 'fpml-switcher-dropdown', $script );
+        if ( ! wp_script_is( 'fpml-switcher-dropdown', 'enqueued' ) ) {
+            wp_enqueue_script( 'fpml-switcher-dropdown' );
+            wp_add_inline_script(
+                'fpml-switcher-dropdown',
+                "document.addEventListener('change',function(e){var el=e.target;if(!el.classList.contains('fpml-switcher__select')){return;}var url=el.options[el.selectedIndex].getAttribute('data-url');if(url){window.location.href=url;}});"
+            );
+        }
 
         return sprintf(
             '<div class="fpml-switcher fpml-switcher--dropdown"><select class="fpml-switcher__select">%s</select></div>',
@@ -208,36 +231,42 @@ class LanguageSwitcherRenderer {
      * @return string
      */
     protected function maybe_prefix_flag( $code ) {
-        $language_manager = fpml_get_language_manager();
-        $all_languages = $language_manager->get_all_languages();
-        
-        $flags = array(
-            self::SOURCE => '🇮🇹',
-        );
-        
+        $language_manager = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        $all_languages    = $language_manager ? $language_manager->get_all_languages() : array();
+        $source_lang      = $this->get_source_language();
+
+        $flags = array();
+
         foreach ( $all_languages as $lang_code => $lang_info ) {
             if ( isset( $lang_info['flag'] ) ) {
                 $flags[ $lang_code ] = $lang_info['flag'];
             }
         }
 
+        // Ensure source language has a fallback flag entry if not already set via lang info.
+        if ( ! isset( $flags[ $source_lang ] ) ) {
+            $flags[ $source_lang ] = '';
+        }
+
         if ( ! isset( $flags[ $code ] ) ) {
+            // No flag configured: return empty so the caller falls back to the language name
             return '';
         }
 
         $emoji = $flags[ $code ];
-        
+
         if ( function_exists( 'wp_staticize_emoji' ) ) {
             $emoji_html = wp_staticize_emoji( $emoji );
         } else {
             $emoji_html = esc_html( $emoji );
         }
 
+        // aria-hidden because the parent <a> already carries aria-label with the language name
         return sprintf( '<span class="fpml-switcher__flag" aria-hidden="true">%s</span>', $emoji_html );
     }
 
     /**
-     * Get URL for a language.
+     * Get URL for a language, preserving the current page context.
      *
      * @since 0.10.0
      *
@@ -245,20 +274,28 @@ class LanguageSwitcherRenderer {
      * @return string
      */
     protected function get_url_for_language( $lang ) {
-        // This should delegate to Language class
-        // For now, return simple URL
-        $language_manager = fpml_get_language_manager();
-        $enabled_languages = $language_manager->get_enabled_languages();
-        
-        $lang = strtolower( $lang );
-        
-        if ( ! in_array( $lang, $enabled_languages, true ) && $lang !== self::SOURCE ) {
-            $lang = self::SOURCE;
+        $language_manager  = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        $enabled_languages = $language_manager ? $language_manager->get_enabled_languages() : array();
+        $source_lang       = $this->get_source_language();
+        $lang              = strtolower( $lang );
+
+        if ( ! in_array( $lang, $enabled_languages, true ) && $lang !== $source_lang ) {
+            $lang = $source_lang;
         }
 
-        if ( fpml_is_target_language( $lang ) ) {
-            $lang_info = $language_manager->get_language_info( $lang );
-            $lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : 'en';
+        // Delegate to FPML_Language if available — it knows the current post/term context
+        $language_instance = function_exists( 'fpml_get_language' ) ? fpml_get_language() : null;
+        if ( $language_instance && method_exists( $language_instance, 'get_url_for_language' ) ) {
+            $url = $language_instance->get_url_for_language( $lang );
+            if ( ! empty( $url ) ) {
+                return $url;
+            }
+        }
+
+        // Fallback: source → homepage, target → /lang/ prefix
+        if ( function_exists( 'fpml_is_target_language' ) && fpml_is_target_language( $lang ) ) {
+            $lang_info = $language_manager ? $language_manager->get_language_info( $lang ) : null;
+            $lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : $lang;
             return home_url( '/' . $lang_slug . '/' );
         }
 

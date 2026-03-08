@@ -11,6 +11,7 @@ namespace FP\Multilanguage\Rest\Handlers;
 
 use FP\Multilanguage\Core\Container;
 use FP\Multilanguage\Core\ContainerAwareTrait;
+use FP\Multilanguage\Providers\ProviderOpenAI;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -51,7 +52,7 @@ class ProviderHandler {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function handle_test_provider( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$processor  = \FPML_fpml_get_processor();
+		$processor  = \fpml_get_processor();
 		$translator = $processor->get_translator_instance();
 
 		if ( is_wp_error( $translator ) ) {
@@ -104,13 +105,13 @@ class ProviderHandler {
 
 		if ( empty( $text ) ) {
 			return new \WP_Error(
-				'\FPML_empty_text',
+				'fpml_empty_text',
 				__( 'Testo da tradurre mancante.', 'fp-multilanguage' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		$processor  = \FPML_fpml_get_processor();
+		$processor  = \fpml_get_processor();
 		$translator = $processor->get_translator_instance();
 
 		// Override provider if specified
@@ -198,7 +199,7 @@ class ProviderHandler {
 
 		if ( 'openai' !== $provider ) {
 			return new \WP_Error(
-				'\FPML_unsupported_provider',
+				'fpml_unsupported_provider',
 				__( 'Il controllo billing è disponibile solo per OpenAI al momento.', 'fp-multilanguage' ),
 				array( 'status' => 400 )
 			);
@@ -213,7 +214,7 @@ class ProviderHandler {
 
 		if ( ! method_exists( $translator, 'verify_billing_status' ) ) {
 			return new \WP_Error(
-				'\FPML_method_not_supported',
+				'fpml_method_not_supported',
 				__( 'Il provider selezionato non supporta il controllo billing.', 'fp-multilanguage' ),
 				array( 'status' => 400 )
 			);
@@ -282,26 +283,26 @@ class ProviderHandler {
 	protected function get_translator_by_slug( string $provider ) {
 		$settings = class_exists( '\FPML_Settings' ) ? \FPML_Settings::instance() : null;
 		if ( ! $settings ) {
-			return new \WP_Error( '\FPML_settings_error', __( 'Impossibile caricare le impostazioni.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_settings_error', __( 'Impossibile caricare le impostazioni.', 'fp-multilanguage' ) );
 		}
 
 		switch ( $provider ) {
-		case 'openai':
-			$api_key = $settings->get( 'openai_api_key', '' );
-			if ( empty( $api_key ) ) {
-				return new \WP_Error( '\FPML_no_api_key', __( 'API key OpenAI mancante.', 'fp-multilanguage' ) );
-			}
-			return new \FPML_Provider_OpenAI();
+	case 'openai':
+		$api_key = $settings->get( 'openai_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return new \WP_Error( 'fpml_no_api_key', __( 'API key OpenAI mancante.', 'fp-multilanguage' ) );
+		}
+		return new ProviderOpenAI();
 
-		case 'google':
-			$api_key = $settings->get( 'google_api_key', '' );
-			if ( empty( $api_key ) ) {
-				return new \WP_Error( '\FPML_no_api_key', __( 'API key Google mancante.', 'fp-multilanguage' ) );
-			}
-			return new \FPML_Provider_Google();
+	case 'google':
+		$api_key = $settings->get( 'google_api_key', '' );
+		if ( empty( $api_key ) ) {
+			return new \WP_Error( 'fpml_no_api_key', __( 'API key Google mancante.', 'fp-multilanguage' ) );
+		}
+		return new \WP_Error( 'fpml_provider_unavailable', __( 'Provider Google non disponibile.', 'fp-multilanguage' ) );
 
-		default:
-			return new \WP_Error( '\FPML_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
+	default:
+		return new \WP_Error( 'fpml_invalid_provider', __( 'Provider non valido.', 'fp-multilanguage' ) );
 		}
 	}
 }

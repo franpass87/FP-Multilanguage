@@ -141,7 +141,7 @@ class SEO {
                 $this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
                 $this->language = ( function_exists( 'fpml_get_language' ) ? fpml_get_language() : \FPML_Language::instance() );
                 $this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : fpml_get_queue();
-                $this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+                $this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 
                 // Initialize modules
                 $this->meta_keys_manager = new MetaKeysManager();

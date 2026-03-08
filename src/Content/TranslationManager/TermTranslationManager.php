@@ -55,9 +55,11 @@ class TermTranslationManager {
 	public function ensure_term_translation( int $term_id, string $taxonomy, string $target_lang = 'en' ): \WP_Term|false {
 		// Validate target language
 		$language_manager = fpml_get_language_manager();
-		$available_languages = array_keys( $language_manager->get_all_languages() );
-		if ( ! in_array( $target_lang, $available_languages, true ) ) {
-			return false;
+		if ( $language_manager ) {
+			$available_languages = array_keys( $language_manager->get_all_languages() );
+			if ( ! in_array( $target_lang, $available_languages, true ) ) {
+				return false;
+			}
 		}
 
 		// Try language-specific meta key
@@ -82,7 +84,7 @@ class TermTranslationManager {
 				update_term_meta( $target_term->term_id, '_fpml_is_translation', 1 );
 				update_term_meta( $target_term->term_id, '_fpml_target_language', $target_lang );
 
-				return $target_term->term_id;
+				return $target_term;
 			}
 		}
 
@@ -97,11 +99,25 @@ class TermTranslationManager {
 		// Il nome iniziale è lo stesso, verrà tradotto successivamente
 		$translation_name = $term->name;
 		
-		// Lo slug iniziale è basato sullo slug italiano senza prefisso en-
+		// Lo slug iniziale è basato sullo slug sorgente senza prefisso lingua
 		$base_slug = $term->slug ? $term->slug : sanitize_title( $term->name );
-		// Rimuovi eventuali prefissi esistenti
-		$base_slug = preg_replace( '/^(it|en)[-_]/i', '', $base_slug );
-		// Usa lo slug base senza prefisso (il routing aggiungerà /en/)
+		// Rimuovi eventuali prefissi lingua esistenti dinamicamente
+		if ( function_exists( 'fpml_get_language_manager' ) ) {
+			$_lm = fpml_get_language_manager();
+			if ( $_lm ) {
+				$_all_langs = $_lm->get_all_languages();
+				$_slugs = array();
+				foreach ( $_all_langs as $_lang_info ) {
+					if ( ! empty( $_lang_info['slug'] ) ) {
+						$_slugs[] = preg_quote( trim( $_lang_info['slug'], '/' ), '/' );
+					}
+				}
+				if ( ! empty( $_slugs ) ) {
+					$base_slug = preg_replace( '/^(' . implode( '|', $_slugs ) . ')[-_]/i', '', $base_slug );
+				}
+			}
+		}
+		// Usa lo slug base senza prefisso (il routing aggiungerà /<lang>/)
 		$translation_slug = $base_slug;
 
 		$parent_translation_id = 0;
@@ -164,7 +180,8 @@ class TermTranslationManager {
 
 		$this->creating_translation = false;
 
-		return $target_id;
+		$created_term = get_term( $target_id, $taxonomy );
+		return ( $created_term instanceof \WP_Term && ! is_wp_error( $created_term ) ) ? $created_term : false;
 	}
 }
 

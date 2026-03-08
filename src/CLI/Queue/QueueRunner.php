@@ -35,7 +35,7 @@ class QueueRunner {
 			$this->run_with_progress( $batch_size );
 		} else {
 			// Original behavior
-			$processor = \FPML_fpml_get_processor();
+			$processor = \fpml_get_processor();
 			$result    = $processor->run_queue();
 
 			if ( is_wp_error( $result ) ) {
@@ -71,7 +71,7 @@ class QueueRunner {
 	 */
 	protected function run_with_progress( int $batch_size ): void {
 		$queue = fpml_get_queue();
-		$processor = \FPML_fpml_get_processor();
+		$processor = \fpml_get_processor();
 
 		// Get jobs to process
 		$jobs = $queue->get_next_jobs( $batch_size );

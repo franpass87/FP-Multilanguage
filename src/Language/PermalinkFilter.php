@@ -29,7 +29,7 @@ class PermalinkFilter {
     /**
      * Cookie key for language preference.
      */
-    const COOKIE_NAME = '\FPML_lang_pref';
+    const COOKIE_NAME = 'fpml_lang_pref';
 
     /**
      * Source language slug.
@@ -90,9 +90,25 @@ class PermalinkFilter {
         
         // Initialize helper and filters
         $this->filter_helper = new FilterHelper();
+        // Tell FilterHelper which object is hooked on post_link/page_link/post_type_link.
+        // $this is the facade — its filter_translation_permalink delegates to $post_filter,
+        // but WordPress holds a reference to $this, so we remove/restore on $this.
+        $this->filter_helper->set_permalink_filter( $this );
         $this->post_filter = new PostPermalinkFilter( $settings, $resolver, $this->filter_helper );
         $this->term_filter = new TermPermalinkFilter( $settings, $resolver, $this->filter_helper );
         $this->sample_html_filter = new SamplePermalinkHtmlFilter( $settings, $resolver, $this->post_filter );
+    }
+
+    /**
+     * Attach the URL filter object so FilterHelper can remove/restore home_url/site_url hooks.
+     *
+     * Must be called after Language.php has registered the URL filters.
+     *
+     * @param object $url_filter UrlFilter instance.
+     * @return void
+     */
+    public function set_url_filter( $url_filter ) {
+        $this->filter_helper->set_url_filter( $url_filter );
     }
 
     /**
@@ -158,43 +174,4 @@ class PermalinkFilter {
         return $this->sample_html_filter->filter_sample_permalink_html( $html, $post_id, $new_title, $new_slug, $post );
     }
 
-    /**
-     * Remove permalink filters temporarily.
-     *
-     * @since 0.10.0
-     * @return void
-     */
-    protected function remove_permalink_filters() {
-        $this->filter_helper->remove_permalink_filters();
-    }
-
-    /**
-     * Restore permalink filters.
-     *
-     * @since 0.10.0
-     * @return void
-     */
-    protected function restore_permalink_filters() {
-        $this->filter_helper->restore_permalink_filters();
-    }
-
-    /**
-     * Remove URL filters temporarily.
-     *
-     * @since 0.10.0
-     * @return void
-     */
-    protected function remove_url_filters() {
-        $this->filter_helper->remove_url_filters();
-    }
-
-    /**
-     * Restore URL filters.
-     *
-     * @since 0.10.0
-     * @return void
-     */
-    protected function restore_url_filters() {
-        $this->filter_helper->restore_url_filters();
-    }
 }

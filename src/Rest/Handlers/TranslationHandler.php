@@ -108,30 +108,30 @@ class TranslationHandler {
 					);
 					break;
 
-				case 'regenerate':
-					// Delete existing translation and retranslate
-					// Backward compatibility: check legacy _fpml_pair_id for 'en'
-					$translation_id = fpml_get_translation_id( $post_id, 'en' );
-					if ( ! $translation_id ) {
-						$translation_id = (int) get_post_meta( $post_id, '_fpml_pair_id', true );
-					}
-					if ( $translation_id ) {
-						wp_delete_post( $translation_id, true );
-						// Delete new meta keys
-						delete_post_meta( $post_id, '_fpml_pair_id_en' );
-						// Backward compatibility: also delete legacy
-						delete_post_meta( $post_id, '_fpml_pair_id' );
-					}
-					$result = $processor->translate_post_directly( $post_id );
-					$results[ $post_id ] = array(
-						'success' => 'completed' === $result,
-						'message' => 'completed' === $result ? 'Translation regenerated' : 'Regeneration failed',
-					);
-					break;
+			case 'regenerate':
+				// Delete existing translation and retranslate
+				$_target_lang   = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en';
+				$translation_id = fpml_get_translation_id( $post_id, $_target_lang );
+				if ( ! $translation_id ) {
+					$translation_id = (int) get_post_meta( $post_id, '_fpml_pair_id', true );
+				}
+				if ( $translation_id ) {
+					wp_delete_post( $translation_id, true );
+					// Delete language-specific meta key (dynamic)
+					delete_post_meta( $post_id, '_fpml_pair_id_' . $_target_lang );
+					// Backward compatibility: also delete legacy
+					delete_post_meta( $post_id, '_fpml_pair_id' );
+				}
+				$result = $processor->translate_post_directly( $post_id );
+				$results[ $post_id ] = array(
+					'success' => 'completed' === $result,
+					'message' => 'completed' === $result ? 'Translation regenerated' : 'Regeneration failed',
+				);
+				break;
 
-				case 'sync':
-					// Backward compatibility: check legacy _fpml_pair_id for 'en'
-					$translation_id = fpml_get_translation_id( $post_id, 'en' );
+			case 'sync':
+				$_target_lang   = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en';
+				$translation_id = fpml_get_translation_id( $post_id, $_target_lang );
 					if ( ! $translation_id ) {
 						$translation_id = (int) get_post_meta( $post_id, '_fpml_pair_id', true );
 					}
@@ -183,20 +183,20 @@ class TranslationHandler {
 		}
 
 		// Delete existing translation
-		// Backward compatibility: check legacy _fpml_pair_id for 'en'
-		$translation_id = fpml_get_translation_id( $post_id, 'en' );
+		$_target_lang   = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en';
+		$translation_id = fpml_get_translation_id( $post_id, $_target_lang );
 		if ( ! $translation_id ) {
 			$translation_id = (int) get_post_meta( $post_id, '_fpml_pair_id', true );
 		}
-		if ( $translation_id ) {
-			wp_delete_post( $translation_id, true );
-			// Delete new meta keys
-			delete_post_meta( $post_id, '_fpml_pair_id_en' );
-			// Backward compatibility: also delete legacy
-			delete_post_meta( $post_id, '_fpml_pair_id' );
-		}
+	if ( $translation_id ) {
+		wp_delete_post( $translation_id, true );
+		// Delete language-specific meta key (dynamic)
+		delete_post_meta( $post_id, '_fpml_pair_id_' . $_target_lang );
+		// Backward compatibility: also delete legacy
+		delete_post_meta( $post_id, '_fpml_pair_id' );
+	}
 
-		// Retranslate
+	// Retranslate
 		$processor = class_exists( '\FP\Multilanguage\Processor' ) ? fpml_get_processor() : null;
 		if ( ! $processor ) {
 			return new \WP_Error( 'processor_error', 'Impossibile caricare il processore.', array( 'status' => 500 ) );
@@ -229,8 +229,8 @@ class TranslationHandler {
 			return new \WP_Error( 'not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
-		$versioning = new TranslationVersioning();
-		$versions   = $versioning->get_versions( $post_id );
+		$versioning = TranslationVersioning::instance();
+		$versions   = $versioning->get_versions( 'post', $post_id );
 
 		return new \WP_REST_Response( array(
 			'versions' => $versions,
@@ -254,8 +254,8 @@ class TranslationHandler {
 			return new \WP_Error( 'not_found', 'Post not found', array( 'status' => 404 ) );
 		}
 
-		$versioning = new TranslationVersioning();
-		$result     = $versioning->rollback( $post_id, $version );
+		$versioning = TranslationVersioning::instance();
+		$result     = $versioning->rollback( $version );
 
 		if ( $result ) {
 			return new \WP_REST_Response( array(

@@ -120,9 +120,7 @@ class Rewrites {
         add_filter( 'posts_clauses', array( $this->query_filter, 'filter_posts_clauses_by_language' ), 10, 2 );
         add_filter( 'posts_where', array( $this->query_filter, 'filter_posts_where_by_language' ), 5, 2 );
         add_filter( 'posts_results', array( $this->query_filter, 'filter_posts_results_by_language' ), 5, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 5, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 1, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 999, 2 );
+        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 10, 2 );
         add_action( 'template_redirect', array( $this, 'force_single_post' ), 1 );
         add_action( 'template_redirect', array( $this, 'redirect_untranslated_to_home' ), 2 );
         add_action( 'wp_footer', array( $this, 'filter_output_html_by_language' ), 999 );
@@ -229,10 +227,10 @@ class Rewrites {
         if ( empty( $current_lang ) ) {
             $language_manager = fpml_get_language_manager();
             if ( ! $language_manager ) {
-                return $query_vars;
+                return array();
             }
             $enabled_languages = $language_manager->get_enabled_languages();
-            $current_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+            $current_lang      = ! empty( $enabled_languages ) ? $enabled_languages[0] : '';
         }
         $path = trim( (string) $path );
 
@@ -391,8 +389,8 @@ class Rewrites {
                                 'p' => $translation_post->ID,
                             );
                         } else {
-                            // Prova con prefisso "en-*"
-                            $translation_slug = 'en-' . $slug;
+                            // Prova con prefisso "<lang>-*" (dinamico)
+                            $translation_slug = $current_lang . '-' . $slug;
                             $translation_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
 
                             if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -421,7 +419,7 @@ class Rewrites {
                                         }
                                     }
 
-                                    // Se non trovato, prova con prefisso "en-*"
+                                    // Se non trovato, prova con prefisso "<lang>-*" (dinamico)
                                     if ( empty( $result ) ) {
                                         $like_slug = $wpdb->esc_like( $translation_slug ) . '%';
                                         $maybe_id  = $wpdb->get_var(
@@ -444,7 +442,7 @@ class Rewrites {
                             }
                         }
                     } else {
-                        // Comportamento normale: prova prima a cercare una pagina tradotta con slug esatto (senza prefisso en-)
+                        // Comportamento normale: prova prima a cercare una pagina tradotta con slug esatto
                         $translation_post = get_page_by_path( $slug, OBJECT, array( 'page', 'post' ) );
 
                         if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -452,8 +450,8 @@ class Rewrites {
                                 'p' => $translation_post->ID,
                             );
                         } else {
-                            // Prova con prefisso "en-*"
-                            $translation_slug = 'en-' . $slug;
+                            // Prova con prefisso "<lang>-*" (dinamico)
+                            $translation_slug = $current_lang . '-' . $slug;
                             $translation_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
 
                             if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -514,9 +512,9 @@ class Rewrites {
 
                             $term = get_term_by( 'slug', $slug, $taxonomy->name );
 
-                            // Se non trovato e siamo in path inglese, prova con en-
+                            // Se non trovato e siamo in path lingua target, prova con prefisso dinamico
                             if ( ! ( $term instanceof \WP_Term ) && $is_target_language_path ) {
-                                $term = get_term_by( 'slug', 'en-' . $slug, $taxonomy->name );
+                                $term = get_term_by( 'slug', $current_lang . '-' . $slug, $taxonomy->name );
                             }
 
                             if ( ! ( $term instanceof \WP_Term ) || is_wp_error( $term ) ) {
@@ -528,18 +526,20 @@ class Rewrites {
                                 if ( get_term_meta( $term->term_id, '_fpml_is_translation', true ) ) {
                                     // È già una traduzione, perfetto
                                 } else {
-                                    // È il termine originale, cerchiamo la sua traduzione
-                                    // Backward compatibility: check legacy _fpml_pair_id for 'en'
-                                    // Try to detect current language first
-                                    $current_lang = 'en'; // Default fallback
-                                    $language_manager = fpml_get_language_manager();
-                                    if ( $language_manager ) {
-                                            $current_lang = $language_manager->get_enabled_languages();
-                                            $current_lang = ! empty( $current_lang ) ? $current_lang[0] : 'en';
+                                    // È il termine originale, cerchiamo la sua traduzione.
+                                    $term_lang_mgr  = fpml_get_language_manager();
+                                    $term_lang      = '';
+                                    if ( $term_lang_mgr ) {
+                                        $term_enabled = $term_lang_mgr->get_enabled_languages();
+                                        $term_lang    = ! empty( $term_enabled ) ? $term_enabled[0] : '';
                                     }
-                                    $meta_key = '_fpml_pair_id_' . $current_lang;
-                                    $trans_id = (int) get_term_meta( $term->term_id, $meta_key, true );
-                                    if ( ! $trans_id && 'en' === $current_lang ) {
+                                    if ( empty( $term_lang ) ) {
+                                        $term_lang = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : '';
+                                    }
+                                    $meta_key = '_fpml_pair_id_' . $term_lang;
+                                    $trans_id = $term_lang ? (int) get_term_meta( $term->term_id, $meta_key, true ) : 0;
+                                    // Backward compatibility: legacy _fpml_pair_id (no lang suffix).
+                                    if ( ! $trans_id ) {
                                             $trans_id = (int) get_term_meta( $term->term_id, '_fpml_pair_id', true );
                                     }
                                     if ( $trans_id ) {
@@ -1026,13 +1026,15 @@ class Rewrites {
             return;
         }
 
-        // JavaScript per rimuovere link problematici e correggere URL duplicati dal DOM
-        // Questo è un fallback finale che agisce direttamente sull'HTML renderizzato
+        // Minimal JS fallback: fix any /lang/https?:// duplicate URLs that PHP missed.
+        $lang_mgr_js2  = fpml_get_language_manager();
+        $lang_info_js2 = $lang_mgr_js2 ? $lang_mgr_js2->get_language_info( $current_lang ) : null;
+        $lang_slug_js2 = $lang_info_js2 ? trim( $lang_info_js2['slug'], '/' ) : $current_lang;
         ?>
         <script type="text/javascript">
         (function() {
+            var fpmlLangSlug = '<?php echo esc_js( $lang_slug_js2 ); ?>';
             function fixDuplicateUrls() {
-                // Funzione per correggere URL duplicati (es: /en/http://domain/path)
                 var links = document.querySelectorAll('a[href]');
                 var fixedCount = 0;
                 var currentHost = window.location.hostname;
@@ -1043,10 +1045,11 @@ class Rewrites {
                     
                     if (!href) continue;
                     
-                    // Verifica se l'URL contiene duplicati (pattern: /en/http:// o http://domain/en/http://)
-                    if (href.indexOf('/en/http://') !== -1 || href.indexOf('/en/https://') !== -1 || 
-                        (href.indexOf('http://' + currentHost + '/en/http://') !== -1) ||
-                        (href.indexOf('https://' + currentHost + '/en/https://') !== -1)) {
+                    // Verifica se l'URL contiene duplicati (pattern: /LANG/http:// o http://domain/LANG/http://)
+                    var langPrefix = '/' + fpmlLangSlug + '/';
+                    if (href.indexOf(langPrefix + 'http://') !== -1 || href.indexOf(langPrefix + 'https://') !== -1 || 
+                        (href.indexOf('http://' + currentHost + langPrefix + 'http://') !== -1) ||
+                        (href.indexOf('https://' + currentHost + langPrefix + 'https://') !== -1)) {
                         
                         // Estrai solo l'ultimo URL completo (dopo l'ultimo http:// o https://)
                         var lastHttpPos = Math.max(
@@ -1066,11 +1069,12 @@ class Rewrites {
                                 }
                             } catch (e) {
                                 // Se l'URL non è valido, prova un approccio alternativo
-                                // Pattern: http://domain/en/http://domain/path -> http://domain/en/path
-                                var match = fixedHref.match(/http[s]?:\/\/([^\/]+)\/en\/http[s]?:\/\/[^\/]+\/(.+)$/);
+                                // Pattern: http://domain/LANG/http://domain/path -> http://domain/LANG/path
+                                var langEscaped2 = fpmlLangSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                var match = fixedHref.match(new RegExp('http[s]?:\\/\\/([^\\/]+)\\/' + langEscaped2 + '\\/http[s]?:\\/\\/[^\\/]+\\/(.+)$'));
                                 if (match) {
                                     var scheme = fixedHref.indexOf('https://') === 0 ? 'https://' : 'http://';
-                                    var correctedHref = scheme + match[1] + '/en/' + match[2];
+                                    var correctedHref = scheme + match[1] + langPrefix + match[2];
                                     link.setAttribute('href', correctedHref);
                                     fixedCount++;
                                 } else {
@@ -1142,32 +1146,6 @@ class Rewrites {
                         
                         var pathname = linkUrl.pathname;
                         
-                        // Se il link non contiene /en/ e punta a un post, rimuovilo
-                        if (pathname.indexOf('/en/') === -1) {
-                            // Verifica se è un link a "prova-di-test" o altri pattern problematici
-                            if (pathname.indexOf('prova-di-test') !== -1 ||
-                                href.indexOf('prova-di-test') !== -1 ||
-                                href.indexOf('prova di test') !== -1) {
-                                
-                                // Trova il contenitore più vicino (article, div, li, etc.)
-                                var container = link.closest('article, .nectar-post-grid-item, .col, li, .post-item, .related-item');
-                                
-                                if (container) {
-                                    container.style.transition = 'opacity 0.3s';
-                                    container.style.opacity = '0';
-                                    setTimeout(function() {
-                                        if (container.parentNode) {
-                                            container.parentNode.removeChild(container);
-                                            removedCount++;
-                                        }
-                                    }, 300);
-                                } else {
-                                    // Se non c'è contenitore, rimuovi solo il link
-                                    link.style.display = 'none';
-                                    removedCount++;
-                                }
-                            }
-                        }
                     }
                 });
                 
@@ -1177,173 +1155,27 @@ class Rewrites {
                 }
             }
             
-            // Esegui quando il DOM è pronto
+            function run() { fixDuplicateUrls(); removeNonTranslatedLinks(); }
+
+            // Run once on DOM ready
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    fixDuplicateUrls();
-                    removeNonTranslatedLinks();
-                });
+                document.addEventListener('DOMContentLoaded', run);
             } else {
-                // DOM già pronto
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
+                run();
             }
-            
-            // Esegui anche dopo un breve delay per intercettare contenuti caricati dinamicamente
-            setTimeout(function() {
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
-            }, 100);
-            setTimeout(function() {
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
-            }, 500);
-            setTimeout(function() {
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
-            }, 1000);
-            setTimeout(function() {
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
-            }, 2000);
-            setTimeout(function() {
-                fixDuplicateUrls();
-                removeNonTranslatedLinks();
-            }, 3000);
-            
-            // Usa MutationObserver per monitorare i cambiamenti del DOM in tempo reale
+
+            // MutationObserver: debounced re-run when new nodes are added (e.g. AJAX content)
             if (typeof MutationObserver !== 'undefined') {
+                var timer = null;
                 var observer = new MutationObserver(function(mutations) {
-                    var shouldFix = false;
-                    mutations.forEach(function(mutation) {
-                        if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                            shouldFix = true;
-                        }
-                        // Intercetta anche cambiamenti agli attributi href
-                        if (mutation.type === 'attributes' && mutation.attributeName === 'href') {
-                            var target = mutation.target;
-                            if (target && target.tagName === 'A' && target.href) {
-                                var href = target.href;
-                                if (href.indexOf('/en/http://') !== -1 || href.indexOf('/en/https://') !== -1) {
-                                    // Correggi immediatamente
-                                    var lastHttpPos = Math.max(
-                                        href.lastIndexOf('http://'),
-                                        href.lastIndexOf('https://')
-                                    );
-                                    if (lastHttpPos !== -1) {
-                                        var fixedHref = href.substring(lastHttpPos);
-                                        try {
-                                            var testUrl = new URL(fixedHref);
-                                            if (testUrl.hostname === window.location.hostname) {
-                                                target.setAttribute('href', fixedHref);
-                                            }
-                                        } catch (e) {
-                                            // Ignora errori di parsing URL
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                    
-                    if (shouldFix) {
-                        // Debounce: esegui solo dopo un breve delay
-                        setTimeout(function() {
-                            fixDuplicateUrls();
-                            removeNonTranslatedLinks();
-                        }, 100);
+                    var hasNew = mutations.some(function(m) { return m.addedNodes.length > 0; });
+                    if (hasNew) {
+                        clearTimeout(timer);
+                        timer = setTimeout(run, 150);
                     }
                 });
-                
-                // Inizia a osservare i cambiamenti del DOM (inclusi attributi)
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    attributeFilter: ['href']
-                });
+                observer.observe(document.body, { childList: true, subtree: true });
             }
-            
-            // Intercetta anche eventi di navigazione AJAX comuni
-            var originalPushState = history.pushState;
-            var originalReplaceState = history.replaceState;
-            
-            if (originalPushState) {
-                history.pushState = function() {
-                    originalPushState.apply(history, arguments);
-                    setTimeout(function() {
-                        fixDuplicateUrls();
-                        removeNonTranslatedLinks();
-                    }, 100);
-                };
-            }
-            
-            if (originalReplaceState) {
-                history.replaceState = function() {
-                    originalReplaceState.apply(history, arguments);
-                    setTimeout(function() {
-                        fixDuplicateUrls();
-                        removeNonTranslatedLinks();
-                    }, 100);
-                };
-            }
-            
-            // Intercetta anche eventi popstate (back/forward)
-            window.addEventListener('popstate', function() {
-                setTimeout(function() {
-                    fixDuplicateUrls();
-                    removeNonTranslatedLinks();
-                }, 100);
-            });
-            
-            // Se jQuery è disponibile, usa anche quello per maggiore compatibilità
-            if (typeof jQuery !== 'undefined') {
-                jQuery(document).ready(function($) {
-                    fixDuplicateUrls();
-                    removeNonTranslatedLinks();
-                    
-                    // Intercetta anche contenuti caricati via AJAX
-                    $(document).on('DOMNodeInserted', function(e) {
-                        if (e.target && (e.target.className && e.target.className.indexOf('related') !== -1)) {
-                            setTimeout(function() {
-                                fixDuplicateUrls();
-                                removeNonTranslatedLinks();
-                            }, 100);
-                        }
-                    });
-                    
-                    // Intercetta anche eventi AJAX completi
-                    $(document).ajaxComplete(function() {
-                        setTimeout(function() {
-                            fixDuplicateUrls();
-                            removeNonTranslatedLinks();
-                        }, 100);
-                    });
-                });
-            }
-            
-            // Intervallo continuo per correggere URL duplicati (fallback per navigazione AJAX)
-            // Esegui ogni secondo per i primi 10 secondi dopo il caricamento della pagina
-            var intervalCount = 0;
-            var maxIntervals = 10;
-            var continuousInterval = setInterval(function() {
-                var fixed = fixDuplicateUrls();
-                if (fixed > 0) {
-                    // Se sono stati corretti URL, continua a monitorare
-                    intervalCount = 0;
-                } else {
-                    intervalCount++;
-                    // Se non ci sono più URL da correggere per 3 secondi consecutivi, ferma l'intervallo
-                    if (intervalCount >= 3) {
-                        clearInterval(continuousInterval);
-                    }
-                }
-                
-                // Ferma comunque dopo 10 secondi
-                if (intervalCount >= maxIntervals) {
-                    clearInterval(continuousInterval);
-                }
-            }, 1000);
         })();
         </script>
         <?php
@@ -1375,10 +1207,7 @@ class Rewrites {
         }
 
         // Check if we're on a target language path
-        $lang = get_query_var( '\FPML_lang' );
-        if ( empty( $lang ) ) {
-            $lang = get_query_var( 'fpml_lang' );
-        }
+        $lang = get_query_var( 'fpml_lang' );
         
         if ( empty( $lang ) ) {
             $lang = $this->get_current_language_from_path();
@@ -1386,6 +1215,9 @@ class Rewrites {
 
         // Check if lang is a target language
         $language_manager = fpml_get_language_manager();
+        if ( ! $language_manager ) {
+            return;
+        }
         $enabled_languages = $language_manager->get_enabled_languages();
         $is_target_lang = ! empty( $lang ) && in_array( $lang, $enabled_languages, true );
 
@@ -1403,6 +1235,11 @@ class Rewrites {
         if ( ! empty( $post_id ) ) {
             return;
         }
+
+        // Resolve current target language before any slug-prefix queries.
+        $current_lang = ! empty( $lang ) ? $lang : (
+            $language_manager ? ( ( $enabled_languages[0] ?? '' ) ?: '' ) : ''
+        );
 
         if ( ! empty( $name ) && ! $wp_query->is_singular() && ! $wp_query->is_404() ) {
             global $wpdb;
@@ -1422,8 +1259,8 @@ class Rewrites {
                 $name
             ) );
 
-            // If not found, try with en- prefix
-            if ( ! $found_post_id ) {
+            // If not found, try with lang- prefix (only if we know the target language).
+            if ( ! $found_post_id && ! empty( $current_lang ) ) {
                 $found_post_id = $wpdb->get_var( $wpdb->prepare(
                     "SELECT ID FROM {$wpdb->posts} 
                     WHERE post_name LIKE %s 
@@ -1435,7 +1272,7 @@ class Rewrites {
                         AND meta_value = '1'
                     )
                     LIMIT 1",
-                    'en-' . $wpdb->esc_like( $name ) . '%'
+                    $current_lang . '-' . $wpdb->esc_like( $name ) . '%'
                 ) );
             }
 
@@ -1452,18 +1289,14 @@ class Rewrites {
                 ) );
 
                 if ( $original_post_id ) {
-                    // Cerca la traduzione di questo post
-                    // Backward compatibility: check legacy _fpml_pair_id for 'en'
-                    // Try to detect current language first
-                    $current_lang = 'en'; // Default fallback
-                    $language_manager = fpml_get_language_manager();
-                    if ( $language_manager ) {
-                            $enabled_languages = $language_manager->get_enabled_languages();
-                            $current_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
-                    }
+                    // $current_lang is already resolved above.
                     $found_post_id = fpml_get_translation_id( $original_post_id, $current_lang );
-                    if ( ! $found_post_id && 'en' === $current_lang ) {
-                            $found_post_id = (int) get_post_meta( $original_post_id, '_fpml_pair_id', true );
+                    // Backward compatibility: legacy _fpml_pair_id was only stored for 'en'.
+                    if ( ! $found_post_id ) {
+                        $legacy = (int) get_post_meta( $original_post_id, '_fpml_pair_id', true );
+                        if ( $legacy ) {
+                            $found_post_id = $legacy;
+                        }
                     }
                 }
             }
@@ -1557,16 +1390,24 @@ class Rewrites {
         }
 
         // Get current language for redirects
-        $current_lang = $this->get_current_language_from_path();
+        $current_lang     = $this->get_current_language_from_path();
         $language_manager = fpml_get_language_manager();
-        
+
+        if ( ! $language_manager ) {
+            return;
+        }
+
         if ( empty( $current_lang ) ) {
             $enabled_languages = $language_manager->get_enabled_languages();
-            $current_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+            $current_lang      = ! empty( $enabled_languages ) ? $enabled_languages[0] : '';
         }
-        
+
+        if ( empty( $current_lang ) ) {
+            return;
+        }
+
         $lang_info = $language_manager->get_language_info( $current_lang );
-        $lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : 'en';
+        $lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : $current_lang;
         $home_url = home_url( '/' . $lang_slug . '/' );
         $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 

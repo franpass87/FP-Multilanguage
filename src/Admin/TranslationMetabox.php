@@ -226,6 +226,11 @@ class TranslationMetabox {
 	 * @return void
 	 */
 	public function save_translation_provider( int $post_id, \WP_Post $post ): void {
+		// Verifica nonce CSRF — il campo è emesso da MetaboxRenderer::render_meta_box().
+		if ( ! isset( $_POST['fpml_translate_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['fpml_translate_nonce'] ) ), 'fpml_force_translate' ) ) {
+			return;
+		}
+
 		// Verifica permessi
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
@@ -243,8 +248,7 @@ class TranslationMetabox {
 
 		// Salva il provider se presente
 		if ( isset( $_POST['fpml_translation_provider'] ) ) {
-			$provider = sanitize_text_field( $_POST['fpml_translation_provider'] );
-			// Valida il valore
+			$provider = sanitize_text_field( wp_unslash( $_POST['fpml_translation_provider'] ) );
 			if ( in_array( $provider, array( 'auto', 'wpml', 'fpml' ), true ) ) {
 				update_post_meta( $post_id, '_fpml_translation_provider', $provider );
 			}

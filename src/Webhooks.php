@@ -159,7 +159,7 @@ class Webhooks {
 		// Log webhook errors
 		if ( is_wp_error( $response ) ) {
 			$container = $this->getContainer();
-			$logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : ( class_exists( '\FPML_Logger' ) ? \FPML_fpml_get_logger() : null );
+			$logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : ( class_exists( '\FPML_Logger' ) ? \fpml_get_logger() : null );
 			if ( $logger ) {
 				$logger->log(
 					'warn',

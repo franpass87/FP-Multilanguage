@@ -123,8 +123,8 @@ class TranslationVersioning {
 		$this->table_installer->maybe_install_table();
 
 		// Hook into translation save
-		add_action( '\FPML_post_translated', array( $this, 'save_post_version' ), 10, 4 );
-		add_action( '\FPML_term_translated', array( $this, 'save_term_version' ), 10, 3 );
+		add_action( 'fpml_post_translated', array( $this, 'save_post_version' ), 10, 4 );
+		add_action( 'fpml_term_translated', array( $this, 'save_term_version' ), 10, 3 );
 	}
 
 	/**

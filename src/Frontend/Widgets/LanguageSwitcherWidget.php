@@ -30,7 +30,7 @@ class LanguageSwitcherWidget extends \WP_Widget {
      */
     public function __construct() {
         parent::__construct(
-            '\FPML_language_switcher',
+            'fpml_language_switcher',
             __( 'Selettore Lingua FP', 'fp-multilanguage' ),
             array(
                 'description' => __( 'Mostra un selettore per cambiare lingua tra quelle abilitate', 'fp-multilanguage' ),
@@ -157,7 +157,7 @@ class LanguageSwitcherWidget extends \WP_Widget {
  * @return void
  */
 function FPML_register_language_switcher_widget() {
-    register_widget( 'FPML_Language_Switcher_Widget' );
+    register_widget( '\FP\Multilanguage\Frontend\Widgets\LanguageSwitcherWidget' );
 }
 add_action( 'widgets_init', __NAMESPACE__ . '\FPML_register_language_switcher_widget' );
 
@@ -172,13 +172,22 @@ add_action( 'widgets_init', __NAMESPACE__ . '\FPML_register_language_switcher_wi
  * @return string HTML output.
  */
 function fpml_language_switcher_shortcode( $atts ) {
-	// Get language instance for URL generation
-	$language_instance = class_exists( '\FPML_Language' ) ? ( function_exists( 'fpml_get_language' ) ? fpml_get_language() : \FPML_Language::instance() ) : null;
+	// Get language instance for URL generation — support both new and legacy architecture.
+	$language_instance = null;
+	if ( function_exists( 'fpml_get_language' ) ) {
+		$language_instance = fpml_get_language();
+	} elseif ( class_exists( '\FPML_Language' ) ) {
+		$language_instance = \FPML_Language::instance();
+	}
+
 	if ( ! $language_instance ) {
 		return '';
 	}
 
-	$language_manager = fpml_get_language_manager();
+	$language_manager = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+	if ( ! $language_manager ) {
+		return '';
+	}
 	$available_languages = $language_manager->get_all_languages();
 
 	// Ensure arrays are valid

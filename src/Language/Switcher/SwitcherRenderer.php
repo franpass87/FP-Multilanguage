@@ -80,19 +80,35 @@ class SwitcherRenderer {
 	 */
 	public function render_dropdown( $atts ) {
 		$it_url = $this->url_resolver->get_italian_url();
+
+		// Enqueue the navigation script once per page via wp_add_inline_script (CSP-safe)
+		if ( ! wp_script_is( 'fpml-lang-select', 'registered' ) ) {
+			wp_register_script( 'fpml-lang-select', false, array(), false, true );
+		}
+		if ( ! wp_script_is( 'fpml-lang-select', 'enqueued' ) ) {
+			wp_enqueue_script( 'fpml-lang-select' );
+			wp_add_inline_script(
+				'fpml-lang-select',
+				"document.addEventListener('change',function(e){var s=e.target;if(s.classList.contains('fpml-lang-select')){var v=s.value;if(v){window.location.href=v;}}});"
+			);
+		}
+
 		ob_start();
 		?>
-		<select onchange="window.location.href=this.value;" class="fpml-lang-select">
+		<select class="fpml-lang-select">
 			<option value="<?php echo esc_url( $it_url ); ?>" <?php selected( 'it' === $this->current_lang ); ?>>
 				<?php if ( 'yes' === $atts['show_flags'] ) : ?>🇮🇹 <?php endif; ?>
 				<?php if ( 'yes' === $atts['show_names'] ) : ?>Italiano<?php endif; ?>
 			</option>
-			<?php foreach ( $this->enabled_languages as $lang_code ) : 
-				if ( ! isset( $this->available_languages[ $lang_code ] ) ) continue;
+			<?php foreach ( $this->enabled_languages as $lang_code ) :
+				if ( ! isset( $this->available_languages[ $lang_code ] ) ) {
+					continue;
+				}
 				$lang_info = $this->available_languages[ $lang_code ];
-				if ( ! is_array( $lang_info ) || empty( $lang_info['slug'] ) ) continue;
-				
-				$lang_url = $this->url_resolver->get_language_url( $lang_code );
+				if ( ! is_array( $lang_info ) || empty( $lang_info['slug'] ) ) {
+					continue;
+				}
+				$lang_url  = $this->url_resolver->get_language_url( $lang_code );
 				$lang_flag = '';
 				if ( 'yes' === $atts['show_flags'] ) {
 					$lang_flag = $this->flag_provider->get_flag_with_space( $lang_code, $lang_info );

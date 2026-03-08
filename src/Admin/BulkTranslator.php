@@ -55,7 +55,6 @@ class BulkTranslator {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ), 20 );
 		add_action( 'admin_head', array( $this, 'hide_legacy_menu_via_css' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_action( 'wp_ajax_fpml_bulk_translate', array( $this, 'ajax_bulk_translate' ) );
 	}
 
 	/**

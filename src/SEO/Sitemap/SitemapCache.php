@@ -27,7 +27,7 @@ class SitemapCache {
 	 * @return string
 	 */
 	public function get_cache_key(): string {
-		return '\FPML_sitemap_en_cache';
+		return 'fpml_sitemap_cache';
 	}
 
 	/**

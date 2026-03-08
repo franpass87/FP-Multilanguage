@@ -72,14 +72,14 @@ class AutoRelink {
 	 */
 	protected function __construct() {
 		$container = $this->getContainer();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
-		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
+		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
+		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : ( class_exists( '\FPML_Settings' ) ? \FPML_Settings::instance() : null );
 
 		// Hook dopo traduzione post.
-		add_action( '\FPML_post_translated', array( $this, 'relink_content' ), 30, 4 );
+		add_action( 'fpml_post_translated', array( $this, 'relink_content' ), 30, 4 );
 
 		// Hook per processare contenuto prima del save.
-		add_filter( '\FPML_pre_save_translation', array( $this, 'process_links' ), 10, 3 );
+		add_filter( 'fpml_pre_save_translation', array( $this, 'process_links' ), 10, 3 );
 	}
 
 	/**

@@ -84,13 +84,20 @@ class ProviderOpenAI extends BaseProvider {
 	 * @param string $domain Context domain.
 	 * @return string|\WP_Error
 	 */
-	public function translate( string $text, string $source = 'it', string $target = 'en', string $domain = 'general' ): string|\WP_Error {
+	public function translate( string $text, string $source = '', string $target = '', string $domain = 'general' ): string|\WP_Error {
 		if ( '' === trim( (string) $text ) ) {
 			return '';
 		}
 
+		if ( '' === $source ) {
+			$source = function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it';
+		}
+		if ( '' === $target ) {
+			$target = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en';
+		}
+
 		if ( ! $this->is_configured() ) {
-			return new \WP_Error( '\FPML_openai_missing_key', __( 'Configura una chiave API OpenAI valida per procedere con la traduzione.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_openai_missing_key', __( 'Configura una chiave API OpenAI valida per procedere con la traduzione.', 'fp-multilanguage' ) );
 		}
 
 		// Check cache first
@@ -155,7 +162,7 @@ class ProviderOpenAI extends BaseProvider {
 	 */
 	public function verify_billing_status(): array|\WP_Error {
 		if ( ! $this->is_configured() ) {
-			return new \WP_Error( '\FPML_openai_not_configured', __( 'Chiave API OpenAI non configurata.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_openai_not_configured', __( 'Chiave API OpenAI non configurata.', 'fp-multilanguage' ) );
 		}
 
 		// Try a minimal request to check quota
@@ -172,7 +179,7 @@ class ProviderOpenAI extends BaseProvider {
 
 		$body = wp_json_encode( $test_payload );
 		if ( false === $body ) {
-			return new \WP_Error( '\FPML_encoding_error', __( 'Errore di codifica JSON.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_encoding_error', __( 'Errore di codifica JSON.', 'fp-multilanguage' ) );
 		}
 
 		$args = array(
@@ -217,9 +224,9 @@ class ProviderOpenAI extends BaseProvider {
 		$api_message = $data['error']['message'] ?? '';
 
 		if ( 429 === $code && ( 'insufficient_quota' === $error_type || false !== stripos( $api_message, 'quota' ) ) ) {
-			return new \WP_Error( '\FPML_openai_quota_exceeded', __( 'Quota OpenAI superata o non configurata.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_openai_quota_exceeded', __( 'Quota OpenAI superata o non configurata.', 'fp-multilanguage' ) );
 		}
 
-		return new \WP_Error( '\FPML_openai_verification_failed', sprintf( __( 'Verifica fallita (codice %d): %s', 'fp-multilanguage' ), $code, wp_kses_post( $api_message ) ) );
+		return new \WP_Error( 'fpml_openai_verification_failed', sprintf( __( 'Verifica fallita (codice %d): %s', 'fp-multilanguage' ), $code, wp_kses_post( $api_message ) ) );
 	}
 }

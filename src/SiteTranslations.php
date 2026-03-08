@@ -315,15 +315,6 @@ class SiteTranslations {
 		return ! empty( $this->current_language );
 	}
 	
-	/**
-	 * Check if current language is English (backward compatibility).
-	 *
-	 * @deprecated Use is_target_language() for multi-language support.
-	 * @return bool True if English.
-	 */
-	protected function is_english() {
-		return 'en' === $this->current_language;
-	}
 }
 
 

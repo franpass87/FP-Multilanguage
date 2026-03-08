@@ -34,11 +34,6 @@ class RESTServiceProvider implements ServiceProvider {
 	public function register( Container $container ): void {
 		// REST Admin Controller (registers routes)
 		$container->bind( 'rest.admin', function( Container $c ) {
-			// Try new location first
-			if ( class_exists( '\FP\Multilanguage\Rest\Controllers\AdminController' ) ) {
-				return \FP\Multilanguage\Rest\Controllers\AdminController::instance();
-			}
-			// Fallback to old location for backward compatibility
 			if ( class_exists( '\FP\Multilanguage\Rest\RestAdmin' ) ) {
 				return \FP\Multilanguage\Rest\RestAdmin::instance();
 			}

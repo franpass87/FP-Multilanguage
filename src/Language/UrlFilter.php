@@ -22,7 +22,7 @@ class UrlFilter {
     /**
      * Cookie key for language preference.
      */
-    const COOKIE_NAME = '\FPML_lang_pref';
+    const COOKIE_NAME = 'fpml_lang_pref';
 
     /**
      * Cached settings instance.
@@ -86,29 +86,6 @@ class UrlFilter {
      * @return string URL filtrato.
      */
     public function filter_pagenum_link_for_en( $result, $pagenum = 1 ) {
-        if ( preg_match( '#/en/http[s]?://#', $result ) || preg_match( '#http[s]?://[^/]+/en/http[s]?://#', $result ) ) {
-            $http_count = substr_count( $result, 'http://' ) + substr_count( $result, 'https://' );
-            if ( $http_count > 1 ) {
-                $last_http_pos = strrpos( $result, 'http://' );
-                $last_https_pos = strrpos( $result, 'https://' );
-                $last_pos = false;
-                if ( $last_http_pos !== false && $last_https_pos !== false ) {
-                    $last_pos = max( $last_http_pos, $last_https_pos );
-                } elseif ( $last_http_pos !== false ) {
-                    $last_pos = $last_http_pos;
-                } elseif ( $last_https_pos !== false ) {
-                    $last_pos = $last_https_pos;
-                }
-                if ( $last_pos !== false ) {
-                    $result = substr( $result, $last_pos );
-                }
-            }
-        }
-        
-        if ( false !== strpos( $result, '/en/' ) ) {
-            return $result;
-        }
-        
         return $this->add_en_prefix_to_url( $result );
     }
 
@@ -162,34 +139,33 @@ class UrlFilter {
      * @return string URL filtrato.
      */
     public function filter_nectar_logo_url_for_en( $url ) {
-        if ( preg_match( '#/en/http[s]?://#', $url ) || preg_match( '#http[s]?://[^/]+/en/http[s]?://#', $url ) ) {
-            $http_count = substr_count( $url, 'http://' ) + substr_count( $url, 'https://' );
-            if ( $http_count > 1 ) {
-                $last_http_pos = strrpos( $url, 'http://' );
-                $last_https_pos = strrpos( $url, 'https://' );
-                $last_pos = false;
-                if ( $last_http_pos !== false && $last_https_pos !== false ) {
-                    $last_pos = max( $last_http_pos, $last_https_pos );
-                } elseif ( $last_http_pos !== false ) {
-                    $last_pos = $last_http_pos;
-                } elseif ( $last_https_pos !== false ) {
-                    $last_pos = $last_https_pos;
-                }
-                if ( $last_pos !== false ) {
-                    $url = substr( $url, $last_pos );
-                }
-            }
-        }
-        
-        if ( false !== strpos( $url, '/en/' ) ) {
-            return $url;
-        }
-        
         return $this->add_en_prefix_to_url( $url );
     }
 
     /**
-     * Helper centralizzato per aggiungere /en/ agli URL quando necessario.
+     * Get the current language prefix from the request URI (e.g. 'en', 'de').
+     *
+     * @return string Language slug or empty string if source language.
+     */
+    protected function get_current_lang_prefix(): string {
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+        if ( function_exists( 'fpml_get_language_manager' ) ) {
+            $lm = fpml_get_language_manager();
+            if ( $lm ) {
+                foreach ( $lm->get_enabled_languages() as $lang ) {
+                    $info = $lm->get_language_info( $lang );
+                    $slug = $info ? trim( $info['slug'], '/' ) : $lang;
+                    if ( preg_match( '#^/' . preg_quote( $slug, '#' ) . '(/|$)#', $request_uri ) ) {
+                        return $slug;
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Helper centralizzato per aggiungere il prefisso lingua agli URL quando necessario.
      *
      * @since 0.9.4
      *
@@ -202,8 +178,15 @@ class UrlFilter {
             return $url;
         }
 
+        $lang_prefix = $this->get_current_lang_prefix();
+
+        if ( '' === $lang_prefix ) {
+            return $url;
+        }
+
         // CRITICO: Se l'URL contiene già un URL completo dentro (es: /en/http://), correggilo PRIMA
-        if ( preg_match( '#/en/http[s]?://#', $url ) || preg_match( '#http[s]?://[^/]+/en/http[s]?://#', $url ) ) {
+        $lang_http_pattern = '#/' . preg_quote( $lang_prefix, '#' ) . '/http[s]?://#';
+        if ( preg_match( $lang_http_pattern, $url ) || preg_match( '#http[s]?://[^/]+/' . preg_quote( $lang_prefix, '#' ) . '/http[s]?://#', $url ) ) {
             $http_count = substr_count( $url, 'http://' ) + substr_count( $url, 'https://' );
             
             if ( $http_count > 1 ) {
@@ -224,21 +207,22 @@ class UrlFilter {
                     
                     $parsed = parse_url( $url );
                     if ( ! $parsed || ! isset( $parsed['host'] ) ) {
-                        if ( preg_match( '#http[s]?://([^/]+)/en/(.*)$#', $url, $match ) ) {
-                            $url = ( strpos( $url, 'https://' ) !== false ? 'https://' : 'http://' ) . $match[1] . '/en/' . $match[2];
+                        $lp = preg_quote( $lang_prefix, '#' );
+                        if ( preg_match( '#http[s]?://([^/]+)/' . $lp . '/(.*)$#', $url, $match ) ) {
+                            $url = ( strpos( $url, 'https://' ) !== false ? 'https://' : 'http://' ) . $match[1] . '/' . $lang_prefix . '/' . $match[2];
                         } elseif ( preg_match( '#http[s]?://([^/]+)(/.*)$#', $url, $match ) ) {
                             $url = ( strpos( $url, 'https://' ) !== false ? 'https://' : 'http://' ) . $match[1] . $match[2];
                         }
                     }
                     
-                    if ( false !== strpos( $url, '/en/' ) ) {
+                    if ( false !== strpos( $url, '/' . $lang_prefix . '/' ) ) {
                         return $url;
                     }
                 }
             }
         }
         
-        if ( false !== strpos( $url, '/en/' ) || false !== strpos( $url, '/en-' ) ) {
+        if ( false !== strpos( $url, '/' . $lang_prefix . '/' ) || false !== strpos( $url, '/' . $lang_prefix . '-' ) ) {
             return $url;
         }
 
@@ -246,9 +230,9 @@ class UrlFilter {
             return $url;
         }
 
-        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
         $is_english_path = fpml_url_contains_target_language( $request_uri );
-        $lang_cookie = isset( $_COOKIE[ self::COOKIE_NAME ] ) ? sanitize_text_field( $_COOKIE[ self::COOKIE_NAME ] ) : '';
+        $lang_cookie = isset( $_COOKIE[ self::COOKIE_NAME ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE_NAME ] ) ) : '';
         $is_target_lang_preference = ( fpml_is_target_language( $lang_cookie ) || $is_english_path );
 
         if ( ! $is_target_lang_preference ) {
@@ -261,8 +245,9 @@ class UrlFilter {
         }
 
         // Evita loop: usa get_option direttamente invece di home_url()
-        remove_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10 );
-        remove_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10 );
+        // NOTA: $accepted_args deve corrispondere a quello usato in add_filter (2).
+        remove_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10, 2 );
+        remove_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10, 2 );
         
         try {
             $home_url_raw = get_option( 'home' );
@@ -280,9 +265,9 @@ class UrlFilter {
         if ( ! $parsed_url || ! isset( $parsed_url['host'] ) ) {
             $url_path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : $url;
             $url_path = ltrim( $url_path, '/' );
-            
-            if ( 'en/' !== substr( $url_path, 0, 3 ) && 'en' !== $url_path ) {
-                $url = $home_url_base . 'en/' . $url_path;
+
+            if ( ( $lang_prefix . '/' ) !== substr( $url_path, 0, strlen( $lang_prefix ) + 1 ) && $lang_prefix !== $url_path ) {
+                $url = $home_url_base . $lang_prefix . '/' . $url_path;
             } else {
                 $url = $home_url_base . $url_path;
             }
@@ -310,13 +295,14 @@ class UrlFilter {
             return $url;
         }
         
-        $rel_path = ltrim( $url_path, '/' );
-        
-        if ( 'en/' !== substr( $rel_path, 0, 3 ) && 'en' !== $rel_path ) {
+        $rel_path   = ltrim( $url_path, '/' );
+        $lp_slash   = $lang_prefix . '/';
+
+        if ( $lp_slash !== substr( $rel_path, 0, strlen( $lp_slash ) ) && $lang_prefix !== $rel_path ) {
             if ( ! empty( $rel_path ) ) {
-                $url = $url_scheme . $url_host . '/' . 'en/' . $rel_path . $url_query . $url_fragment;
+                $url = $url_scheme . $url_host . '/' . $lang_prefix . '/' . $rel_path . $url_query . $url_fragment;
             } else {
-                $url = $url_scheme . $url_host . '/en/' . $url_query . $url_fragment;
+                $url = $url_scheme . $url_host . '/' . $lang_prefix . '/' . $url_query . $url_fragment;
             }
         }
 

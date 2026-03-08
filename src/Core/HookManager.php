@@ -65,7 +65,7 @@ class HookManager {
             $container->has( 'logger' ) && $container->get( 'logger' );
         } else {
             \FPML_Settings::instance();
-            \FPML_fpml_get_logger();
+            \fpml_get_logger();
         }
         fpml_get_glossary();
         \FPML_Strings_Override::instance();
@@ -81,7 +81,7 @@ class HookManager {
             ( function_exists( 'fpml_get_rewrites' ) ? fpml_get_rewrites() : \FPML_Rewrites::instance() );
             ( function_exists( 'fpml_get_language' ) ? fpml_get_language() : \FPML_Language::instance() );
             ( function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : \FPML_Content_Diff::instance() );
-            \FPML_fpml_get_processor();
+            \fpml_get_processor();
             ( function_exists( 'fpml_get_menu_sync' ) ? fpml_get_menu_sync() : \FPML_Menu_Sync::instance() );
             \FPML_Media_Front::instance();
             ( function_exists( 'fpml_get_seo' ) ? fpml_get_seo() : \FPML_SEO::instance() );
@@ -98,8 +98,8 @@ class HookManager {
         
         if ( class_exists( '\FPML_Auto_Detection' ) ) {
             \FPML_Auto_Detection::instance();
-            add_action( '\FPML_reindex_post_type', array( $this->plugin, 'reindex_post_type' ), 10, 1 );
-            add_action( '\FPML_reindex_taxonomy', array( $this->plugin, 'reindex_taxonomy' ), 10, 1 );
+            add_action( 'fpml_reindex_post_type', array( $this->plugin, 'reindex_post_type' ), 10, 1 );
+            add_action( 'fpml_reindex_taxonomy', array( $this->plugin, 'reindex_taxonomy' ), 10, 1 );
         }
 
         // Fase 3: Features opzionali
@@ -163,8 +163,6 @@ class HookManager {
                 add_action( 'before_delete_post', array( $this->plugin, 'handle_delete_post' ), 10, 1 );
                 add_action( 'delete_term', array( $this->plugin, 'handle_delete_term' ), 10, 3 );
                 add_action( 'fpml_after_translation_saved', array( $this->plugin, 'enqueue_jobs_after_translation' ), 10, 2 );
-                add_action( 'add_attachment', array( $this->plugin, 'handle_add_attachment' ), 10, 1 );
-                add_action( 'edit_attachment', array( $this->plugin, 'handle_edit_attachment' ), 10, 1 );
                 add_action( 'comment_post', array( $this->plugin, 'handle_comment_post' ), 10, 3 );
                 add_action( 'edit_comment', array( $this->plugin, 'handle_edit_comment' ), 10, 1 );
             }

@@ -261,7 +261,7 @@ class Diagnostics {
 			// Carica processor
 			$processor = null;
 			if ( class_exists( '\FPML_Processor' ) ) {
-				$processor = \FPML_fpml_get_processor();
+				$processor = \fpml_get_processor();
 			}
 
 			// Carica queue counts

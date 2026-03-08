@@ -37,7 +37,7 @@ class Language {
     /**
      * Cookie key for language preference.
      */
-    const COOKIE_NAME = '\FPML_lang_pref';
+    const COOKIE_NAME = 'fpml_lang_pref';
 
     /**
      * Cookie lifetime (30 days).
@@ -206,6 +206,10 @@ class Language {
         add_filter( 'redirect_canonical', array( $this, 'disable_canonical_redirect_for_translations' ), 10, 2 );
         add_filter( 'home_url', array( $this->url_filter, 'filter_home_url_for_en' ), 10, 2 );
         add_filter( 'site_url', array( $this->url_filter, 'filter_site_url_for_en' ), 10, 2 );
+        // Give FilterHelper a reference to the URL filter so it can remove/restore these hooks.
+        if ( method_exists( $this->permalink_filter, 'set_url_filter' ) ) {
+            $this->permalink_filter->set_url_filter( $this->url_filter );
+        }
         add_filter( 'get_pagenum_link', array( $this->url_filter, 'filter_pagenum_link_for_en' ), 10, 1 );
         add_filter( 'get_comments_pagenum_link', array( $this->url_filter, 'filter_comments_pagenum_link_for_en' ), 10, 1 );
         add_filter( 'bloginfo_url', array( $this->url_filter, 'filter_bloginfo_url_for_en' ), 10, 2 );
@@ -2481,7 +2485,7 @@ class Language {
         $routing = $this->settings->get( 'routing_mode', 'segment' );
 
         if ( 'segment' !== $routing ) {
-            $url = remove_query_arg( array( 'lang', '\FPML_lang', 'fpml_lang' ), $url );
+            $url = remove_query_arg( array( 'lang', 'fpml_lang' ), $url );
 
             // Check if lang is a target language
         if ( fpml_is_target_language( $lang ) ) {
@@ -2491,7 +2495,7 @@ class Language {
             return $url;
         }
 
-        $url    = remove_query_arg( array( 'lang', '\FPML_lang', 'fpml_lang' ), $url );
+        $url    = remove_query_arg( array( 'lang', 'fpml_lang' ), $url );
         $parsed = wp_parse_url( $url );
 
         if ( false === $parsed ) {

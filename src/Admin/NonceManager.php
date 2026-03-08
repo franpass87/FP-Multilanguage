@@ -164,14 +164,6 @@ class NonceManager {
      * @return bool|int
      */
     public function handle_admin_referer_check( $result, $action ) {
-        if ( $action !== '\FPML_settings_group-options' ) {
-            return $result;
-        }
-
-        if ( false === $result && isset( $_GET['page'] ) && $_GET['page'] === Admin::MENU_SLUG ) {
-            return 1;
-        }
-
         return $result;
     }
 }

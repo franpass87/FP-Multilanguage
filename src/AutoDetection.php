@@ -121,7 +121,7 @@ class AutoDetection {
 	 */
 	protected function __construct() {
 		$container = $this->getContainer();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 
 		// Initialize modules
 		$this->storage = new DetectionStorage();

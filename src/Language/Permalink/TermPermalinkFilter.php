@@ -76,45 +76,44 @@ class TermPermalinkFilter {
 			return $permalink;
 		}
 
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-		$is_english_path = fpml_url_contains_target_language( $request_uri );
-		
+		$request_uri    = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$is_target_path = fpml_url_contains_target_language( $request_uri );
 		$is_translation = get_term_meta( $term->term_id, '_fpml_is_translation', true );
 
+		// Determine the actual language slug to use
 		$language_manager = fpml_get_language_manager();
-		$current_lang = $this->resolver->get_current_language();
-		$lang_info = $language_manager->get_language_info( $current_lang );
-		$lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : 'en';
-		$lang_path = '/' . $lang_slug . '/';
-		
-		if ( ! $is_english_path && ! $is_translation ) {
+		$term_lang        = get_term_meta( $term->term_id, '_fpml_target_language', true );
+		if ( empty( $term_lang ) ) {
+			$term_lang = $this->resolver->get_current_language();
+		}
+		$lang_info = $language_manager->get_language_info( $term_lang );
+		$lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : $term_lang;
+		$lp        = preg_quote( $lang_slug, '#' );
+
+		// Not on a target-language path: strip any stray lang prefix from the permalink
+		if ( ! $is_target_path ) {
 			if ( fpml_url_contains_target_language( $permalink ) ) {
-				$permalink = preg_replace( '#/' . preg_quote( $lang_slug, '#' ) . '/#', '/', $permalink );
+				$permalink = preg_replace( '#/' . $lp . '/#', '/', $permalink );
+			}
+			// Remove legacy lang-prefixed slug (e.g. /en-slug/ → /slug/)
+			foreach ( array( '-', '_' ) as $sep ) {
+				$permalink = str_replace( '/' . $lang_slug . $sep, '/', $permalink );
 			}
 			return $permalink;
 		}
 
-		if ( ! $is_english_path && $is_translation ) {
-			if ( fpml_url_contains_target_language( $permalink ) ) {
-				$permalink = preg_replace( '#/' . preg_quote( $lang_slug, '#' ) . '/#', '/', $permalink );
-			}
-			if ( false !== strpos( $permalink, '/en-' ) ) {
-				$permalink = str_replace( '/en-', '/', $permalink );
-			}
-			return $permalink;
-		}
-
-		if ( $is_english_path && ! $is_translation ) {
-			// Backward compatibility: check legacy _fpml_pair_id for 'en'
-			$meta_key = '_fpml_pair_id_en';
+		// On target-language path but term is not a translation: try to find the translation
+		if ( ! $is_translation ) {
+			$meta_key       = '_fpml_pair_id_' . $term_lang;
 			$translation_id = (int) get_term_meta( $term->term_id, $meta_key, true );
+			// Backward compat: legacy _fpml_pair_id (used for 'en' only)
 			if ( ! $translation_id ) {
 				$translation_id = (int) get_term_meta( $term->term_id, '_fpml_pair_id', true );
 			}
 			if ( $translation_id > 0 ) {
 				$translation = get_term( $translation_id, $term->taxonomy );
 				if ( $translation instanceof \WP_Term && get_term_meta( $translation_id, '_fpml_is_translation', true ) ) {
-					$term = $translation;
+					$term           = $translation;
 					$is_translation = true;
 				} else {
 					return $permalink;
@@ -124,56 +123,42 @@ class TermPermalinkFilter {
 			}
 		}
 
-		if ( ! $is_translation || ! $is_english_path ) {
+		if ( ! $is_translation ) {
 			return $permalink;
 		}
 
+		// Determine base slug: strip lang prefix (e.g. 'en-about' → 'about')
 		$base_slug = $term->slug;
-		if ( 0 === strpos( $base_slug, 'en-' ) ) {
-			$base_slug = substr( $base_slug, 3 );
+		foreach ( array( $lang_slug . '-', $lang_slug . '_' ) as $prefix ) {
+			if ( 0 === strpos( $base_slug, $prefix ) ) {
+				$base_slug = substr( $base_slug, strlen( $prefix ) );
+				break;
+			}
 		}
 
 		$this->filter_helper->remove_url_filters();
-		
 		try {
 			$home_url = trailingslashit( home_url() );
 		} finally {
 			$this->filter_helper->restore_url_filters();
 		}
-		
-		$parsed = wp_parse_url( $permalink );
-		if ( $parsed && isset( $parsed['path'] ) ) {
-			$rel_path = $parsed['path'];
-		} else {
-			$rel_path = str_replace( $home_url, '', $permalink );
-		}
-		
-		$rel_path = preg_replace( '#^(/en/)+#', '/', $rel_path );
-		if ( preg_last_error() !== PREG_NO_ERROR ) {
-			\FP\Multilanguage\Logger::warning(
-				'Regex error in filter_term_permalink (remove /en/)',
-				array( 'error' => preg_last_error() )
-			);
-		}
-		
-		$rel_path = preg_replace( '#^en/#', '', $rel_path );
-		$rel_path = preg_replace( '#/en/#', '/', $rel_path );
-		$rel_path = ltrim( $rel_path, '/' );
-		
-		if ( preg_match( '#^[^/]+\.(local|com|net|org|it|eu)/(.+)$#', $rel_path, $matches ) ) {
-			if ( preg_last_error() === PREG_NO_ERROR ) {
-				$rel_path = $matches[2];
-			}
-		}
-		
+
+		$parsed   = wp_parse_url( $permalink );
+		$rel_path = ( $parsed && isset( $parsed['path'] ) ) ? $parsed['path'] : str_replace( $home_url, '', $permalink );
+
+		// Strip any existing lang prefix from the relative path
+		$rel_path = preg_replace( '#^(/' . $lp . '/)+#', '/', $rel_path );
+		$rel_path = preg_replace( '#^' . $lp . '/#', '', ltrim( $rel_path, '/' ) );
+		$rel_path = preg_replace( '#/' . $lp . '/#', '/', $rel_path );
 		$rel_path = preg_replace( '#//+#', '/', $rel_path );
 		$rel_path = ltrim( $rel_path, '/' );
-		
-		if ( false !== strpos( $rel_path, $term->slug ) ) {
+
+		// Replace original slug with cleaned base slug in path
+		if ( $term->slug !== $base_slug && false !== strpos( $rel_path, $term->slug ) ) {
 			$rel_path = str_replace( $term->slug, $base_slug, $rel_path );
 		}
-		
-		$permalink = $home_url . 'en/' . $rel_path;
+
+		$permalink = $home_url . $lang_slug . '/' . $rel_path;
 
 		return $permalink;
 	}

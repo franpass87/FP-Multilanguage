@@ -79,7 +79,7 @@ class ApiClient {
 			'messages'    => array(
 				array(
 					'role'    => 'system',
-					'content' => $this->prompt_builder->build_system_prompt( $marketing ),
+					'content' => $this->prompt_builder->build_system_prompt( $marketing, $source, $target ),
 				),
 				array(
 					'role'    => 'user',
@@ -90,7 +90,7 @@ class ApiClient {
 
 		$body = wp_json_encode( $payload );
 		if ( false === $body ) {
-			return new \WP_Error( '\FPML_openai_encoding_error', __( 'Impossibile codificare il payload JSON per OpenAI.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_openai_encoding_error', __( 'Impossibile codificare il payload JSON per OpenAI.', 'fp-multilanguage' ) );
 		}
 
 		$args = array(
@@ -109,7 +109,7 @@ class ApiClient {
 
 			if ( is_wp_error( $response ) ) {
 				if ( $attempt === $max_attempts ) {
-					return new \WP_Error( '\FPML_openai_http_error', sprintf( __( 'Errore di connessione a OpenAI: %s', 'fp-multilanguage' ), $response->get_error_message() ) );
+					return new \WP_Error( 'fpml_openai_http_error', sprintf( __( 'Errore di connessione a OpenAI: %s', 'fp-multilanguage' ), $response->get_error_message() ) );
 				}
 
 				$this->retry_manager->backoff( $attempt );
@@ -153,9 +153,9 @@ class ApiClient {
 				return $this->error_handler->handle_client_error( $code, $api_message );
 			}
 
-			// Other errors
+			// Other errors — use $api_message (already extracted) to avoid leaking raw response/API key.
 			if ( $code < 200 || $code >= 300 ) {
-				return new \WP_Error( '\FPML_openai_error', sprintf( __( 'Risposta non valida da OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $body ) ) );
+				return new \WP_Error( 'fpml_openai_error', sprintf( __( 'Risposta non valida da OpenAI (%1$d): %2$s', 'fp-multilanguage' ), $code, wp_kses_post( $api_message ) ) );
 			}
 
 			// Success - parse response
@@ -163,7 +163,7 @@ class ApiClient {
 
 			if ( json_last_error() !== JSON_ERROR_NONE ) {
 				return new \WP_Error(
-					'\FPML_openai_invalid_json',
+					'fpml_openai_invalid_json',
 					sprintf(
 						__( 'Risposta JSON non valida da OpenAI: %s', 'fp-multilanguage' ),
 						json_last_error_msg()
@@ -176,13 +176,13 @@ class ApiClient {
 			}
 
 			if ( ! isset( $data['choices'][0]['message']['content'] ) || empty( $data['choices'][0]['message']['content'] ) ) {
-				return new \WP_Error( '\FPML_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
+				return new \WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
 			}
 
 			return (string) $data['choices'][0]['message']['content'];
 		}
 
-		return new \WP_Error( '\FPML_openai_unexpected', __( 'Errore imprevisto durante la traduzione con OpenAI.', 'fp-multilanguage' ) );
+		return new \WP_Error( 'fpml_openai_unexpected', __( 'Errore imprevisto durante la traduzione con OpenAI.', 'fp-multilanguage' ) );
 	}
 }
 

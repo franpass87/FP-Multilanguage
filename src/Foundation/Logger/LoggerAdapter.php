@@ -58,6 +58,16 @@ class LoggerAdapter implements LoggerInterface {
 	}
 
 	/**
+	 * Set the wrapped logger service.
+	 *
+	 * @param LoggerInterface $logger Logger instance.
+	 * @return void
+	 */
+	public function set_logger( LoggerInterface $logger ): void {
+		$this->logger = $logger;
+	}
+
+	/**
 	 * Constructor.
 	 */
 	protected function __construct() {

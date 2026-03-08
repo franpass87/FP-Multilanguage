@@ -28,41 +28,48 @@ class TextTranslator {
 	 * @param string $text Testo da tradurre.
 	 * @return string|false Testo tradotto o false in caso di errore.
 	 */
-	public function translate_text( $text ) {
+	public function translate_text( $text, $source = '', $target = '' ) {
 		if ( empty( $text ) ) {
 			return false;
 		}
 
-		// Ottieni il translator dal Processor
-		$processor = fpml_get_processor();
+		$container = $this->getContainer();
+		$settings  = $container && $container->has( 'options' ) ? $container->get( 'options' ) : ( class_exists( '\FPML_Settings' ) ? \FPML_Settings::instance() : null );
 
-		if ( ! $processor ) {
+		if ( ! $settings ) {
 			return false;
 		}
 
-		// Usa reflection per accedere al translator (metodo privato)
-		// Alternativa: usa direttamente il provider
-		$container = $this->getContainer();
-		$settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
-		$provider_name = $settings->get( 'provider', 'openai' );
+		// Resolve source/target from settings when not explicitly provided.
+		if ( empty( $source ) ) {
+			$source = $settings->get( 'source_language', 'it' );
+		}
+		if ( empty( $target ) ) {
+			$enabled = $settings->get( 'enabled_languages', array() );
+			$target  = ! empty( $enabled ) ? $enabled[0] : 'en';
+		}
 
-		// Carica il provider direttamente
+		$provider_name = $settings->get( 'provider', 'openai' );
+		$translator    = null;
+
 		if ( 'openai' === $provider_name ) {
 			$translator = \FP\Multilanguage\Providers\ProviderOpenAI::instance();
 		} else {
-			// Fallback: prova a ottenere il translator dal processor via reflection
-			$reflection = new \ReflectionClass( $processor );
-			$translator_property = $reflection->getProperty( 'translator' );
-			$translator_property->setAccessible( true );
-			$translator = $translator_property->getValue( $processor );
+			// Attempt to retrieve the translator via the processor's public method.
+			$processor = function_exists( 'fpml_get_processor' ) ? fpml_get_processor() : null;
+			if ( $processor && method_exists( $processor, 'get_translator_instance' ) ) {
+				$translator = $processor->get_translator_instance();
+				if ( is_wp_error( $translator ) ) {
+					$translator = null;
+				}
+			}
 		}
 
 		if ( ! $translator || ! method_exists( $translator, 'translate' ) ) {
 			return false;
 		}
 
-		// Traduci il testo
-		$translated = $translator->translate( $text, 'it', 'en', 'general' );
+		$translated = $translator->translate( $text, $source, $target, 'general' );
 
 		if ( is_wp_error( $translated ) || empty( $translated ) ) {
 			return false;

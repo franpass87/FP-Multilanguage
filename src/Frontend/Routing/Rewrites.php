@@ -121,9 +121,7 @@ class Rewrites {
         add_filter( 'posts_clauses', array( $this->query_filter, 'filter_posts_clauses_by_language' ), 10, 2 );
         add_filter( 'posts_where', array( $this->query_filter, 'filter_posts_where_by_language' ), 5, 2 );
         add_filter( 'posts_results', array( $this->query_filter, 'filter_posts_results_by_language' ), 5, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 5, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 1, 2 );
-        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 999, 2 );
+        add_filter( 'the_posts', array( $this->query_filter, 'filter_the_posts_by_language' ), 10, 2 );
         add_action( 'template_redirect', array( $this, 'force_single_post' ), 1 );
         add_action( 'template_redirect', array( $this, 'redirect_untranslated_to_home' ), 2 );
         add_action( 'wp_footer', array( $this, 'filter_output_html_by_language' ), 999 );
@@ -228,9 +226,12 @@ class Rewrites {
         
         // Fallback to first enabled language if still empty
         if ( empty( $current_lang ) ) {
-            $language_manager = fpml_get_language_manager();
+            $language_manager  = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+            if ( ! $language_manager ) {
+                return array();
+            }
             $enabled_languages = $language_manager->get_enabled_languages();
-            $current_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+            $current_lang      = ! empty( $enabled_languages ) ? $enabled_languages[0] : '';
         }
         $path = trim( (string) $path );
 
@@ -389,8 +390,8 @@ class Rewrites {
                                 'p' => $translation_post->ID,
                             );
                         } else {
-                            // Prova con prefisso "en-*"
-                            $translation_slug = 'en-' . $slug;
+                            // Prova con prefisso "<lang>-*" (dinamico)
+                            $translation_slug = $current_lang . '-' . $slug;
                             $translation_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
 
                             if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -419,7 +420,7 @@ class Rewrites {
                                         }
                                     }
 
-                                    // Se non trovato, prova con prefisso "en-*"
+                                    // Se non trovato, prova con prefisso "<lang>-*" (dinamico)
                                     if ( empty( $result ) ) {
                                         $like_slug = $wpdb->esc_like( $translation_slug ) . '%';
                                         $maybe_id  = $wpdb->get_var(
@@ -442,7 +443,7 @@ class Rewrites {
                             }
                         }
                     } else {
-                        // Comportamento normale: prova prima a cercare una pagina tradotta con slug esatto (senza prefisso en-)
+                        // Comportamento normale: prova prima a cercare una pagina tradotta con slug esatto
                         $translation_post = get_page_by_path( $slug, OBJECT, array( 'page', 'post' ) );
 
                         if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -450,8 +451,8 @@ class Rewrites {
                                 'p' => $translation_post->ID,
                             );
                         } else {
-                            // Prova con prefisso "en-*"
-                            $translation_slug = 'en-' . $slug;
+                            // Prova con prefisso "<lang>-*" (dinamico)
+                            $translation_slug = $current_lang . '-' . $slug;
                             $translation_post = get_page_by_path( $translation_slug, OBJECT, array( 'page', 'post' ) );
 
                             if ( $translation_post && get_post_meta( $translation_post->ID, '_fpml_is_translation', true ) ) {
@@ -512,9 +513,9 @@ class Rewrites {
 
                             $term = get_term_by( 'slug', $slug, $taxonomy->name );
 
-                            // Se non trovato e siamo in path inglese, prova con en-
+                            // Se non trovato e siamo in path lingua target, prova con prefisso dinamico
                             if ( ! ( $term instanceof \WP_Term ) && $is_target_language_path ) {
-                                $term = get_term_by( 'slug', 'en-' . $slug, $taxonomy->name );
+                                $term = get_term_by( 'slug', $current_lang . '-' . $slug, $taxonomy->name );
                             }
 
                             if ( ! ( $term instanceof \WP_Term ) || is_wp_error( $term ) ) {
@@ -1014,11 +1015,15 @@ class Rewrites {
 
         // JavaScript per rimuovere link problematici e correggere URL duplicati dal DOM
         // Questo è un fallback finale che agisce direttamente sull'HTML renderizzato
+        $lang_manager_js = fpml_get_language_manager();
+        $lang_info_js    = $lang_manager_js ? $lang_manager_js->get_language_info( $current_lang ) : null;
+        $lang_slug_js    = $lang_info_js ? trim( $lang_info_js['slug'], '/' ) : $current_lang;
         ?>
         <script type="text/javascript">
         (function() {
+            var fpmlLangSlug = '<?php echo esc_js( $lang_slug_js ); ?>';
             function fixDuplicateUrls() {
-                // Funzione per correggere URL duplicati (es: /en/http://domain/path)
+                // Funzione per correggere URL duplicati (es: /LANG/http://domain/path)
                 var links = document.querySelectorAll('a[href]');
                 var fixedCount = 0;
                 var currentHost = window.location.hostname;
@@ -1029,10 +1034,11 @@ class Rewrites {
                     
                     if (!href) continue;
                     
-                    // Verifica se l'URL contiene duplicati (pattern: /en/http:// o http://domain/en/http://)
-                    if (href.indexOf('/en/http://') !== -1 || href.indexOf('/en/https://') !== -1 || 
-                        (href.indexOf('http://' + currentHost + '/en/http://') !== -1) ||
-                        (href.indexOf('https://' + currentHost + '/en/https://') !== -1)) {
+                    // Verifica se l'URL contiene duplicati (pattern: /LANG/http:// o http://domain/LANG/http://)
+                    var langPrefix = '/' + fpmlLangSlug + '/';
+                    if (href.indexOf(langPrefix + 'http://') !== -1 || href.indexOf(langPrefix + 'https://') !== -1 || 
+                        (href.indexOf('http://' + currentHost + langPrefix + 'http://') !== -1) ||
+                        (href.indexOf('https://' + currentHost + langPrefix + 'https://') !== -1)) {
                         
                         // Estrai solo l'ultimo URL completo (dopo l'ultimo http:// o https://)
                         var lastHttpPos = Math.max(
@@ -1053,10 +1059,11 @@ class Rewrites {
                             } catch (e) {
                                 // Se l'URL non è valido, prova un approccio alternativo
                                 // Pattern: http://domain/en/http://domain/path -> http://domain/en/path
-                                var match = fixedHref.match(/http[s]?:\/\/([^\/]+)\/en\/http[s]?:\/\/[^\/]+\/(.+)$/);
+                                var langEscaped = fpmlLangSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                var match = fixedHref.match(new RegExp('http[s]?:\\/\\/([^\\/]+)\\/' + langEscaped + '\\/http[s]?:\\/\\/[^\\/]+\\/(.+)$'));
                                 if (match) {
                                     var scheme = fixedHref.indexOf('https://') === 0 ? 'https://' : 'http://';
-                                    var correctedHref = scheme + match[1] + '/en/' + match[2];
+                                    var correctedHref = scheme + match[1] + langPrefix + match[2];
                                     link.setAttribute('href', correctedHref);
                                     fixedCount++;
                                 } else {
@@ -1085,116 +1092,32 @@ class Rewrites {
                 return fixedCount;
             }
             
-            function removeNonTranslatedLinks() {
-                // Funzione che funziona anche senza jQuery
-                var relatedSelectors = [
-                    '.related-post-wrap',
-                    '[class*="related"]',
-                    '[class*="Related"]',
-                    '.nectar-related-posts',
-                    '.related-posts',
-                    '.post-related',
-                    'section[class*="related"]'
-                ];
-                
-                var relatedSections = [];
-                relatedSelectors.forEach(function(selector) {
-                    var elements = document.querySelectorAll(selector);
-                    for (var i = 0; i < elements.length; i++) {
-                        relatedSections.push(elements[i]);
-                    }
-                });
-                
-                if (relatedSections.length === 0) {
-                    // Se non troviamo sezioni specifiche, cerca in tutto il body
-                    relatedSections = [document.body];
-                }
-                
-                var removedCount = 0;
-                var currentHost = window.location.hostname;
-                
-                relatedSections.forEach(function(section) {
-                    var links = section.querySelectorAll('a[href]');
-                    
-                    for (var i = 0; i < links.length; i++) {
-                        var link = links[i];
-                        var href = link.getAttribute('href');
-                        
-                        if (!href) continue;
-                        
-                        // Verifica se il link punta al nostro dominio
-                        var linkUrl = new URL(href, window.location.origin);
-                        if (linkUrl.hostname !== currentHost) continue;
-                        
-                        var pathname = linkUrl.pathname;
-                        
-                        // Se il link non contiene /en/ e punta a un post, rimuovilo
-                        if (pathname.indexOf('/en/') === -1) {
-                            // Verifica se è un link a "prova-di-test" o altri pattern problematici
-                            if (pathname.indexOf('prova-di-test') !== -1 ||
-                                href.indexOf('prova-di-test') !== -1 ||
-                                href.indexOf('prova di test') !== -1) {
-                                
-                                // Trova il contenitore più vicino (article, div, li, etc.)
-                                var container = link.closest('article, .nectar-post-grid-item, .col, li, .post-item, .related-item');
-                                
-                                if (container) {
-                                    container.style.transition = 'opacity 0.3s';
-                                    container.style.opacity = '0';
-                                    setTimeout(function() {
-                                        if (container.parentNode) {
-                                            container.parentNode.removeChild(container);
-                                            removedCount++;
-                                        }
-                                    }, 300);
-                                } else {
-                                    // Se non c'è contenitore, rimuovi solo il link
-                                    link.style.display = 'none';
-                                    removedCount++;
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                // Log per debug (solo se console è disponibile)
-                if (removedCount > 0 && window.console && window.console.log) {
-                    console.log('[FPML] Rimossi ' + removedCount + ' link problematici dal DOM');
-                }
-            }
             
             // Esegui quando il DOM è pronto
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
                     fixDuplicateUrls();
-                    removeNonTranslatedLinks();
                 });
             } else {
                 // DOM già pronto
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }
             
             // Esegui anche dopo un breve delay per intercettare contenuti caricati dinamicamente
             setTimeout(function() {
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }, 100);
             setTimeout(function() {
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }, 500);
             setTimeout(function() {
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }, 1000);
             setTimeout(function() {
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }, 2000);
             setTimeout(function() {
                 fixDuplicateUrls();
-                removeNonTranslatedLinks();
             }, 3000);
             
             // Usa MutationObserver per monitorare i cambiamenti del DOM in tempo reale
@@ -1210,7 +1133,7 @@ class Rewrites {
                             var target = mutation.target;
                             if (target && target.tagName === 'A' && target.href) {
                                 var href = target.href;
-                                if (href.indexOf('/en/http://') !== -1 || href.indexOf('/en/https://') !== -1) {
+                                if (href.indexOf(langPrefix + 'http://') !== -1 || href.indexOf(langPrefix + 'https://') !== -1) {
                                     // Correggi immediatamente
                                     var lastHttpPos = Math.max(
                                         href.lastIndexOf('http://'),
@@ -1236,7 +1159,6 @@ class Rewrites {
                         // Debounce: esegui solo dopo un breve delay
                         setTimeout(function() {
                             fixDuplicateUrls();
-                            removeNonTranslatedLinks();
                         }, 100);
                     }
                 });
@@ -1259,7 +1181,6 @@ class Rewrites {
                     originalPushState.apply(history, arguments);
                     setTimeout(function() {
                         fixDuplicateUrls();
-                        removeNonTranslatedLinks();
                     }, 100);
                 };
             }
@@ -1269,7 +1190,6 @@ class Rewrites {
                     originalReplaceState.apply(history, arguments);
                     setTimeout(function() {
                         fixDuplicateUrls();
-                        removeNonTranslatedLinks();
                     }, 100);
                 };
             }
@@ -1278,7 +1198,6 @@ class Rewrites {
             window.addEventListener('popstate', function() {
                 setTimeout(function() {
                     fixDuplicateUrls();
-                    removeNonTranslatedLinks();
                 }, 100);
             });
             
@@ -1286,23 +1205,20 @@ class Rewrites {
             if (typeof jQuery !== 'undefined') {
                 jQuery(document).ready(function($) {
                     fixDuplicateUrls();
-                    removeNonTranslatedLinks();
-                    
+
                     // Intercetta anche contenuti caricati via AJAX
                     $(document).on('DOMNodeInserted', function(e) {
                         if (e.target && (e.target.className && e.target.className.indexOf('related') !== -1)) {
                             setTimeout(function() {
                                 fixDuplicateUrls();
-                                removeNonTranslatedLinks();
                             }, 100);
                         }
                     });
-                    
+
                     // Intercetta anche eventi AJAX completi
                     $(document).ajaxComplete(function() {
                         setTimeout(function() {
                             fixDuplicateUrls();
-                            removeNonTranslatedLinks();
                         }, 100);
                     });
                 });
@@ -1361,10 +1277,7 @@ class Rewrites {
         }
 
         // Check if we're on a target language path
-        $lang = get_query_var( '\FPML_lang' );
-        if ( empty( $lang ) ) {
-            $lang = get_query_var( 'fpml_lang' );
-        }
+        $lang = get_query_var( 'fpml_lang' );
         
         if ( empty( $lang ) ) {
             $lang = $this->get_current_language_from_path();
@@ -1372,6 +1285,9 @@ class Rewrites {
 
         // Check if lang is a target language
         $language_manager = fpml_get_language_manager();
+        if ( ! $language_manager ) {
+            return;
+        }
         $enabled_languages = $language_manager->get_enabled_languages();
         $is_target_lang = ! empty( $lang ) && in_array( $lang, $enabled_languages, true );
 
@@ -1408,21 +1324,26 @@ class Rewrites {
                 $name
             ) );
 
-            // If not found, try with en- prefix
+            // If not found, try with dynamic lang prefix
             if ( ! $found_post_id ) {
-                $found_post_id = $wpdb->get_var( $wpdb->prepare(
-                    "SELECT ID FROM {$wpdb->posts} 
-                    WHERE post_name LIKE %s 
-                    AND post_type IN ('post', 'page') 
-                    AND post_status = 'publish'
-                    AND ID IN (
-                        SELECT post_id FROM {$wpdb->postmeta} 
-                        WHERE meta_key = '_fpml_is_translation' 
-                        AND meta_value = '1'
-                    )
-                    LIMIT 1",
-                    'en-' . $wpdb->esc_like( $name ) . '%'
-                ) );
+                $lang_manager  = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+                $enabled_langs = $lang_manager ? $lang_manager->get_enabled_languages() : array();
+                $current_lang  = ! empty( $enabled_langs ) ? $enabled_langs[0] : '';
+                if ( $current_lang ) {
+                    $found_post_id = $wpdb->get_var( $wpdb->prepare(
+                        "SELECT ID FROM {$wpdb->posts} 
+                        WHERE post_name LIKE %s 
+                        AND post_type IN ('post', 'page') 
+                        AND post_status = 'publish'
+                        AND ID IN (
+                            SELECT post_id FROM {$wpdb->postmeta} 
+                            WHERE meta_key = '_fpml_is_translation' 
+                            AND meta_value = '1'
+                        )
+                        LIMIT 1",
+                        $current_lang . '-' . $wpdb->esc_like( $name ) . '%'
+                    ) );
+                }
             }
 
             // Se ancora non trovato, cerca anche cercando il post originale e poi la sua traduzione
@@ -1438,8 +1359,17 @@ class Rewrites {
                 ) );
 
                 if ( $original_post_id ) {
-                    // Cerca la traduzione di questo post
-                    $found_post_id = (int) get_post_meta( $original_post_id, '_fpml_pair_id', true );
+                    // Usa fpml_get_translation_id per rispettare la lingua corrente
+                    $lang_manager  = $lang_manager ?? ( function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null );
+                    $enabled_langs = $lang_manager ? $lang_manager->get_enabled_languages() : array();
+                    $target_lang   = ! empty( $enabled_langs ) ? $enabled_langs[0] : '';
+                    if ( $target_lang && function_exists( 'fpml_get_translation_id' ) ) {
+                        $found_post_id = (int) fpml_get_translation_id( $original_post_id, $target_lang );
+                    }
+                    // Backward compatibility for 'en' only
+                    if ( ! $found_post_id && ( 'en' === $target_lang || empty( $target_lang ) ) ) {
+                        $found_post_id = (int) get_post_meta( $original_post_id, '_fpml_pair_id', true );
+                    }
                 }
             }
 
@@ -1532,17 +1462,26 @@ class Rewrites {
         }
 
         // Get current language for redirects
-        $current_lang = $this->get_current_language_from_path();
+        $current_lang     = $this->get_current_language_from_path();
         $language_manager = fpml_get_language_manager();
-        
+
+        if ( ! $language_manager ) {
+            return;
+        }
+
         if ( empty( $current_lang ) ) {
             $enabled_languages = $language_manager->get_enabled_languages();
-            $current_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+            $current_lang      = ! empty( $enabled_languages ) ? $enabled_languages[0] : '';
         }
-        
-        $lang_info = $language_manager->get_language_info( $current_lang );
-        $lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : 'en';
-        $home_url = home_url( '/' . $lang_slug . '/' );
+
+        if ( empty( $current_lang ) ) {
+            return;
+        }
+
+        $lang_info   = $language_manager->get_language_info( $current_lang );
+        $lang_slug   = $lang_info ? trim( $lang_info['slug'], '/' ) : $current_lang;
+        $home_url    = home_url( '/' . $lang_slug . '/' );
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 
         // Se è una pagina singolare, verifica se è tradotta
         if ( $wp_query->is_singular() && isset( $post ) && $post instanceof \WP_Post ) {

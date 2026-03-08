@@ -33,7 +33,7 @@ class ColumnManager {
 	 * @return array
 	 */
 	public function add_column( array $columns ): array {
-		$columns['\FPML_auto_translate'] = __( 'Auto-Traduzione', 'fp-multilanguage' );
+		$columns['fpml_auto_translate'] = __( 'Auto-Traduzione', 'fp-multilanguage' );
 		return $columns;
 	}
 
@@ -47,7 +47,7 @@ class ColumnManager {
 	 * @return void
 	 */
 	public function render_column( string $column, int $post_id ): void {
-		if ( '\FPML_auto_translate' !== $column ) {
+		if ( 'fpml_auto_translate' !== $column ) {
 			return;
 		}
 

@@ -22,7 +22,7 @@ class RedirectManager {
     /**
      * Cookie key for language preference.
      */
-    const COOKIE_NAME = '\FPML_lang_pref';
+    const COOKIE_NAME = 'fpml_lang_pref';
 
     /**
      * Source language slug.
@@ -61,6 +61,8 @@ class RedirectManager {
         $this->settings = $settings;
         $this->resolver = $resolver;
         $this->permalink_filter = $permalink_filter;
+
+        add_action( 'template_redirect', array( $this, 'redirect_translated_posts_to_en' ), 5 );
     }
 
     /**
@@ -98,13 +100,23 @@ class RedirectManager {
             return;
         }
 
-        if ( false === stripos( $accept_language, 'en' ) ) {
+        $language_manager = fpml_get_language_manager();
+        if ( ! $language_manager ) {
             return;
         }
-
-        $language_manager = fpml_get_language_manager();
         $enabled_languages = $language_manager->get_enabled_languages();
-        $target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
+
+        $target_lang = null;
+        foreach ( $enabled_languages as $lang_code ) {
+            if ( false !== stripos( $accept_language, $lang_code ) ) {
+                $target_lang = $lang_code;
+                break;
+            }
+        }
+
+        if ( null === $target_lang ) {
+            return;
+        }
         $target_url = $this->get_url_for_language( $target_lang );
 
         if ( empty( $target_url ) || headers_sent() ) {
@@ -132,29 +144,29 @@ class RedirectManager {
             return;
         }
 
-        $current_path = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
-        $current_url = home_url( $current_path );
-        
+        $current_path = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+        $current_url  = home_url( $current_path );
+
         $language_manager = fpml_get_language_manager();
-        $enabled_languages = $language_manager->get_enabled_languages();
+        if ( ! $language_manager ) {
+            return;
+        }
+        $enabled_languages    = $language_manager->get_enabled_languages();
         $has_target_lang_path = false;
-        
+
         foreach ( $enabled_languages as $lang_code ) {
             $lang_info = $language_manager->get_language_info( $lang_code );
             if ( $lang_info && ! empty( $lang_info['slug'] ) ) {
                 $lang_slug = trim( $lang_info['slug'], '/' );
-                if ( false !== strpos( $current_path, '/' . $lang_slug . '/' ) ||
-                     false !== strpos( $current_path, '/' . $lang_slug . '-' ) ||
-                     '/' . $lang_slug === rtrim( $current_path, '/' ) ||
-                     '/' . $lang_slug . '/' === rtrim( $current_path, '/' ) ||
-                     preg_match( '#^/' . preg_quote( $lang_slug, '#' ) . '(/|$)#', $current_path ) ) {
+                // Use a single regex that covers /lang/, /lang-slug, and /lang (exact)
+                if ( preg_match( '#^/' . preg_quote( $lang_slug, '#' ) . '(/|-|$)#', $current_path ) ) {
                     $has_target_lang_path = true;
                     break;
                 }
             }
         }
-        
-        if ( $has_target_lang_path || false !== strpos( $current_path, '/en-' ) ) {
+
+        if ( $has_target_lang_path ) {
             return;
         }
 
@@ -267,7 +279,7 @@ class RedirectManager {
             return false;
         }
 
-        return (bool) apply_filters( '\FPML_has_cookie_consent', true, $cookie_name, $raw_value );
+        return (bool) apply_filters( 'fpml_has_cookie_consent', true, $cookie_name, $raw_value );
     }
 }
 

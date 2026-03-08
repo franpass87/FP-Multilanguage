@@ -39,7 +39,7 @@ class Processor {
          *
          * @var string
          */
-        protected $lock_key = '\FPML_processor_lock';
+        protected $lock_key = 'fpml_processor_lock';
 
         /**
          * Lock time to live in seconds.
@@ -201,12 +201,23 @@ class Processor {
                 $this->notification_manager = new NotificationManager( $this->settings );
                 $this->cron_scheduler = new CronScheduler( $this->settings, $this->assisted_mode );
                 $this->queue_processor = new QueueProcessor( $this->queue, $this->settings, $this->logger, $this->batch_manager, $this->assisted_mode );
+                $this->queue_processor->set_job_handler( array( $this, 'process_job' ) );
 
                 if ( $this->assisted_mode ) {
                         return;
                 }
 
                 add_filter( 'cron_schedules', array( $this->cron_scheduler, 'register_schedules' ) );
+                add_action( 'init', array( $this->cron_scheduler, 'maybe_schedule_events' ) );
+                add_action( 'fpml_run_queue', array( $this->queue_processor, 'run_queue' ) );
+                add_action( 'fpml_retry_failed', array( $this->retry_manager, 'retry_failed_jobs' ) );
+                add_action( 'fpml_resync_outdated', array( $this->cleanup_manager, 'resync_outdated_jobs' ) );
+                add_action( 'fpml_cleanup_queue', array( $this->cleanup_manager, 'handle_scheduled_cleanup' ) );
+                add_action( 'update_option_' . \FPML_Settings::OPTION_KEY, array( $this->cron_scheduler, 'reschedule_events' ), 10, 2 );
+
+                if ( $this->settings && $this->settings->get( 'manual_translation_mode', false ) ) {
+                        $this->cron_scheduler->clear_scheduled_event( 'fpml_run_queue' );
+                }
         }
 
         /**
@@ -222,16 +233,6 @@ class Processor {
                         }
                 }
                 return null;
-                add_action( 'init', array( $this->cron_scheduler, 'maybe_schedule_events' ) );
-                add_action( '\FPML_run_queue', array( $this->queue_processor, 'run_queue' ) );
-                add_action( '\FPML_retry_failed', array( $this->retry_manager, 'retry_failed_jobs' ) );
-                add_action( '\FPML_resync_outdated', array( $this->cleanup_manager, 'resync_outdated_jobs' ) );
-                add_action( '\FPML_cleanup_queue', array( $this->cleanup_manager, 'handle_scheduled_cleanup' ) );
-                add_action( 'update_option_' . \FPML_Settings::OPTION_KEY, array( $this->cron_scheduler, 'reschedule_events' ), 10, 2 );
-                
-                if ( $this->settings && $this->settings->get( 'manual_translation_mode', false ) ) {
-                        $this->cron_scheduler->clear_scheduled_event( '\FPML_run_queue' );
-                }
         }
 
         /**
@@ -257,15 +258,15 @@ class Processor {
         protected function get_schedule_from_settings() {
                 $frequency = $this->settings ? $this->settings->get( 'cron_frequency', '15min' ) : '15min';
 
-                if ( '5min' === $frequency ) {
-                        return '\FPML_five_minutes';
-                }
+		if ( '5min' === $frequency ) {
+			return 'fpml_five_minutes';
+		}
 
-                if ( 'hourly' === $frequency ) {
-                        return 'hourly';
-                }
+		if ( 'hourly' === $frequency ) {
+			return 'hourly';
+		}
 
-                return '\FPML_fifteen_minutes';
+		return 'fpml_fifteen_minutes';
         }
 
         /**
@@ -333,11 +334,6 @@ class Processor {
          * Check whether the processor is currently locked.
          *
          * @since 0.2.0
-         *
-         * @return bool
-         */
-        /**
-         * Check if processor is locked.
          *
          * @return bool
          */
@@ -413,9 +409,9 @@ class Processor {
          *
          * @return true|WP_Error|string
          */
-        protected function process_job( $job ) {
+        public function process_job( $job ) {
                 if ( empty( $job->object_type ) ) {
-                        return new \WP_Error( '\FPML_job_invalid', __( 'Job non valido.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_invalid', __( 'Job non valido.', 'fp-multilanguage' ) );
                 }
 
                 $this->current_job_characters = 0;
@@ -443,7 +439,7 @@ class Processor {
                                 return 'skipped';
                 }
 
-                return new \WP_Error( '\FPML_job_type_unsupported', sprintf( __( 'Tipo di job %s non supportato.', 'fp-multilanguage' ), $job->object_type ) );
+                return new \WP_Error( 'fpml_job_type_unsupported', sprintf( __( 'Tipo di job %s non supportato.', 'fp-multilanguage' ), $job->object_type ) );
         }
 
         /**
@@ -492,11 +488,11 @@ class Processor {
 			$translator = new \FPML_Provider_Google();
 			break;
 		default:
-			return new \WP_Error( '\FPML_provider_missing', __( 'Nessun provider configurato.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_provider_missing', __( 'Nessun provider configurato.', 'fp-multilanguage' ) );
 	}
 
                 if ( ! $translator->is_configured() ) {
-                        return new \WP_Error( '\FPML_provider_not_configured', __( 'Il provider selezionato non è configurato.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_provider_not_configured', __( 'Il provider selezionato non è configurato.', 'fp-multilanguage' ) );
                 }
 
                 $this->translator = $translator;
@@ -569,29 +565,29 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 $source_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
 
                 if ( ! $source_id ) {
-                        return new \WP_Error( '\FPML_job_menu_missing', __( 'ID voce di menu mancante.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_missing', __( 'ID voce di menu mancante.', 'fp-multilanguage' ) );
                 }
 
                 $source_item = get_post( $source_id );
 
                 if ( ! ( $source_item instanceof WP_Post ) || 'nav_menu_item' !== $source_item->post_type ) {
-                        return new \WP_Error( '\FPML_job_menu_invalid', __( 'La voce di menu sorgente non è disponibile.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_invalid', __( 'La voce di menu sorgente non è disponibile.', 'fp-multilanguage' ) );
                 }
 
                 if ( get_post_meta( $source_item->ID, '_fpml_is_translation', true ) ) {
-                        return new \WP_Error( '\FPML_job_menu_loop', __( 'Il job punta a una voce di menu già tradotta.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_loop', __( 'Il job punta a una voce di menu già tradotta.', 'fp-multilanguage' ) );
                 }
 
                 $field = isset( $job->field ) ? sanitize_key( $job->field ) : 'title';
 
                 if ( 'title' !== $field ) {
-                        return new \WP_Error( '\FPML_job_menu_field_unsupported', __( 'Campo voce di menu non gestito.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_field_unsupported', __( 'Campo voce di menu non gestito.', 'fp-multilanguage' ) );
                 }
 
                 // Get translation ID - try to determine target language from job or use first enabled language
                 $language_manager = fpml_get_language_manager();
                 if ( ! $language_manager ) {
-                        return new \WP_Error( '\FPML_job_menu_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
                 }
                 $enabled_languages = $language_manager->get_enabled_languages();
                 
@@ -607,13 +603,13 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 }
 
                 if ( ! $target_id ) {
-                        return new \WP_Error( '\FPML_job_menu_target_missing', __( 'Nessuna voce di menu tradotta collegata.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_menu_target_missing', __( 'Nessuna voce di menu tradotta collegata.', 'fp-multilanguage' ) );
                 }
 
                 $target_item = get_post( $target_id );
 
-                if ( ! ( $target_item instanceof WP_Post ) || 'nav_menu_item' !== $target_item->post_type ) {
-                        return new \WP_Error( '\FPML_job_menu_target_invalid', __( 'La voce di menu di destinazione non esiste.', 'fp-multilanguage' ) );
+                if ( ! ( $target_item instanceof \WP_Post ) || 'nav_menu_item' !== $target_item->post_type ) {
+                        return new \WP_Error( 'fpml_job_menu_target_invalid', __( 'La voce di menu di destinazione non esiste.', 'fp-multilanguage' ) );
                 }
 
                 $manual_label = (string) get_post_meta( $source_item->ID, '_menu_item_title', true );
@@ -680,7 +676,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                  * @param string  $value       New translated value.
                  * @param object  $job         Job entry.
                  */
-                do_action( '\FPML_menu_item_translated', $target_item, 'title', $translated, $job );
+                do_action( 'fpml_menu_item_translated', $target_item, 'title', $translated, $job );
 
                 return true;
         }
@@ -698,7 +694,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		$term_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
 
 		if ( ! $term_id ) {
-			return new \WP_Error( '\FPML_job_term_missing', __( 'ID termine mancante.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_missing', __( 'ID termine mancante.', 'fp-multilanguage' ) );
 		}
 
 		$field_raw = isset( $job->field ) ? (string) $job->field : 'name';
@@ -713,17 +709,17 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		$field    = sanitize_key( $field );
 
 		if ( '' === $field ) {
-			return new \WP_Error( '\FPML_job_term_field_invalid', __( 'Campo termine non valido.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_field_invalid', __( 'Campo termine non valido.', 'fp-multilanguage' ) );
 		}
 
 		$term = $taxonomy ? get_term( $term_id, $taxonomy ) : get_term( $term_id );
 
 		if ( ! $term || is_wp_error( $term ) ) {
-			return new \WP_Error( '\FPML_job_term_invalid', __( 'Il termine sorgente non è disponibile.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_invalid', __( 'Il termine sorgente non è disponibile.', 'fp-multilanguage' ) );
 		}
 
 		if ( get_term_meta( $term->term_id, '_fpml_is_translation', true ) ) {
-			return new \WP_Error( '\FPML_job_term_loop', __( 'Il job punta a un termine già tradotto.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_loop', __( 'Il job punta a un termine già tradotto.', 'fp-multilanguage' ) );
 		}
 
 		$taxonomy = sanitize_key( $term->taxonomy );
@@ -731,7 +727,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		// Get translation ID for terms - try first enabled language
 		$language_manager = fpml_get_language_manager();
 		if ( ! $language_manager ) {
-			return new \WP_Error( '\FPML_job_term_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
 		}
 		$enabled_languages = $language_manager->get_enabled_languages();
 		$target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
@@ -746,13 +742,13 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		}
 
 		if ( ! $target_id ) {
-			return new \WP_Error( '\FPML_job_term_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
 		}
 
 		$target_term = $taxonomy ? get_term( $target_id, $taxonomy ) : get_term( $target_id );
 
 		if ( ! $target_term || is_wp_error( $target_term ) ) {
-			return new \WP_Error( '\FPML_job_term_target_invalid', __( 'Il termine di destinazione non esiste.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_term_target_invalid', __( 'Il termine di destinazione non esiste.', 'fp-multilanguage' ) );
 		}
 
 		switch ( $field ) {
@@ -767,7 +763,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 				$sanitize     = 'wp_kses_post';
 				break;
 			default:
-				return new \WP_Error( '\FPML_job_term_field_unsupported', __( 'Campo termine non gestito.', 'fp-multilanguage' ) );
+				return new \WP_Error( 'fpml_job_term_field_unsupported', __( 'Campo termine non gestito.', 'fp-multilanguage' ) );
 		}
 
 		// Se entrambi i valori sono vuoti, salta
@@ -842,7 +838,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		 * @param string  $value       New value.
 		 * @param object  $job         Job entry.
 		 */
-		do_action( '\FPML_term_translated', $target_term, $field, $translated, $job );
+		do_action( 'fpml_term_translated', $target_term, $field, $translated, $job );
 
 		return true;
 	}
@@ -860,35 +856,35 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		$comment_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
 
 		if ( ! $comment_id ) {
-			return new \WP_Error( '\FPML_job_comment_missing', __( 'ID commento mancante.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_missing', __( 'ID commento mancante.', 'fp-multilanguage' ) );
 		}
 
 		$comment = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return new \WP_Error( '\FPML_job_comment_invalid', __( 'Il commento sorgente non è disponibile.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_invalid', __( 'Il commento sorgente non è disponibile.', 'fp-multilanguage' ) );
 		}
 
 		if ( get_comment_meta( $comment_id, '_fpml_is_translation', true ) ) {
-			return new \WP_Error( '\FPML_job_comment_loop', __( 'Il job punta a un commento già tradotto.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_loop', __( 'Il job punta a un commento già tradotto.', 'fp-multilanguage' ) );
 		}
 
 		$field = isset( $job->field ) ? sanitize_key( $job->field ) : 'comment_content';
 
 		if ( 'comment_content' !== $field ) {
-			return new \WP_Error( '\FPML_job_comment_field_unsupported', __( 'Campo commento non gestito.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_field_unsupported', __( 'Campo commento non gestito.', 'fp-multilanguage' ) );
 		}
 
 		$target_comment_id = (int) get_comment_meta( $comment_id, '_fpml_pair_id', true );
 
 		if ( ! $target_comment_id ) {
-			return new \WP_Error( '\FPML_job_comment_target_missing', __( 'Nessun commento tradotto collegato.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_target_missing', __( 'Nessun commento tradotto collegato.', 'fp-multilanguage' ) );
 		}
 
 		$target_comment = get_comment( $target_comment_id );
 
 		if ( ! $target_comment ) {
-			return new \WP_Error( '\FPML_job_comment_target_invalid', __( 'Il commento di destinazione non esiste.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_target_invalid', __( 'Il commento di destinazione non esiste.', 'fp-multilanguage' ) );
 		}
 
 		$source_value = (string) $comment->comment_content;
@@ -924,7 +920,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		);
 
 		if ( ! $result ) {
-			return new \WP_Error( '\FPML_job_comment_update_failed', __( 'Impossibile aggiornare il commento tradotto.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_comment_update_failed', __( 'Impossibile aggiornare il commento tradotto.', 'fp-multilanguage' ) );
 		}
 
 		/**
@@ -937,7 +933,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		 * @param string     $translated     Translated value.
 		 * @param object     $job           Job entry.
 		 */
-		do_action( '\FPML_comment_translated', $target_comment, $field, $translated, $job );
+		do_action( 'fpml_comment_translated', $target_comment, $field, $translated, $job );
 
 		return true;
 	}
@@ -955,7 +951,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		$widget_id = isset( $job->object_id ) ? (string) $job->object_id : '';
 
 		if ( '' === $widget_id ) {
-			return new \WP_Error( '\FPML_job_widget_missing', __( 'ID widget mancante.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_widget_missing', __( 'ID widget mancante.', 'fp-multilanguage' ) );
 		}
 
 		$field = isset( $job->field ) ? sanitize_key( $job->field ) : 'text';
@@ -963,7 +959,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		// Parse widget ID (format: widget_id_base_number)
 		$parts = explode( '_', $widget_id, 2 );
 		if ( count( $parts ) < 2 ) {
-			return new \WP_Error( '\FPML_job_widget_invalid', __( 'ID widget non valido.', 'fp-multilanguage' ) );
+			return new \WP_Error( 'fpml_job_widget_invalid', __( 'ID widget non valido.', 'fp-multilanguage' ) );
 		}
 
 		$widget_number = array_pop( $parts );
@@ -1019,7 +1015,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		 * @param string $translated Translated value.
 		 * @param object $job       Job entry.
 		 */
-		do_action( '\FPML_widget_translated', $widget_id, $field, $translated, $job );
+		do_action( 'fpml_widget_translated', $widget_id, $field, $translated, $job );
 
 		return true;
 	}
@@ -1037,17 +1033,17 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 $post_id = isset( $job->object_id ) ? (int) $job->object_id : 0;
 
                 if ( ! $post_id ) {
-                        return new \WP_Error( '\FPML_job_post_missing', __( 'ID post mancante.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_post_missing', __( 'ID post mancante.', 'fp-multilanguage' ) );
                 }
 
                 $source_post = get_post( $post_id );
 
                 if ( ! $source_post || 'trash' === $source_post->post_status ) {
-                        return new \WP_Error( '\FPML_job_post_invalid', __( 'Il contenuto sorgente non è disponibile.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_post_invalid', __( 'Il contenuto sorgente non è disponibile.', 'fp-multilanguage' ) );
                 }
 
                 if ( get_post_meta( $source_post->ID, '_fpml_is_translation', true ) ) {
-                        return new \WP_Error( '\FPML_job_post_loop', __( 'Il job punta a un contenuto già tradotto.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_post_loop', __( 'Il job punta a un contenuto già tradotto.', 'fp-multilanguage' ) );
                 }
 
                 // Get translation ID - check if explicitly provided in job first
@@ -1058,9 +1054,11 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 if ( isset( $job->target_id ) && $job->target_id > 0 ) {
                         $target_id = (int) $job->target_id;
                         // Determine language from target post meta
-                        $target_lang = get_post_meta( $target_id, '_fpml_language', true );
+                        // _fpml_target_language is the canonical meta key written by PostTranslationManager
+                        $target_lang = get_post_meta( $target_id, '_fpml_target_language', true );
                         if ( empty( $target_lang ) ) {
-                                $target_lang = 'en'; // Fallback default
+                                $enabled_langs = function_exists( 'fpml_get_enabled_languages' ) ? fpml_get_enabled_languages() : array();
+                                $target_lang   = ! empty( $enabled_langs ) ? $enabled_langs[0] : 'en';
                         }
                 } else {
                         // Try to determine target language from all enabled languages
@@ -1068,53 +1066,52 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         // we check all enabled languages and find translations that need this field updated
                         $language_manager = fpml_get_language_manager();
                         if ( ! $language_manager ) {
-                                return new \WP_Error( '\FPML_job_post_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
+                                return new \WP_Error( 'fpml_job_post_language_manager_missing', __( 'Language manager non disponibile.', 'fp-multilanguage' ) );
                         }
                         $enabled_languages = $language_manager->get_enabled_languages();
                         
-                        // Try to find which translation needs this field updated by checking status flags
-                        // This handles the case where we have multiple translations (EN, DE, FR, etc.)
-                        $field_key = str_replace( ':', '_', $job->field );
-                        $status_key = '_fpml_status_' . $field_key;
-                        
+                        // Collect ALL translations that need this field updated.
+                        // With multiple target languages (EN, DE, FR…) we must process each one.
+                        $field_key   = str_replace( ':', '_', $job->field );
+                        $status_key  = '_fpml_status_' . $field_key;
+                        $targets     = array(); // array of [ 'id' => int, 'lang' => string ]
+
                         foreach ( $enabled_languages as $lang ) {
                                 $translation_id = fpml_get_translation_id( $source_post->ID, $lang );
-                                if ( $translation_id ) {
-                                        $translation_post = get_post( $translation_id );
-                                        if ( $translation_post && get_post_meta( $translation_id, '_fpml_is_translation', true ) ) {
-                                                // Check if this translation has status flag indicating it needs this field
-                                                $status = get_post_meta( $translation_id, $status_key, true );
-                                                $translation_status = get_post_meta( $translation_id, '_fpml_translation_status', true );
-                                                
-                                                if ( 'needs_update' === $status || 'pending' === $translation_status ) {
-                                                        $target_id = $translation_id;
-                                                        $target_lang = $lang;
-                                                        break;
-                                                }
-                                        }
+                                // Backward compatibility for 'en'
+                                if ( ! $translation_id && 'en' === $lang ) {
+                                        $translation_id = (int) get_post_meta( $source_post->ID, '_fpml_pair_id', true );
+                                }
+                                if ( ! $translation_id ) {
+                                        continue;
+                                }
+                                $translation_post = get_post( $translation_id );
+                                if ( ! $translation_post || ! get_post_meta( $translation_id, '_fpml_is_translation', true ) ) {
+                                        continue;
+                                }
+                                $status             = get_post_meta( $translation_id, $status_key, true );
+                                $translation_status = get_post_meta( $translation_id, '_fpml_translation_status', true );
+                                if ( 'needs_update' === $status || 'pending' === $translation_status ) {
+                                        $targets[] = array( 'id' => $translation_id, 'lang' => $lang );
                                 }
                         }
-                        
-                        // Fallback: if no specific translation found with needs_update status, use first enabled language
-                        if ( ! $target_id ) {
-                                $target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
-                                $target_id = fpml_get_translation_id( $source_post->ID, $target_lang );
-                                
-                                // Backward compatibility: check legacy _fpml_pair_id
-                                if ( ! $target_id && 'en' === $target_lang ) {
-                                        $target_id = (int) get_post_meta( $source_post->ID, '_fpml_pair_id', true );
-                                }
+
+                        if ( ! empty( $targets ) ) {
+                                // Use the first matching target for this job execution;
+                                // remaining targets will be handled by their own queued jobs.
+                                $target_id   = $targets[0]['id'];
+                                $target_lang = $targets[0]['lang'];
                         }
                 }
 
                 if ( ! $target_id ) {
-                        return new \WP_Error( '\FPML_job_post_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_post_target_missing', __( 'Nessuna traduzione collegata disponibile.', 'fp-multilanguage' ) );
                 }
 
                 $target_post = get_post( $target_id );
 
                 if ( ! $target_post ) {
-                        return new \WP_Error( '\FPML_job_post_target_invalid', __( 'Il post di destinazione non esiste.', 'fp-multilanguage' ) );
+                        return new \WP_Error( 'fpml_job_post_target_invalid', __( 'Il post di destinazione non esiste.', 'fp-multilanguage' ) );
                 }
 
                 $field = isset( $job->field ) ? sanitize_text_field( $job->field ) : 'post_content';
@@ -1176,7 +1173,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                 $cost               = $this->translator instanceof \FPML_TranslatorInterface ? $this->translator->estimate_cost( $payload_text ) : 0.0;
 
                                 if ( class_exists( '\FPML_Export_Import' ) ) {
-                                        $export_import = function_exists( 'fpml_get_export_import' ) ? fpml_get_export_import() : ( function_exists( 'fpml_get_export_import' ) ? fpml_get_export_import() : \FPML_Export_Import::instance() );
+                                        $export_import = function_exists( 'fpml_get_export_import' ) ? fpml_get_export_import() : \FPML_Export_Import::instance();
                                         if ( $export_import && method_exists( $export_import, 'record_sandbox_preview' ) ) {
                                                 $export_import->record_sandbox_preview(
                                         array(
@@ -1224,7 +1221,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 
 		$this->update_post_status_flag( $target_post->ID, $field, 'synced' );
 
-                        do_action( '\FPML_post_translated', $target_post, $field, $translated_value, $job );
+                        do_action( 'fpml_post_translated', $target_post, $field, $translated_value, $job );
 
 		$this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
 
@@ -1269,7 +1266,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         }
                         
                         $domain = $this->resolve_domain_for_field( $field );
-                        $new_value = $this->attempt_translation_with_backoff( $translator, $source_value, $domain, 1 );
+                        $new_value = $this->attempt_translation_with_backoff( $translator, $source_value, $domain, 1, '', $target_lang ?? '' );
                         
                         if ( is_wp_error( $new_value ) ) {
                                 $this->update_post_status_flag( $target_post->ID, $field, 'failed' );
@@ -1282,7 +1279,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         $this->update_post_status_flag( $target_post->ID, $field, 'synced' );
                         $this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
                         
-                        do_action( '\FPML_post_translated', $target_post, $field, $new_value, $job );
+                        do_action( 'fpml_post_translated', $target_post, $field, $new_value, $job );
                         
                         return true;
                 }
@@ -1415,7 +1412,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                  * @param string  $new_value   Translated value.
                  * @param object  $job         Queue job entry.
                  */
-                do_action( '\FPML_post_translated', $target_post, $field, $new_value, $job );
+                do_action( 'fpml_post_translated', $target_post, $field, $new_value, $job );
 
 	$this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
 
@@ -1532,12 +1529,12 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         'names'
                 );
 
-                $custom_taxonomies = get_option( '\FPML_custom_translatable_taxonomies', array() );
+                $custom_taxonomies = get_option( 'fpml_custom_translatable_taxonomies', array() );
                 if ( ! empty( $custom_taxonomies ) ) {
                         $taxonomies = array_merge( $taxonomies, $custom_taxonomies );
                 }
 
-                $taxonomies = apply_filters( '\FPML_translatable_taxonomies', $taxonomies );
+                $taxonomies = apply_filters( 'fpml_translatable_taxonomies', $taxonomies );
 
                 if ( empty( $taxonomies ) ) {
                         return;
@@ -1626,14 +1623,26 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         $slug = sanitize_title( $post->post_title );
                                 }
 
-                                // Rimuovi il prefisso en- se presente (per post inglesi)
-                                $slug = preg_replace( '/^en[-_]/i', '', $slug );
+                                // Strip any lang prefix (e.g. 'en-', 'de_') from the slug
+                                $lm = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+                                if ( $lm ) {
+                                        foreach ( $lm->get_enabled_languages() as $lc ) {
+                                                $info = $lm->get_language_info( $lc );
+                                                $ls   = $info ? trim( $info['slug'], '/' ) : $lc;
+                                                foreach ( array( '-', '_' ) as $sep ) {
+                                                        if ( 0 === strpos( $slug, $ls . $sep ) ) {
+                                                                $slug = substr( $slug, strlen( $ls ) + 1 );
+                                                                break 2;
+                                                        }
+                                                }
+                                        }
+                                } else {
+                                        $slug = preg_replace( '/^[a-z]{2}[-_]/i', '', $slug );
+                                }
 
-                                // Per la traduzione, converti lo slug in testo leggibile
-                                // Sostituisci i trattini con spazi per permettere la traduzione
+                                // Convert slug to readable text for translation
                                 $slug = str_replace( array( '-', '_' ), ' ', $slug );
-                                
-                                // Se lo slug è vuoto dopo la rimozione del prefisso, usa il titolo
+
                                 if ( '' === trim( $slug ) ) {
                                         $slug = $post->post_title;
                                 }
@@ -1652,7 +1661,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         return (string) $value;
                 }
 
-                return (string) apply_filters( '\FPML_get_post_field_value', '', $post, $field );
+                return (string) apply_filters( 'fpml_get_post_field_value', '', $post, $field );
         }
 
         /**
@@ -1667,7 +1676,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
          * @return void
          */
         protected function save_post_field_value( $post, $field, $new_value ) {
-                $new_value = apply_filters( '\FPML_pre_save_translation', $new_value, $post, $field );
+                $new_value = apply_filters( 'fpml_pre_save_translation', $new_value, $post, $field );
 
                 // Get provider for versioning
                 $provider = 'gpt-5-nano';
@@ -1740,7 +1749,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                  *
                  * @since 0.2.0
                  */
-                do_action( '\FPML_save_post_field_value', $post, $field, $new_value );
+                do_action( 'fpml_save_post_field_value', $post, $field, $new_value );
         }
 
 	/**
@@ -2276,10 +2285,12 @@ private function translate_value_recursive( $value, array $context ) {
          * @param string                   $text       Payload to translate.
          * @param string                   $domain     Context domain.
          * @param int                      $attempt    Attempt counter.
+         * @param string                   $source     Source language code.
+         * @param string                   $target     Target language code.
          *
          * @return string|WP_Error
          */
-        protected function attempt_translation_with_backoff( $translator, $text, $domain, $attempt ) {
+        protected function attempt_translation_with_backoff( $translator, $text, $domain, $attempt, $source = '', $target = '' ) {
                 $max_attempts = 2; // Reduced from 4 to avoid long blocking
                 $delay        = 1;
                 $start_time   = time();
@@ -2288,15 +2299,17 @@ private function translate_value_recursive( $value, array $context ) {
                 for ( $i = 0; $i < $max_attempts; $i++ ) {
                         // Check if we've exceeded max time
                         if ( ( time() - $start_time ) > $max_time ) {
-                                return new \WP_Error( '\FPML_translation_timeout', __( 'Traduzione interrotta per timeout.', 'fp-multilanguage' ) );
+                                return new \WP_Error( 'fpml_translation_timeout', __( 'Traduzione interrotta per timeout.', 'fp-multilanguage' ) );
                         }
 
                         try {
-                                $result = $translator->translate( $text, 'it', 'en', $domain );
+                                $src    = ! empty( $source ) ? $source : ( function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it' );
+                                $tgt    = ! empty( $target ) ? $target : ( function_exists( 'fpml_get_enabled_languages' ) ? ( fpml_get_enabled_languages()[0] ?? 'en' ) : 'en' );
+                                $result = $translator->translate( $text, $src, $tgt, $domain );
                         } catch ( \Exception $e ) {
-                                $result = new \WP_Error( '\FPML_translation_exception', $e->getMessage() );
+                                $result = new \WP_Error( 'fpml_translation_exception', $e->getMessage() );
                         } catch ( \Error $e ) {
-                                $result = new \WP_Error( '\FPML_translation_error', $e->getMessage() );
+                                $result = new \WP_Error( 'fpml_translation_error', $e->getMessage() );
                         }
 
                         if ( ! is_wp_error( $result ) ) {
@@ -2318,12 +2331,12 @@ private function translate_value_recursive( $value, array $context ) {
                          * @param float  $sleep Delay in seconds.
                          * @param string $domain Translation domain.
                          */
-                        $sleep = apply_filters( '\FPML_translation_retry_delay', $sleep, $domain );
+                        $sleep = apply_filters( 'fpml_translation_retry_delay', $sleep, $domain );
 
                         usleep( (int) ( $sleep * 1000000 ) );
                 }
 
-                return new \WP_Error( '\FPML_translation_failed', __( 'Traduzione non riuscita dopo vari tentativi.', 'fp-multilanguage' ) );
+                return new \WP_Error( 'fpml_translation_failed', __( 'Traduzione non riuscita dopo vari tentativi.', 'fp-multilanguage' ) );
         }
 
         /**

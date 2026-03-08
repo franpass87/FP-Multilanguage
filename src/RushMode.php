@@ -96,19 +96,19 @@ class RushMode {
 	 */
 	protected function __construct() {
 		$container = $this->getContainer();
-		$this->queue = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : fpml_get_queue();
-		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
-		$this->logger = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \FPML_fpml_get_logger();
+		$this->queue    = $container && $container->has( 'queue' ) ? $container->get( 'queue' ) : ( function_exists( 'fpml_get_queue' ) ? fpml_get_queue() : null );
+		$this->settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : ( class_exists( '\FPML_Settings' ) ? \FPML_Settings::instance() : null );
+		$this->logger   = $container && $container->has( 'logger' ) ? $container->get( 'logger' ) : \fpml_get_logger();
 
 		// Check automatico prima di ogni run della coda.
-		add_action( '\FPML_before_queue_run', array( $this, 'check_rush_mode' ) );
+		add_action( 'fpml_before_queue_run', array( $this, 'check_rush_mode' ) );
 
 		// Hook per modificare parametri in rush mode.
-		add_filter( '\FPML_batch_size', array( $this, 'adjust_batch_size' ), 10, 1 );
-		add_filter( '\FPML_max_chars_per_batch', array( $this, 'adjust_max_chars' ), 10, 1 );
+		add_filter( 'fpml_batch_size', array( $this, 'adjust_batch_size' ), 10, 1 );
+		add_filter( 'fpml_max_chars_per_batch', array( $this, 'adjust_max_chars' ), 10, 1 );
 
 		// Check stato attuale.
-		$this->is_rush_active = get_option( '\FPML_rush_mode_active', false );
+		$this->is_rush_active = get_option( 'fpml_rush_mode_active', false );
 	}
 
 	/**
@@ -144,31 +144,41 @@ class RushMode {
 			return;
 		}
 
-		// Salva impostazioni originali.
-		$this->original_settings = array(
-			'batch_size'          => $this->settings->get( 'batch_size', 5 ),
-			'max_chars_per_batch' => $this->settings->get( 'max_chars_per_batch', 20000 ),
-			'cron_frequency'      => $this->settings->get( 'cron_frequency', '15min' ),
-		);
+		// Atomic lock: prevent concurrent activations via add_option (INSERT IGNORE).
+		if ( ! add_option( 'fpml_rush_mode_activating', 1, '', 'no' ) ) {
+			return;
+		}
 
-		update_option( '\FPML_rush_original_settings', $this->original_settings, false );
+		try {
+			// Salva impostazioni originali.
+			$this->original_settings = array(
+				'batch_size'          => $this->settings->get( 'batch_size', 5 ),
+				'max_chars_per_batch' => $this->settings->get( 'max_chars_per_batch', 20000 ),
+				'cron_frequency'      => $this->settings->get( 'cron_frequency', '15min' ),
+			);
 
-		// Calcola parametri ottimizzati.
-		$optimized = $this->calculate_optimized_params( $queue_size );
+			update_option( 'fpml_rush_original_settings', $this->original_settings, false );
 
-		// Applica temporaneamente.
-		$current_settings = $this->settings->all();
-		$current_settings['batch_size'] = $optimized['batch_size'];
-		$current_settings['max_chars_per_batch'] = $optimized['max_chars_per_batch'];
-		update_option( \FPML_Settings::OPTION_KEY, $current_settings );
+			// Calcola parametri ottimizzati.
+			$optimized = $this->calculate_optimized_params( $queue_size );
 
-		// Aumenta frequenza cron (se possibile).
-		$this->reschedule_cron( '5min' );
+			// Applica temporaneamente.
+			$current_settings = $this->settings->all();
+			$current_settings['batch_size']          = $optimized['batch_size'];
+			$current_settings['max_chars_per_batch'] = $optimized['max_chars_per_batch'];
+			update_option( \FPML_Settings::OPTION_KEY, $current_settings );
 
-		update_option( '\FPML_rush_mode_active', true, false );
-		update_option( '\FPML_rush_activated_at', current_time( 'timestamp', true ), false );
+			// Aumenta frequenza cron (se possibile).
+			$this->reschedule_cron( '5min' );
 
-		$this->is_rush_active = true;
+			update_option( 'fpml_rush_mode_active', true, false );
+			update_option( 'fpml_rush_activated_at', time(), false );
+
+			$this->is_rush_active = true;
+		} finally {
+			// Always release the activation lock, even if an exception occurred.
+			delete_option( 'fpml_rush_mode_activating' );
+		}
 
 		$this->logger->log(
 			'info',
@@ -195,7 +205,7 @@ class RushMode {
 	 */
 	protected function deactivate_rush_mode() {
 		// Ripristina impostazioni originali.
-		$original = get_option( '\FPML_rush_original_settings', array() );
+		$original = get_option( 'fpml_rush_original_settings', array() );
 
 		if ( ! empty( $original ) && $this->settings ) {
 			$current_settings = $this->settings->all();
@@ -207,8 +217,8 @@ class RushMode {
 			$this->reschedule_cron( $original['cron_frequency'] );
 		}
 
-		update_option( '\FPML_rush_mode_active', false, false );
-		delete_option( '\FPML_rush_activated_at' );
+		update_option( 'fpml_rush_mode_active', false, false );
+		delete_option( 'fpml_rush_activated_at' );
 
 		$this->is_rush_active = false;
 
@@ -261,7 +271,7 @@ class RushMode {
 	 * @return void
 	 */
 	protected function reschedule_cron( $frequency ) {
-		$hook = '\FPML_run_queue';
+		$hook = 'fpml_run_queue';
 
 		// Rimuovi schedule esistente.
 		$timestamp = wp_next_scheduled( $hook );
@@ -271,12 +281,12 @@ class RushMode {
 
 		// Mappa frequenza.
 		$schedule_map = array(
-			'5min'  => '\FPML_five_minutes',
-			'15min' => '\FPML_fifteen_minutes',
+			'5min'  => 'fpml_five_minutes',
+			'15min' => 'fpml_fifteen_minutes',
 			'hourly' => 'hourly',
 		);
 
-		$schedule = isset( $schedule_map[ $frequency ] ) ? $schedule_map[ $frequency ] : '\FPML_fifteen_minutes';
+		$schedule = isset( $schedule_map[ $frequency ] ) ? $schedule_map[ $frequency ] : 'fpml_fifteen_minutes';
 
 		// Reschedula.
 		wp_schedule_event( time() + 60, $schedule, $hook );
@@ -336,7 +346,7 @@ class RushMode {
 	 * @return array
 	 */
 	public function get_stats() {
-		$activated_at = get_option( '\FPML_rush_activated_at', 0 );
+		$activated_at = get_option( 'fpml_rush_activated_at', 0 );
 
 		return array(
 			'is_active'    => $this->is_rush_active,

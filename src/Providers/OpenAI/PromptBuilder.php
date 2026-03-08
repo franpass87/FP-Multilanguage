@@ -20,15 +20,46 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PromptBuilder {
 	/**
+	 * Map of language codes to human-readable names for prompt construction.
+	 *
+	 * @var array<string, string>
+	 */
+	const LANGUAGE_NAMES = array(
+		'it' => 'Italian',
+		'en' => 'English (United States)',
+		'de' => 'German',
+		'fr' => 'French',
+		'es' => 'Spanish',
+		'pt' => 'Portuguese',
+		'nl' => 'Dutch',
+		'pl' => 'Polish',
+		'ru' => 'Russian',
+		'zh' => 'Chinese (Simplified)',
+		'ja' => 'Japanese',
+		'ar' => 'Arabic',
+	);
+
+	/**
 	 * Build system prompt.
 	 *
 	 * @since 0.10.0
 	 *
-	 * @param bool $marketing Whether marketing tone is enabled.
+	 * @param bool   $marketing Whether marketing tone is enabled.
+	 * @param string $source    Source language code (e.g. 'it').
+	 * @param string $target    Target language code (e.g. 'en').
 	 * @return string
 	 */
-	public function build_system_prompt( bool $marketing ): string {
-		$prompt  = 'You are a professional Italian to English (United States) translator. Preserve HTML tags, shortcode structure, and URLs exactly. Respond with English content only.';
+	public function build_system_prompt( bool $marketing, string $source = '', string $target = '' ): string {
+		if ( '' === $source ) {
+			$source = function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it';
+		}
+		if ( '' === $target ) {
+			$target = function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en';
+		}
+		$source_name = self::LANGUAGE_NAMES[ $source ] ?? strtoupper( $source );
+		$target_name = self::LANGUAGE_NAMES[ $target ] ?? strtoupper( $target );
+
+		$prompt  = sprintf( 'You are a professional %1$s to %2$s translator. Preserve HTML tags, shortcode structure, and URLs exactly. Respond with %2$s content only.', $source_name, $target_name );
 		$prompt .= ' Maintain neutral, clear language suitable for a broad audience.';
 		$prompt .= ' IMPORTANT: Preserve brand names, company names, product names, and technical terms exactly as they appear. Do not translate proper nouns, brand names, or technical terminology unless they are clearly meant to be translated.';
 		

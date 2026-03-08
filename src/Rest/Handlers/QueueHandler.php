@@ -35,7 +35,7 @@ class QueueHandler {
 		$plugin = class_exists( '\FPML_Plugin' ) ? \FPML_Plugin::instance() : null;
 		if ( ! $plugin ) {
 			return new \WP_Error(
-				'\FPML_plugin_error',
+				'fpml_plugin_error',
 				__( 'Impossibile caricare il plugin.', 'fp-multilanguage' ),
 				array( 'status' => 500 )
 			);
@@ -43,16 +43,16 @@ class QueueHandler {
 
 		if ( $plugin->is_assisted_mode() ) {
 			return new \WP_Error(
-				'\FPML_assisted_mode',
+				'fpml_assisted_mode',
 				__( 'Modalità assistita attiva: la coda interna è disabilitata.', 'fp-multilanguage' ),
 				array( 'status' => 409 )
 			);
 		}
 
-		$processor = class_exists( '\FPML_Processor' ) ? \FPML_fpml_get_processor() : null;
+		$processor = class_exists( '\FPML_Processor' ) ? \fpml_get_processor() : null;
 		if ( ! $processor ) {
 			return new \WP_Error(
-				'\FPML_processor_error',
+				'fpml_processor_error',
 				__( 'Impossibile caricare il processore.', 'fp-multilanguage' ),
 				array( 'status' => 500 )
 			);
@@ -86,7 +86,7 @@ class QueueHandler {
 		$plugin = class_exists( '\FPML_Plugin' ) ? \FPML_Plugin::instance() : null;
 		if ( ! $plugin ) {
 			return new \WP_Error(
-				'\FPML_plugin_error',
+				'fpml_plugin_error',
 				__( 'Impossibile caricare il plugin.', 'fp-multilanguage' ),
 				array( 'status' => 500 )
 			);
@@ -94,7 +94,7 @@ class QueueHandler {
 
 		if ( $plugin->is_assisted_mode() ) {
 			return new \WP_Error(
-				'\FPML_assisted_mode',
+				'fpml_assisted_mode',
 				__( 'Modalità assistita attiva: la coda interna è disabilitata.', 'fp-multilanguage' ),
 				array( 'status' => 409 )
 			);
@@ -110,7 +110,7 @@ class QueueHandler {
 
 		if ( $days <= 0 ) {
 			return new \WP_Error(
-				'\FPML_cleanup_disabled',
+				'fpml_cleanup_disabled',
 				__( 'Configura prima la retention della coda dalle impostazioni.', 'fp-multilanguage' ),
 				array( 'status' => 400 )
 			);
@@ -120,7 +120,7 @@ class QueueHandler {
 
 		if ( empty( $states ) ) {
 			return new \WP_Error(
-				'\FPML_cleanup_states_empty',
+				'fpml_cleanup_states_empty',
 				__( 'Nessuno stato valido configurato per la pulizia della coda.', 'fp-multilanguage' ),
 				array( 'status' => 400 )
 			);
@@ -129,7 +129,7 @@ class QueueHandler {
 		$queue = class_exists( '\FPML_Queue' ) ? fpml_get_queue() : null;
 		if ( ! $queue ) {
 			return new \WP_Error(
-				'\FPML_queue_error',
+				'fpml_queue_error',
 				__( 'Impossibile caricare la coda.', 'fp-multilanguage' ),
 				array( 'status' => 500 )
 			);

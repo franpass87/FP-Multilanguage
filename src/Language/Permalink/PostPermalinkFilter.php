@@ -25,7 +25,7 @@ class PostPermalinkFilter {
 	/**
 	 * Cookie key for language preference.
 	 */
-	const COOKIE_NAME = '\FPML_lang_pref';
+	const COOKIE_NAME = 'fpml_lang_pref';
 
 	/**
 	 * Source language slug.
@@ -109,7 +109,7 @@ class PostPermalinkFilter {
 		$enabled_languages = $language_manager->get_enabled_languages();
 		$available_languages = $language_manager->get_all_languages();
 		
-		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : ''; // phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.server___SERVER
 		$current_lang = self::SOURCE;
 		$is_target_language_path = false;
 		
@@ -134,10 +134,17 @@ class PostPermalinkFilter {
 		$lang_cookie = isset( $_COOKIE[ self::COOKIE_NAME ] ) ? sanitize_text_field( $_COOKIE[ self::COOKIE_NAME ] ) : '';
 		$is_target_language_preference = ( in_array( $lang_cookie, $enabled_languages, true ) || $is_target_language_path );
 		
-		// Se $force è true, considera sempre che siamo in contesto di una lingua target (per admin)
+		// Se $force è true (admin), usa la lingua del post stesso se disponibile
 		if ( $force && ! empty( $enabled_languages ) && is_array( $enabled_languages ) ) {
 			$is_target_language_preference = true;
-			$current_lang = $enabled_languages[0];
+			// Prefer the language stored in post meta over whatever was detected from the path
+			$post_target_lang = get_post_meta( $post->ID, '_fpml_target_language', true );
+			if ( ! empty( $post_target_lang ) && in_array( $post_target_lang, $enabled_languages, true ) ) {
+				$current_lang = $post_target_lang;
+			} else {
+				// No language meta on post: fall back to first enabled language
+				$current_lang = $enabled_languages[0];
+			}
 		}
 
 		$is_translation = get_post_meta( $post->ID, '_fpml_is_translation', true );
@@ -197,21 +204,23 @@ class PostPermalinkFilter {
 
 		// Determina lo slug base
 		$base_slug = $post->post_name;
-		
-		// Se lo slug inizia con 'en-', rimuovi il prefisso
-		if ( 0 === strpos( $base_slug, 'en-' ) ) {
-			$base_slug = substr( $base_slug, 3 );
+
+		// Get the actual language for this translated post
+		$post_lang = get_post_meta( $post->ID, '_fpml_target_language', true );
+		if ( empty( $post_lang ) ) {
+			$post_lang = $this->resolver->get_current_language();
 		}
-		
-		if ( 0 === strpos( $base_slug, 'en_' ) ) {
-			$base_slug = substr( $base_slug, 3 );
-		}
-		
-		// Get current language slug
-		$current_lang = $this->resolver->get_current_language();
 		$language_manager = fpml_get_language_manager();
-		$lang_info = $language_manager->get_language_info( $current_lang );
-		$lang_slug = $lang_info ? trim( $lang_info['slug'], '/' ) : 'en';
+		$lang_info        = $language_manager->get_language_info( $post_lang );
+		$lang_slug        = $lang_info ? trim( $lang_info['slug'], '/' ) : $post_lang;
+
+		// Se lo slug inizia con il prefisso lingua (es. 'en-' o 'en_'), rimuovilo
+		foreach ( array( $lang_slug . '-', $lang_slug . '_' ) as $prefix ) {
+			if ( 0 === strpos( $base_slug, $prefix ) ) {
+				$base_slug = substr( $base_slug, strlen( $prefix ) );
+				break;
+			}
+		}
 		
 		$lang_path = '/' . $lang_slug . '/';
 		if ( false === strpos( $permalink, $lang_path ) ) {
@@ -282,7 +291,8 @@ class PostPermalinkFilter {
 	 * @return array
 	 */
 	public function filter_sample_permalink( $permalink, $post_id, $title, $name, $post ) {
-		if ( ! is_array( $permalink ) || ! isset( $permalink['permalink'] ) ) {
+		// WordPress passes $permalink as [ 0 => 'url_with_%postname%', 1 => 'slug' ] (numeric array).
+		if ( ! is_array( $permalink ) || ! isset( $permalink[0] ) ) {
 			return $permalink;
 		}
 
@@ -303,10 +313,10 @@ class PostPermalinkFilter {
 			return $permalink;
 		}
 
-		$filtered_permalink = $this->filter_translation_permalink( $permalink['permalink'], $post, true );
+		$filtered_url = $this->filter_translation_permalink( $permalink[0], $post, true );
 
-		if ( $filtered_permalink !== $permalink['permalink'] ) {
-			$permalink['permalink'] = $filtered_permalink;
+		if ( $filtered_url !== $permalink[0] ) {
+			$permalink[0] = $filtered_url;
 		}
 
 		return $permalink;

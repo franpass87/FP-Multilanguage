@@ -58,9 +58,8 @@ class RegistrationService {
 	 * @return string
 	 */
 	public function renderLanguageSwitcherShortcode( $atts ): string {
-		if ( class_exists( '\FP\Multilanguage\Frontend\Widgets\LanguageSwitcherWidget' ) ) {
-			$widget = new \FP\Multilanguage\Frontend\Widgets\LanguageSwitcherWidget();
-			return $widget->render_shortcode( $atts );
+		if ( function_exists( '\FP\Multilanguage\Frontend\Widgets\fpml_language_switcher_shortcode' ) ) {
+			return \FP\Multilanguage\Frontend\Widgets\fpml_language_switcher_shortcode( $atts );
 		}
 		return '';
 	}
@@ -71,10 +70,7 @@ class RegistrationService {
 	 * @return void
 	 */
 	public function registerRestRoutes(): void {
-		if ( class_exists( '\FP\Multilanguage\Rest\Controllers\AdminController' ) ) {
-			$admin_controller = new \FP\Multilanguage\Rest\Controllers\AdminController();
-			$admin_controller->register_routes();
-		}
+		// AdminController was removed as dead code; REST routes are registered via RESTServiceProvider.
 	}
 
 	/**

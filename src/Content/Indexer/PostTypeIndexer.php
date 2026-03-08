@@ -98,6 +98,17 @@ class PostTypeIndexer {
 			// Pre-load all post meta to avoid N+1 queries.
 			update_meta_cache( 'post', $query->posts );
 
+			// Resolve language info once per batch, outside the loop.
+			$language_manager  = fpml_get_language_manager();
+			if ( ! $language_manager ) {
+				break;
+			}
+			$enabled_languages = $language_manager->get_enabled_languages();
+			$target_lang       = ! empty( $enabled_languages ) ? $enabled_languages[0] : null;
+			if ( ! $target_lang ) {
+				break;
+			}
+
 			foreach ( $query->posts as $post_id ) {
 				$post = get_post( $post_id );
 
@@ -110,17 +121,17 @@ class PostTypeIndexer {
 				}
 
 				$summary['posts_scanned']++;
-
-				// Get translation for first enabled language
-				$language_manager = fpml_get_language_manager();
-				$enabled_languages = $language_manager->get_enabled_languages();
-				$target_lang = ! empty( $enabled_languages ) ? $enabled_languages[0] : 'en';
 				
-				$existing_target = $this->translation_manager->get_translation_id( $post->ID, $target_lang );
-				// Backward compatibility
-				if ( ! $existing_target && 'en' === $target_lang ) {
-					$existing_target = (int) get_post_meta( $post->ID, '_fpml_pair_id', true );
+			$existing_target = $this->translation_manager->get_translation_id( $post->ID, $target_lang );
+			// Backward compatibility: legacy _fpml_pair_id was only used for 'en', but check for any lang.
+			if ( ! $existing_target ) {
+				$legacy = (int) get_post_meta( $post->ID, '_fpml_pair_id', true );
+				if ( $legacy ) {
+					// Migrate legacy meta to language-specific key.
+					update_post_meta( $post->ID, '_fpml_pair_id_' . $target_lang, $legacy );
+					$existing_target = $legacy;
 				}
+			}
 				
 				// Create translation explicitly during indexing
 				if ( $existing_target ) {

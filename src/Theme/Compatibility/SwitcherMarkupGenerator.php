@@ -44,14 +44,18 @@ class SwitcherMarkupGenerator {
 	 * @return string
 	 */
 	public function get_switcher_markup() {
-		$style = $this->settings->get( 'menu_switcher_style', 'inline' );
+		$style      = $this->settings->get( 'menu_switcher_style', 'links' );
 		$show_flags = $this->settings->get( 'menu_switcher_show_flags', true );
 
-		$style = in_array( $style, array( 'inline', 'dropdown' ), true ) ? $style : 'inline';
-		$show_flags_attr = $show_flags ? '1' : '0';
+		// Map legacy 'inline' to 'links' for the new shortcode
+		if ( 'inline' === $style ) {
+			$style = 'links';
+		}
+		$style           = in_array( $style, array( 'links', 'flags', 'dropdown' ), true ) ? $style : 'links';
+		$show_flags_attr = $show_flags ? 'yes' : 'no';
 
 		$shortcode = sprintf(
-			'[fp_lang_switcher style="%s" show_flags="%s"]',
+			'[fpml_language_switcher style="%s" show_flags="%s" show_names="yes"]',
 			esc_attr( $style ),
 			esc_attr( $show_flags_attr )
 		);

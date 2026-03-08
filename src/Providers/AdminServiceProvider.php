@@ -60,15 +60,12 @@ class AdminServiceProvider implements ServiceProvider {
 		// Admin AJAX Handlers
 		$container->bind( 'admin.ajax_handlers', function( Container $c ) {
 			if ( class_exists( '\FP\Multilanguage\Admin\Ajax\AjaxHandlers' ) ) {
-				$logger = $c->has( 'logger' ) ? $c->get( 'logger' ) : null;
-				$queue = $c->has( 'queue' ) ? $c->get( 'queue' ) : null;
-				$translation_manager = $c->has( 'translation.manager' ) ? $c->get( 'translation.manager' ) : null;
 				return new \FP\Multilanguage\Admin\Ajax\AjaxHandlers();
 			}
 			// Fallback to old location for backward compatibility
 			if ( class_exists( '\FP\Multilanguage\Admin\AjaxHandlers' ) ) {
-				$logger = $c->has( 'logger' ) ? $c->get( 'logger' ) : null;
-				$queue = $c->has( 'queue' ) ? $c->get( 'queue' ) : null;
+				$logger              = $c->has( 'logger' ) ? $c->get( 'logger' ) : null;
+				$queue               = $c->has( 'queue' ) ? $c->get( 'queue' ) : null;
 				$translation_manager = $c->has( 'translation.manager' ) ? $c->get( 'translation.manager' ) : null;
 				return new \FP\Multilanguage\Admin\AjaxHandlers( $logger, $queue, $translation_manager );
 			}
@@ -157,30 +154,33 @@ class AdminServiceProvider implements ServiceProvider {
 	 * @return void
 	 */
 	public function boot( Container $container ): void {
-		if ( ! is_admin() ) {
+		// wp_doing_ajax() è true su admin-ajax.php, che è un contesto admin ma is_admin() lo rileva correttamente.
+		// Tuttavia, is_admin() potrebbe essere false in alcuni contesti REST/cron; usiamo il check
+		// più ampio per garantire che gli AJAX handler vengano sempre registrati.
+		$is_admin_context = is_admin() || wp_doing_ajax();
+
+		if ( ! $is_admin_context ) {
 			return;
 		}
 
-		// FIX: Force Admin instance creation to ensure menu is registered
-		// Admin menu registration happens in Admin::__construct() via add_action( 'admin_menu', ... )
-		// We need to instantiate Admin here to ensure the menu is registered
-		if ( $container->has( 'admin' ) ) {
-			$admin = $container->get( 'admin' );
-			// Admin instance is now created, menu should be registered via constructor
-		}
-
-		// FIX: Force BulkTranslator instance creation to ensure submenu is registered
-		if ( $container->has( 'admin.bulk_translator' ) ) {
-			$bulk_translator = $container->get( 'admin.bulk_translator' );
-			// BulkTranslator instance is now created, submenu should be registered via constructor
-		}
-
-		// FIX: Force TranslationMetabox instance creation to ensure metabox is registered
-		// TranslationMetabox registration happens in TranslationMetabox::__construct() via add_action( 'add_meta_boxes', ... )
-		// We need to instantiate TranslationMetabox here to ensure the metabox is registered
-		if ( $container->has( 'admin.translation_metabox' ) ) {
-			$translation_metabox = $container->get( 'admin.translation_metabox' );
-			// TranslationMetabox instance is now created, metabox should be registered via constructor
+		// Force instantiation so constructors register their hooks (admin_menu, add_meta_boxes, etc.)
+		$services_to_boot = array(
+			'admin',
+			'admin.bulk_translator',
+			'admin.translation_metabox',
+			'admin.ajax_handlers',
+			'admin.post_handlers',
+			'admin.nonce_manager',
+			'admin.preview_inline',
+			'admin.translation_history_ui',
+			'admin.analytics_dashboard',
+			'admin.post_list_column',
+			'admin.bar_switcher',
+		);
+		foreach ( $services_to_boot as $service_id ) {
+			if ( $container->has( $service_id ) ) {
+				$container->get( $service_id );
+			}
 		}
 
 		// Enqueue admin scripts

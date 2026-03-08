@@ -177,8 +177,11 @@ class SiteTranslations {
 		}
 		
 		// Get enabled languages and check if we're on any target language path
-		$language_manager = fpml_get_language_manager();
-		$enabled_languages = $language_manager->get_enabled_languages();
+		$language_manager    = fpml_get_language_manager();
+		if ( ! $language_manager ) {
+			return;
+		}
+		$enabled_languages   = $language_manager->get_enabled_languages();
 		$available_languages = $language_manager->get_all_languages();
 		
 		// Ensure arrays are valid
@@ -262,7 +265,7 @@ class SiteTranslations {
 			add_filter( 'option_woocommerce_checkout_page_title', array( $this->options_filter, 'filter_option' ), 10, 2 );
 			add_filter( 'option_blogname', array( $this->options_filter, 'filter_blogname' ), 10, 2 );
 			add_filter( 'option_blogdescription', array( $this->options_filter, 'filter_blogdescription' ), 10, 2 );
-			add_filter( 'option', array( $this->options_filter, 'filter_generic_option' ), 10, 2 );
+			// Note: the generic 'option' hook does not exist in WordPress; use specific 'option_{name}' hooks instead.
 			
 			// Media filters
 			add_filter( 'wp_get_attachment_image_attributes', array( $this->media_filter, 'filter_image_alt' ), 10, 3 );
@@ -315,15 +318,6 @@ class SiteTranslations {
 		return ! empty( $this->current_language );
 	}
 	
-	/**
-	 * Check if current language is English (backward compatibility).
-	 *
-	 * @deprecated Use is_target_language() for multi-language support.
-	 * @return bool True if English.
-	 */
-	protected function is_english() {
-		return 'en' === $this->current_language;
-	}
 }
 
 
