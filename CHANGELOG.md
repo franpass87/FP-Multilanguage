@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.16] - 2026-03-08
+### Fixed
+- Security, performance e robustezza generale del plugin
+
+## [0.9.15] - 2026-01-30
+### Added
+- Supporto completo WPBakery e Salient/Nectar shortcode con 50+ attributi traducibili e 40+ container strutturali
+- Traduzione attributi testo in shortcode WPBakery/Salient (text, heading, title, caption)
+
+### Fixed
+- Preservazione contenuto WPBakery durante traduzione tramite masking tag strutturali
+- Prefisso lingua nello slug, timeout e gestione errori per traduzione
+- Inizializzazione ThemeCompatibility su `wp_loaded` per integrazione switcher
+- Fallback `wp_footer` per placeholder switcher Salient
+
 ## [0.9.1] - 2025-11-XX
 
 ### ✨ Enhanced - Comment Translation
