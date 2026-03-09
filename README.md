@@ -374,3 +374,11 @@ Vedi [CONTRIBUTING.md](CONTRIBUTING.md) per linee guida.
 - ✨ **Commenti Annidati** - Supporto completo commenti threaded con mapping parent automatico
 - 🛒 **Attributi WooCommerce** - Traduzione queue-based per attributi custom e opzioni
 - 🔧 **Miglioramenti** - Rimossi placeholder `[PENDING TRANSLATION]`, workflow ottimizzato
+---
+
+## Autore
+
+**Francesco Passeri**
+- Sito: [francescopasseri.com](https://francescopasseri.com)
+- Email: [info@francescopasseri.com](mailto:info@francescopasseri.com)
+- GitHub: [github.com/franpass87](https://github.com/franpass87)
