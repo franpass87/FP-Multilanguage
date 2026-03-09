@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.17] - 2026-03-09
+### Changed
+- FoundationServiceProvider sync
+
 ## [0.9.16] - 2026-03-08
 ### Fixed
 - Security, performance e robustezza generale del plugin

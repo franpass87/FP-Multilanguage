@@ -46,14 +46,11 @@ class FoundationServiceProvider implements ServiceProvider {
 	 * @return void
 	 */
 	public function register( Container $container ): void {
-		// Logger - Create instance with Settings dependency
+		// Logger - Create instance with LoggerInterface (Foundation\Logger\Logger)
 		$container->bind( 'logger.core', function( Container $c ) {
-			$settings = $c->has( 'settings' ) ? $c->get( 'settings' ) : null;
+			$settings  = $c->has( 'settings' ) ? $c->get( 'settings' ) : null;
 			$min_level = $settings ? $settings->get( 'log_level', defined( 'WP_DEBUG' ) && WP_DEBUG ? 'debug' : 'info' ) : ( defined( 'WP_DEBUG' ) && WP_DEBUG ? 'debug' : 'info' );
-			
-			// Create Logger with Settings dependency
-			$logger = new \FP\Multilanguage\Logger( $settings );
-			return $logger;
+			return new Logger( $min_level );
 		}, true );
 
 		// Logger - Use LoggerAdapter for backward compatibility with static methods
