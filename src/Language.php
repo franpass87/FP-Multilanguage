@@ -195,11 +195,13 @@ class Language {
         add_action( 'template_redirect', array( $this->resolver, 'persist_language_cookie' ), 1 );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_assets' ) );
         add_shortcode( 'fp_lang_switcher', array( $this->switcher_renderer, 'render_switcher' ) );
+        add_shortcode( 'fpml_language_switcher', array( $this, 'render_fpml_language_switcher' ) );
         add_filter( 'locale', array( $this, 'filter_locale' ) );
         add_filter( 'language_attributes', array( $this, 'filter_language_attributes' ), 10, 2 );
         add_filter( 'post_link', array( $this->permalink_filter, 'filter_translation_permalink' ), 10, 2 );
         add_filter( 'page_link', array( $this->permalink_filter, 'filter_translation_permalink' ), 10, 2 );
         add_filter( 'post_type_link', array( $this->permalink_filter, 'filter_translation_permalink' ), 10, 2 );
+        add_filter( 'the_content', array( $this, 'ensure_builder_shortcodes_rendered' ), 99 );
         add_filter( 'get_sample_permalink', array( $this->permalink_filter, 'filter_sample_permalink' ), 10, 5 );
         add_filter( 'get_sample_permalink_html', array( $this->permalink_filter, 'filter_sample_permalink_html' ), 10, 5 );
         add_filter( 'term_link', array( $this->permalink_filter, 'filter_term_permalink' ), 10, 2 );
@@ -1150,6 +1152,43 @@ class Language {
     }
 
     /**
+     * Render shortcode alias [fpml_language_switcher].
+     *
+     * Keeps compatibility with the newer shortcode name used by theme integration
+     * while delegating to the canonical switcher renderer.
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string
+     */
+    public function render_fpml_language_switcher( $atts ) {
+        $atts = shortcode_atts(
+            array(
+                'style'      => 'auto',
+                'show_flags' => 'yes',
+                'show_names' => 'yes',
+            ),
+            is_array( $atts ) ? $atts : array(),
+            'fpml_language_switcher'
+        );
+
+        $style = (string) $atts['style'];
+        if ( 'links' === $style || 'flags' === $style ) {
+            $style = 'inline';
+        } elseif ( ! in_array( $style, array( 'auto', 'dropdown', 'inline' ), true ) ) {
+            $style = 'auto';
+        }
+
+        $show_flags = in_array( strtolower( (string) $atts['show_flags'] ), array( '1', 'true', 'yes' ), true ) ? '1' : '0';
+
+        return $this->switcher_renderer->render_switcher(
+            array(
+                'style'      => $style,
+                'show_flags' => $show_flags,
+            )
+        );
+    }
+
+    /**
      * Render language switcher.
      * 
      * @deprecated Use LanguageSwitcherRenderer::render_switcher() instead.
@@ -1346,14 +1385,8 @@ class Language {
 
         $emoji = $flags[ $code ];
         
-        // Usa wp_staticize_emoji per convertire gli emoji in immagini SVG
-        // Questo garantisce che le bandiere siano sempre visibili
-        if ( function_exists( 'wp_staticize_emoji' ) ) {
-            $emoji_html = wp_staticize_emoji( $emoji );
-        } else {
-            // Fallback: usa esc_html se wp_staticize_emoji non è disponibile
-            $emoji_html = esc_html( $emoji );
-        }
+        // Keep native emoji characters to avoid remote image fallback issues.
+        $emoji_html = esc_html( $emoji );
 
         return sprintf( '<span class="fpml-switcher__flag" aria-hidden="true">%s</span>', $emoji_html );
     }
@@ -2096,13 +2129,41 @@ class Language {
      */
     protected function strip_language_segment( $path ) {
         $path = '/' === $path ? '/' : untrailingslashit( $path ) . '/';
+        $language_manager = fpml_get_language_manager();
 
-        $lowered = strtolower( $path );
+        if ( $language_manager ) {
+            $enabled_languages = $language_manager->get_enabled_languages();
+            $all_languages     = $language_manager->get_all_languages();
 
-        if ( 0 === strpos( $lowered, '/en/' ) ) {
-            $path = substr( $path, 3 );
-        } elseif ( '/en' === rtrim( $lowered, '/' ) ) {
-            $path = '/';
+            foreach ( $enabled_languages as $lang_code ) {
+                if ( ! isset( $all_languages[ $lang_code ] ) ) {
+                    continue;
+                }
+
+                $lang_info = $all_languages[ $lang_code ];
+                if ( ! is_array( $lang_info ) || empty( $lang_info['slug'] ) ) {
+                    continue;
+                }
+
+                $lang_slug = trim( (string) $lang_info['slug'], '/' );
+                if ( '' === $lang_slug ) {
+                    continue;
+                }
+
+                $lowered = strtolower( $path );
+                $prefix  = '/' . strtolower( $lang_slug ) . '/';
+                $exact   = '/' . strtolower( $lang_slug );
+
+                if ( 0 === strpos( $lowered, $prefix ) ) {
+                    $path = substr( $path, strlen( $prefix ) - 1 );
+                    break;
+                }
+
+                if ( $exact === rtrim( $lowered, '/' ) ) {
+                    $path = '/';
+                    break;
+                }
+            }
         }
 
         return $path;
@@ -2454,21 +2515,7 @@ class Language {
      */
     protected function get_language_home( $lang ) {
         unset( $lang );
-
-        // Rimuovi temporaneamente i filtri per evitare che aggiungano /en/ quando non necessario
-        // Questo è critico quando si genera l'URL per l'italiano da una pagina /en/
-        remove_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10 );
-        remove_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10 );
-        
-        try {
-            $url = home_url( '/' );
-        } finally {
-            // Riapplica sempre i filtri, anche in caso di errore
-            add_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10, 2 );
-            add_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10, 2 );
-        }
-        
-        return $url;
+        return $this->build_absolute_url_from_request( '/' );
     }
 
     /**
@@ -2525,18 +2572,7 @@ class Language {
             $formatted_path = '/' . ltrim( $formatted_path, '/' );
         }
 
-        // Rimuovi temporaneamente i filtri per evitare che aggiungano /en/ quando non necessario
-        // Questo è critico quando si genera l'URL per l'italiano da una pagina /en/
-        remove_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10 );
-        remove_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10 );
-        
-        try {
-            $target = home_url( $formatted_path );
-        } finally {
-            // Riapplica sempre i filtri, anche in caso di errore
-            add_filter( 'home_url', array( $this, 'filter_home_url_for_en' ), 10, 2 );
-            add_filter( 'site_url', array( $this, 'filter_site_url_for_en' ), 10, 2 );
-        }
+        $target = $this->build_absolute_url_from_request( $formatted_path );
 
         if ( ! empty( $parsed['query'] ) ) {
             $target = rtrim( $target, '?' );
@@ -2552,6 +2588,96 @@ class Language {
         }
 
         return $target;
+    }
+
+    /**
+     * Build an absolute URL using the current request host/scheme.
+     *
+     * Avoids home_url() filter recursion side-effects in multilingual context.
+     *
+     * @param string $path Absolute path starting with "/".
+     * @return string
+     */
+    protected function build_absolute_url_from_request( $path ) {
+        $path = is_string( $path ) ? $path : '/';
+        if ( '' === $path ) {
+            $path = '/';
+        }
+        if ( '/' !== substr( $path, 0, 1 ) ) {
+            $path = '/' . ltrim( $path, '/' );
+        }
+
+        $current_url = $this->get_current_url();
+        $scheme      = wp_parse_url( $current_url, PHP_URL_SCHEME );
+        $host        = wp_parse_url( $current_url, PHP_URL_HOST );
+        $port        = wp_parse_url( $current_url, PHP_URL_PORT );
+
+        if ( ! is_string( $scheme ) || '' === $scheme ) {
+            $scheme = is_ssl() ? 'https' : 'http';
+        }
+
+        if ( ! is_string( $host ) || '' === $host ) {
+            return home_url( $path );
+        }
+
+        $port_suffix = '';
+        if ( is_int( $port ) && $port > 0 ) {
+            $port_suffix = ':' . $port;
+        }
+
+        return esc_url_raw( $scheme . '://' . $host . $port_suffix . $path );
+    }
+
+    /**
+     * Ensure builder shortcodes are rendered when still present in final content.
+     *
+     * Some theme/page-builder templates can bypass or alter the normal shortcode
+     * execution chain, leaving raw tags like [vc_row] in output. This late pass
+     * only runs when shortcode-like content is still present.
+     *
+     * @param string $content Post content.
+     * @return string
+     */
+    public function ensure_builder_shortcodes_rendered( $content ) {
+        if ( is_admin() || ! is_string( $content ) || '' === $content ) {
+            return $content;
+        }
+
+        if ( false === strpos( $content, '[' ) ) {
+            return $content;
+        }
+
+        // Only trigger for known builder tags to keep impact minimal.
+        $builder_markers = array(
+            '[vc_',
+            '[/vc_',
+            '[nectar_',
+            '[full_width_section',
+            '[tabbed_section',
+            '[toggles',
+            '[toggle',
+        );
+
+        $has_builder_shortcode = false;
+        foreach ( $builder_markers as $marker ) {
+            if ( false !== strpos( $content, $marker ) ) {
+                $has_builder_shortcode = true;
+                break;
+            }
+        }
+
+        if ( ! $has_builder_shortcode ) {
+            return $content;
+        }
+
+        // If no shortcode handlers exist, do_shortcode would not help.
+        if ( ! function_exists( 'shortcode_exists' ) || ( ! shortcode_exists( 'vc_row' ) && ! shortcode_exists( 'nectar_slider' ) ) ) {
+            return $content;
+        }
+
+        $rendered = do_shortcode( shortcode_unautop( $content ) );
+
+        return is_string( $rendered ) && '' !== $rendered ? $rendered : $content;
     }
 
     /**

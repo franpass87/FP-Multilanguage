@@ -73,7 +73,13 @@ class TranslationHistoryUI {
 	 */
 	public function render_meta_box( $post ) {
 		$versioning = fpml_get_translation_versioning();
-		$versions   = $versioning->get_versions( $post->ID, 'content' );
+		$object_id   = isset( $post->ID ) ? absint( (int) $post->ID ) : 0;
+		$object_type = isset( $post->post_type ) ? sanitize_key( (string) $post->post_type ) : 'post';
+		$versions    = array();
+
+		if ( $versioning && $object_id > 0 ) {
+			$versions = $versioning->get_versions( $object_type, $object_id, 'content' );
+		}
 
 		if ( empty( $versions ) ) {
 			echo '<p>' . esc_html__( 'Nessuna versione disponibile.', 'fp-multilanguage' ) . '</p>';

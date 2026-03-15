@@ -67,9 +67,12 @@ class UrlFilter {
             return $url;
         }
 
-        if ( false === strpos( $path, 'wp-admin' ) && 
+        if ( false === strpos( $path, 'wp-admin' ) &&
              false === strpos( $path, 'wp-login' ) &&
-             false === strpos( $path, 'wp-content' ) ) {
+             false === strpos( $path, 'wp-content' ) &&
+             false === strpos( $path, 'wp-includes' ) &&
+             false === strpos( $path, 'wp-json' ) &&
+             false === strpos( $path, 'xmlrpc.php' ) ) {
             return $this->add_en_prefix_to_url( $url, $path );
         }
 
@@ -266,7 +269,9 @@ class UrlFilter {
             $url_path = isset( $parsed_url['path'] ) ? $parsed_url['path'] : $url;
             $url_path = ltrim( $url_path, '/' );
 
-            if ( ( $lang_prefix . '/' ) !== substr( $url_path, 0, strlen( $lang_prefix ) + 1 ) && $lang_prefix !== $url_path ) {
+            if ( $this->has_language_prefix( $url_path ) ) {
+                $url = $home_url_base . $url_path;
+            } elseif ( ( $lang_prefix . '/' ) !== substr( $url_path, 0, strlen( $lang_prefix ) + 1 ) && $lang_prefix !== $url_path ) {
                 $url = $home_url_base . $lang_prefix . '/' . $url_path;
             } else {
                 $url = $home_url_base . $url_path;
@@ -298,6 +303,10 @@ class UrlFilter {
         $rel_path   = ltrim( $url_path, '/' );
         $lp_slash   = $lang_prefix . '/';
 
+        if ( $this->has_language_prefix( $rel_path ) ) {
+            return $url;
+        }
+
         if ( $lp_slash !== substr( $rel_path, 0, strlen( $lp_slash ) ) && $lang_prefix !== $rel_path ) {
             if ( ! empty( $rel_path ) ) {
                 $url = $url_scheme . $url_host . '/' . $lang_prefix . '/' . $rel_path . $url_query . $url_fragment;
@@ -307,6 +316,47 @@ class UrlFilter {
         }
 
         return $url;
+    }
+
+    /**
+     * Check whether a relative path already starts with a valid language slug.
+     *
+     * @param string $relative_path Path without host.
+     * @return bool
+     */
+    protected function has_language_prefix( string $relative_path ): bool {
+        $relative_path = trim( $relative_path, '/' );
+        if ( '' === $relative_path ) {
+            return false;
+        }
+
+        $first_segment = strtolower( (string) strtok( $relative_path, '/' ) );
+        if ( '' === $first_segment ) {
+            return false;
+        }
+
+        $language_manager = function_exists( 'fpml_get_language_manager' ) ? fpml_get_language_manager() : null;
+        if ( ! $language_manager ) {
+            return false;
+        }
+
+        $all_languages = $language_manager->get_all_languages();
+        if ( ! is_array( $all_languages ) ) {
+            return false;
+        }
+
+        foreach ( $all_languages as $language_info ) {
+            if ( ! is_array( $language_info ) || empty( $language_info['slug'] ) ) {
+                continue;
+            }
+
+            $slug = strtolower( trim( (string) $language_info['slug'], '/' ) );
+            if ( '' !== $slug && $slug === $first_segment ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

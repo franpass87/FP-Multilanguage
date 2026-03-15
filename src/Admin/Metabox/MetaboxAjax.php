@@ -125,6 +125,22 @@ class MetaboxAjax {
             if ( ! $processor ) {
                 wp_send_json_error( array( 'message' => __( 'Errore: Processor non disponibile.', 'fp-multilanguage' ) ) );
             }
+
+            // Validate translator/provider configuration before creating a "successful" but empty translation.
+            if ( method_exists( $processor, 'get_translator_instance' ) ) {
+                $translator = $processor->get_translator_instance();
+                if ( is_wp_error( $translator ) ) {
+                    wp_send_json_error(
+                        array(
+                            'message' => sprintf(
+                                /* translators: %s: configuration error message. */
+                                __( 'Traduzione non disponibile: %s', 'fp-multilanguage' ),
+                                $translator->get_error_message()
+                            ),
+                        )
+                    );
+                }
+            }
             
             $result = $processor->translate_post_directly( $post, $translation );
 
@@ -139,6 +155,18 @@ class MetaboxAjax {
             $skipped = isset( $result['skipped'] ) ? (int) $result['skipped'] : 0;
             $errors = isset( $result['errors'] ) ? (int) $result['errors'] : 0;
             $processed = $translated;
+
+            if ( 0 === $translated && $errors > 0 ) {
+                wp_send_json_error(
+                    array(
+                        'message' => sprintf(
+                            /* translators: %d: number of failed fields. */
+                            __( 'Traduzione non completata: %d campi in errore. Verifica provider e API key nelle impostazioni FP Multilanguage.', 'fp-multilanguage' ),
+                            $errors
+                        ),
+                    )
+                );
+            }
 
             update_post_meta( $translation->ID, '_fpml_last_sync', current_time( 'mysql' ) );
 

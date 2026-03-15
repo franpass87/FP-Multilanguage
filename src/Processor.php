@@ -524,7 +524,32 @@ return $this->excluded_shortcodes;
 }
 
 	$raw = $this->settings ? $this->settings->get( 'excluded_shortcodes', '' ) : '';
-	$defaults = array( 'vc_row', 'vc_column', 'vc_section' );
+	$defaults = array(
+		'vc_row',
+		'vc_column',
+		'vc_section',
+		'vc_column_text',
+		'vc_custom_heading',
+		'vc_btn',
+		'vc_tabs',
+		'vc_tab',
+		'vc_tta_accordion',
+		'vc_tta_section',
+		'vc_cta',
+		'tab',
+		'toggle',
+		'toggles',
+		'nectar_btn',
+		'nectar_icon_list_item',
+		'highlighted_text',
+		'fancy_box',
+		'milestone',
+		'countdown',
+		'team_member',
+		'testimonial',
+		'nectar_accordion',
+		'nectar_accordion_tab',
+	);
 
 if ( ! is_string( $raw ) || '' === trim( $raw ) ) {
 $this->excluded_shortcodes = $defaults;
@@ -1123,12 +1148,16 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         $source_meta = maybe_unserialize( $source_raw );
                         $target_meta = maybe_unserialize( $target_raw );
 
+                        $source_lang = function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it';
+
                         $context = array(
                                 'post_id'             => $source_post->ID,
                                 'meta_key'            => $meta_key,
                                 'field'               => $field,
                                 'domain'              => 'meta',
                                 'target_value'        => $target_meta,
+                                'source_lang'         => $source_lang,
+                                'target_lang'         => is_string( $target_lang ) ? $target_lang : '',
                                 'excluded_shortcodes' => $this->get_excluded_shortcodes(),
                         );
 
@@ -1275,7 +1304,13 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         }
                         
                         // Salva direttamente il valore tradotto
-                        $this->save_post_field_value( $target_post, $field, (string) $new_value );
+                        $this->save_post_field_value(
+                                $target_post,
+                                $field,
+                                (string) $new_value,
+                                function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it',
+                                is_string( $target_lang ) ? $target_lang : ''
+                        );
                         $this->update_post_status_flag( $target_post->ID, $field, 'synced' );
                         $this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
                         
@@ -1309,13 +1344,47 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 $chunks = isset( $diff['segments'] ) ? $diff['segments'] : array();
 
 	if ( empty( $chunks ) ) {
+		if ( 'post_content' === $field && '' !== trim( (string) $source_value ) && '' === trim( (string) $target_value ) ) {
+			$translator = $this->get_translator();
+			if ( is_wp_error( $translator ) ) {
+				$this->update_post_status_flag( $target_post->ID, $field, 'failed' );
+				$this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
+				return $translator;
+			}
+
+			$domain = $this->resolve_domain_for_field( $field );
+			$fallback_translated = $this->attempt_translation_with_backoff(
+				$translator,
+				(string) $source_value,
+				$domain,
+				1,
+				function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it',
+				is_string( $target_lang ) ? $target_lang : ''
+			);
+
+			if ( is_wp_error( $fallback_translated ) ) {
+				$this->update_post_status_flag( $target_post->ID, $field, 'failed' );
+				$this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
+				return $fallback_translated;
+			}
+
+			$this->save_post_field_value(
+				$target_post,
+				$field,
+				(string) $fallback_translated,
+				function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it',
+				is_string( $target_lang ) ? $target_lang : ''
+			);
+		}
+
 		$this->update_post_status_flag( $target_post->ID, $field, 'synced' );
 		$this->maybe_update_translation_status( $source_post->ID, $target_post->ID );
 
 		return true;
 	}
 
-                $translations = $this->translate_segments( $chunks, $field );
+                $source_lang  = function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it';
+                $translations = $this->translate_segments( $chunks, $field, $source_lang, is_string( $target_lang ) ? $target_lang : '' );
 
 	if ( is_wp_error( $translations ) ) {
 		$this->update_post_status_flag( $target_post->ID, $field, 'failed' );
@@ -1398,7 +1467,13 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
 		return 'skipped';
                 }
 
-                $this->save_post_field_value( $target_post, $field, $new_value );
+                $this->save_post_field_value(
+                        $target_post,
+                        $field,
+                        $new_value,
+                        function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it',
+                        is_string( $target_lang ) ? $target_lang : ''
+                );
 
 	$this->update_post_status_flag( $target_post->ID, $field, 'synced' );
 
@@ -1671,11 +1746,13 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
          *
          * @param WP_Post $post      Target post.
          * @param string  $field     Field identifier.
-         * @param string  $new_value Translated value.
+         * @param string  $new_value   Translated value.
+         * @param string  $source_lang Source language code.
+         * @param string  $target_lang Target language code.
          *
          * @return void
          */
-        protected function save_post_field_value( $post, $field, $new_value ) {
+        protected function save_post_field_value( $post, $field, $new_value, string $source_lang = '', string $target_lang = '' ) {
                 $new_value = apply_filters( 'fpml_pre_save_translation', $new_value, $post, $field );
 
                 // Get provider for versioning
@@ -1719,6 +1796,9 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                                         $new_value
                                 );
                                 $new_value = trim( $new_value );
+                                if ( '' !== $new_value ) {
+                                        $new_value = $this->translate_shortcode_attribute_labels( $new_value, $source_lang, $target_lang );
+                                }
                                 
                                 $this->safe_update_post(
                                         array(
@@ -1751,6 +1831,90 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                  */
                 do_action( 'fpml_save_post_field_value', $post, $field, $new_value );
         }
+
+	/**
+	 * Translate known shortcode label attributes while preserving shortcode markup.
+	 *
+	 * @since 1.0.1
+	 *
+	 * @param string $content     Content containing shortcodes.
+	 * @param string $source_lang Source language code.
+	 * @param string $target_lang Target language code.
+	 *
+	 * @return string
+	 */
+	protected function translate_shortcode_attribute_labels( string $content, string $source_lang = '', string $target_lang = '' ): string {
+		if ( '' === trim( $content ) ) {
+			return $content;
+		}
+
+		$translator = $this->get_translator();
+		if ( is_wp_error( $translator ) ) {
+			return $content;
+		}
+
+		$source = '' !== $source_lang ? $source_lang : ( function_exists( 'fpml_get_source_language' ) ? (string) fpml_get_source_language() : 'it' );
+		$target = '' !== $target_lang ? $target_lang : ( function_exists( 'fpml_get_primary_target_language' ) ? (string) fpml_get_primary_target_language() : 'en' );
+
+		$shortcode_pattern = '/\[(?!\/)([a-zA-Z0-9_-]+)([^\]]*)\]/';
+		$attr_pattern      = '/(\s(?:title|heading|tab_title|label|text|button_text|subtitle|cta_text|before_title|after_title|h2|h3|h4|h5)\s*=\s*)(["\'])(.*?)\2/i';
+
+		$translated = preg_replace_callback(
+			$shortcode_pattern,
+			function( array $matches ) use ( $attr_pattern, $translator, $source, $target ) {
+				$tag   = $matches[1];
+				$attrs = isset( $matches[2] ) ? (string) $matches[2] : '';
+
+				if ( '' === trim( $attrs ) ) {
+					return $matches[0];
+				}
+
+				$new_attrs = preg_replace_callback(
+					$attr_pattern,
+					function( array $attr_match ) use ( $translator, $source, $target ) {
+						$prefix = $attr_match[1];
+						$quote  = $attr_match[2];
+						$value  = html_entity_decode( (string) $attr_match[3], ENT_QUOTES, 'UTF-8' );
+
+						// Skip dynamic values and very short labels.
+						if ( '' === trim( $value ) || false !== strpos( $value, '{' ) || mb_strlen( $value, 'UTF-8' ) < 3 ) {
+							return $attr_match[0];
+						}
+
+						$response = $this->attempt_translation_with_backoff(
+							$translator,
+							$value,
+							'marketing',
+							1,
+							$source,
+							$target
+						);
+
+						if ( is_wp_error( $response ) ) {
+							return $attr_match[0];
+						}
+
+						$translated_value = trim( (string) $response );
+						if ( '' === $translated_value ) {
+							return $attr_match[0];
+						}
+
+						return $prefix . $quote . esc_attr( $translated_value ) . $quote;
+					},
+					$attrs
+				);
+
+				if ( null === $new_attrs ) {
+					return $matches[0];
+				}
+
+				return '[' . $tag . $new_attrs . ']';
+			},
+			$content
+		);
+
+		return null !== $translated ? $translated : $content;
+	}
 
 	/**
          * Update translation status flag for a translated post.
@@ -1877,7 +2041,7 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
          *
          * @return array|WP_Error
          */
-        protected function translate_segments( $segments, $field ) {
+        protected function translate_segments( $segments, $field, string $source_lang = '', string $target_lang = '' ) {
                 $translator = $this->get_translator();
 
                 if ( is_wp_error( $translator ) ) {
@@ -1910,106 +2074,49 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                         );
                 }
 
-                $max_chars = $this->settings ? (int) $this->settings->get( 'max_chars', 4500 ) : 4500;
-                $max_chars = max( 500, $max_chars );
                 $domain    = $this->resolve_domain_for_field( $field );
-
-                $chunks = array();
-                $buffer = '';
-                $buffer_indexes = array();
+                $translations      = array();
+                $attempt           = 0;
+                $shortcodes        = $this->get_excluded_shortcodes();
+                $total_characters  = 0;
 
                 foreach ( $segments as $index => $segment ) {
                         $segment = (string) $segment;
 
                         if ( '' === trim( $segment ) ) {
+                                $translations[ $index ] = $segment;
                                 continue;
                         }
 
-                        $candidate = '' === $buffer ? $segment : $buffer . "\n\n" . $segment;
-
-                        if ( strlen( $candidate ) > $max_chars && '' !== $buffer ) {
-                                $chunks[] = array(
-                                        'text'    => $buffer,
-                                        'indices' => $buffer_indexes,
-                                        'length'  => function_exists( 'mb_strlen' ) ? mb_strlen( $buffer, 'UTF-8' ) : strlen( $buffer ),
-                                );
-
-                                $buffer         = $segment;
-                                $buffer_indexes = array( $index );
-                                continue;
-                        }
-
-                        $buffer         = $candidate;
-                        $buffer_indexes[] = $index;
-                }
-
-                if ( '' !== $buffer && ! empty( $buffer_indexes ) ) {
-                        $chunks[] = array(
-                                'text'    => $buffer,
-                                'indices' => $buffer_indexes,
-                                'length'  => function_exists( 'mb_strlen' ) ? mb_strlen( $buffer, 'UTF-8' ) : strlen( $buffer ),
-                        );
-                }
-
-                $translations      = array();
-                $attempt           = 0;
-                $shortcodes        = $this->get_excluded_shortcodes();
-                $chunk_placeholders = array();
-
-                if ( ! empty( $shortcodes ) ) {
-                        foreach ( $chunks as $chunk_index => $chunk_data ) {
-                                $masked_text = $chunk_data['text'];
-                                $map = array();
-                                if ( class_exists( '\FPML_Content_Diff' ) ) {
-                                        $content_diff = function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : ( function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : \FPML_Content_Diff::instance() );
-                                        if ( $content_diff && method_exists( $content_diff, 'prepare_text_for_provider' ) ) {
-                                                list( $masked_text, $map ) = $content_diff->prepare_text_for_provider( $chunk_data['text'], $shortcodes );
-                                        }
-                                }
-                                $chunks[ $chunk_index ]['text'] = $masked_text;
-
-                                if ( ! empty( $map ) ) {
-                                        $chunk_placeholders[ $chunk_index ] = $map;
-                                }
-                        }
-                }
-
-                foreach ( $chunks as $chunk_index => $chunk ) {
                         $attempt++;
-                        $response = $this->attempt_translation_with_backoff( $translator, $chunk['text'], $domain, $attempt );
+                        $masked_text = $segment;
+                        $map         = array();
 
+                        if ( ! empty( $shortcodes ) && class_exists( '\FPML_Content_Diff' ) ) {
+                                $content_diff = function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : ( function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : \FPML_Content_Diff::instance() );
+                                if ( $content_diff && method_exists( $content_diff, 'prepare_text_for_provider' ) ) {
+                                        list( $masked_text, $map ) = $content_diff->prepare_text_for_provider( $segment, $shortcodes );
+                                }
+                        }
+
+                        $response = $this->attempt_translation_with_backoff( $translator, $masked_text, $domain, $attempt, $source_lang, $target_lang );
                         if ( is_wp_error( $response ) ) {
                                 return $response;
                         }
 
-                        if ( isset( $chunk_placeholders[ $chunk_index ] ) && ! empty( $chunk_placeholders[ $chunk_index ] ) ) {
-                                if ( class_exists( '\FPML_Content_Diff' ) ) {
-                                        $content_diff = function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : ( function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : \FPML_Content_Diff::instance() );
-                                        if ( $content_diff && method_exists( $content_diff, 'restore_placeholders' ) ) {
-                                                $response = $content_diff->restore_placeholders( $response, $chunk_placeholders[ $chunk_index ] );
-                                        }
+                        if ( ! empty( $map ) && class_exists( '\FPML_Content_Diff' ) ) {
+                                $content_diff = function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : ( function_exists( 'fpml_get_content_diff' ) ? fpml_get_content_diff() : \FPML_Content_Diff::instance() );
+                                if ( $content_diff && method_exists( $content_diff, 'restore_placeholders' ) ) {
+                                        $response = $content_diff->restore_placeholders( $response, $map );
                                 }
                         }
 
-                        $pieces = preg_split( "/\n\n/", $response );
-
-                        foreach ( $chunk['indices'] as $position => $index ) {
-                                $translations[ $index ] = isset( $pieces[ $position ] ) ? $pieces[ $position ] : '';
-                        }
+                        $translations[ $index ] = (string) $response;
+                        $total_characters      += function_exists( 'mb_strlen' ) ? mb_strlen( $segment, 'UTF-8' ) : strlen( $segment );
                 }
 
-                if ( ! empty( $chunks ) ) {
-                        $total_characters = 0;
-
-                        foreach ( $chunks as $chunk_data ) {
-                                if ( isset( $chunk_data['length'] ) ) {
-                                        $total_characters += (int) $chunk_data['length'];
-                                }
-                        }
-
-                        if ( $total_characters > 0 ) {
-                                $this->current_job_characters += $total_characters;
-                        }
+                if ( $total_characters > 0 ) {
+                        $this->current_job_characters += $total_characters;
                 }
 
                 return $translations;
@@ -2216,7 +2323,9 @@ private function translate_value_recursive( $value, array $context ) {
                         }
 
                         $field        = isset( $context['field'] ) ? $context['field'] : 'meta';
-                        $translations = $this->translate_segments( $segments, $field );
+                        $source_lang  = isset( $context['source_lang'] ) && is_string( $context['source_lang'] ) ? $context['source_lang'] : '';
+                        $target_lang  = isset( $context['target_lang'] ) && is_string( $context['target_lang'] ) ? $context['target_lang'] : '';
+                        $translations = $this->translate_segments( $segments, $field, $source_lang, $target_lang );
 
                         if ( is_wp_error( $translations ) ) {
                                 return $translations;
@@ -2304,7 +2413,18 @@ private function translate_value_recursive( $value, array $context ) {
 
                         try {
                                 $src    = ! empty( $source ) ? $source : ( function_exists( 'fpml_get_source_language' ) ? fpml_get_source_language() : 'it' );
-                                $tgt    = ! empty( $target ) ? $target : ( function_exists( 'fpml_get_enabled_languages' ) ? ( fpml_get_enabled_languages()[0] ?? 'en' ) : 'en' );
+                                $tgt    = ! empty( $target ) ? $target : ( function_exists( 'fpml_get_primary_target_language' ) ? fpml_get_primary_target_language() : 'en' );
+                                if ( $tgt === $src && function_exists( 'fpml_get_enabled_languages' ) ) {
+                                        $enabled_languages = fpml_get_enabled_languages();
+                                        if ( is_array( $enabled_languages ) ) {
+                                                foreach ( $enabled_languages as $lang_code ) {
+                                                        if ( is_string( $lang_code ) && '' !== $lang_code && $lang_code !== $src ) {
+                                                                $tgt = $lang_code;
+                                                                break;
+                                                        }
+                                                }
+                                        }
+                                }
                                 $result = $translator->translate( $text, $src, $tgt, $domain );
                         } catch ( \Exception $e ) {
                                 $result = new \WP_Error( 'fpml_translation_exception', $e->getMessage() );

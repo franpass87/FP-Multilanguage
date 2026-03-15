@@ -1428,7 +1428,7 @@ class Rewrites {
     }
 
     /**
-     * Redirect to home /en/ if current page is not translated when on /en/ path.
+     * Redirect untranslated content with English fallback.
      *
      * @since 0.9.4
      *
@@ -1478,17 +1478,30 @@ class Rewrites {
             return;
         }
 
-        $lang_info   = $language_manager->get_language_info( $current_lang );
-        $lang_slug   = $lang_info ? trim( $lang_info['slug'], '/' ) : $current_lang;
-        $home_url    = home_url( '/' . $lang_slug . '/' );
+        $lang_info          = $language_manager->get_language_info( $current_lang );
+        $lang_slug          = $lang_info ? trim( $lang_info['slug'], '/' ) : $current_lang;
+        $home_url           = home_url( '/' . $lang_slug . '/' );
+        $fallback_lang      = $this->get_english_fallback_language( $language_manager );
+        $fallback_home_url  = '' !== $fallback_lang ? $this->get_language_home_url( $language_manager, $fallback_lang ) : '';
         $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 
         // Se è una pagina singolare, verifica se è tradotta
         if ( $wp_query->is_singular() && isset( $post ) && $post instanceof \WP_Post ) {
             $is_translation = get_post_meta( $post->ID, '_fpml_is_translation', true );
             
-            // Se la pagina NON è una traduzione, fai redirect alla home della lingua corrente
+            // If this is an untranslated source post, try EN translation first.
             if ( ! $is_translation ) {
+                $fallback_translation_url = $this->resolve_fallback_translation_url( $post, $fallback_lang );
+                if ( '' !== $fallback_translation_url ) {
+                    wp_safe_redirect( $fallback_translation_url, 302 );
+                    exit;
+                }
+
+                if ( '' !== $fallback_home_url ) {
+                    wp_safe_redirect( $fallback_home_url, 302 );
+                    exit;
+                }
+
                 if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
                     error_log( sprintf( 
                         '[FPML] Redirect pagina non tradotta a home %s: post_id=%d, slug=%s, url=%s', 
@@ -1515,11 +1528,16 @@ class Rewrites {
                 ) );
             }
             
+            if ( '' !== $fallback_home_url ) {
+                wp_safe_redirect( $fallback_home_url, 302 );
+                exit;
+            }
+
             wp_safe_redirect( $home_url, 302 );
             exit;
         }
 
-        // Se è un 404, redirect alla home della lingua corrente
+        // Se è un 404, prova prima il fallback EN, poi la home EN.
         // MA solo se NON siamo già sulla homepage (per evitare loop)
         if ( $wp_query->is_404() ) {
             $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
@@ -1536,6 +1554,17 @@ class Rewrites {
                 }
                 return;
             }
+
+            $fallback_translation_url = $this->resolve_fallback_url_from_request_path( $request_uri, $lang_slug, $fallback_lang );
+            if ( '' !== $fallback_translation_url ) {
+                wp_safe_redirect( $fallback_translation_url, 302 );
+                exit;
+            }
+
+            if ( '' !== $fallback_home_url ) {
+                wp_safe_redirect( $fallback_home_url, 302 );
+                exit;
+            }
             
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
                 error_log( sprintf( 
@@ -1548,6 +1577,146 @@ class Rewrites {
             wp_safe_redirect( $home_url, 302 );
             exit;
         }
+    }
+
+    /**
+     * Resolve the preferred English fallback language code.
+     *
+     * @param object $language_manager Language manager instance.
+     * @return string
+     */
+    protected function get_english_fallback_language( $language_manager ): string {
+        $enabled_languages = $language_manager->get_enabled_languages();
+
+        if ( in_array( 'en', $enabled_languages, true ) ) {
+            return 'en';
+        }
+
+        foreach ( $enabled_languages as $lang_code ) {
+            $lang_info = $language_manager->get_language_info( $lang_code );
+            $lang_slug = $lang_info && ! empty( $lang_info['slug'] ) ? strtolower( trim( (string) $lang_info['slug'], '/' ) ) : '';
+
+            if ( 'en' === $lang_slug ) {
+                return (string) $lang_code;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Build home URL for a specific language.
+     *
+     * @param object $language_manager Language manager instance.
+     * @param string $lang             Language code.
+     * @return string
+     */
+    protected function get_language_home_url( $language_manager, string $lang ): string {
+        if ( '' === $lang ) {
+            return '';
+        }
+
+        $lang_info = $language_manager->get_language_info( $lang );
+        $lang_slug = $lang_info && ! empty( $lang_info['slug'] ) ? trim( (string) $lang_info['slug'], '/' ) : $lang;
+
+        return (string) home_url( '/' . $lang_slug . '/' );
+    }
+
+    /**
+     * Resolve translation URL for a source or translated post.
+     *
+     * @param \WP_Post $post          Current post.
+     * @param string   $fallback_lang Fallback language code.
+     * @return string
+     */
+    protected function resolve_fallback_translation_url( \WP_Post $post, string $fallback_lang ): string {
+        if ( '' === $fallback_lang || ! function_exists( 'fpml_get_translation_id' ) ) {
+            return '';
+        }
+
+        $source_post_id = (int) $post->ID;
+
+        if ( get_post_meta( $post->ID, '_fpml_is_translation', true ) ) {
+            $paired_source_id = (int) get_post_meta( $post->ID, '_fpml_pair_source_id', true );
+            if ( $paired_source_id > 0 ) {
+                $source_post_id = $paired_source_id;
+            }
+        }
+
+        $fallback_post_id = (int) fpml_get_translation_id( $source_post_id, $fallback_lang );
+        if ( $fallback_post_id <= 0 ) {
+            return '';
+        }
+
+        $fallback_post = get_post( $fallback_post_id );
+        if ( ! $fallback_post instanceof \WP_Post || 'publish' !== $fallback_post->post_status ) {
+            return '';
+        }
+
+        $fallback_url = get_permalink( $fallback_post_id );
+
+        return is_string( $fallback_url ) ? esc_url_raw( $fallback_url ) : '';
+    }
+
+    /**
+     * Resolve fallback URL from the current request path.
+     *
+     * @param string $request_uri   Current request URI.
+     * @param string $current_slug  Current language slug in path.
+     * @param string $fallback_lang Fallback language code.
+     * @return string
+     */
+    protected function resolve_fallback_url_from_request_path( string $request_uri, string $current_slug, string $fallback_lang ): string {
+        if ( '' === $request_uri || '' === $current_slug || '' === $fallback_lang ) {
+            return '';
+        }
+
+        $request_path = (string) wp_parse_url( $request_uri, PHP_URL_PATH );
+        if ( '' === $request_path ) {
+            return '';
+        }
+
+        $home_path = (string) wp_parse_url( home_url(), PHP_URL_PATH );
+        if ( '' !== $home_path && '/' !== $home_path ) {
+            $request_path = preg_replace( '#^' . preg_quote( rtrim( $home_path, '/' ), '#' ) . '#', '', $request_path );
+            $request_path = is_string( $request_path ) ? $request_path : '';
+        }
+
+        $request_path = '/' . ltrim( $request_path, '/' );
+        $lang_prefix  = '/' . trim( $current_slug, '/' );
+
+        if ( str_starts_with( $request_path, $lang_prefix . '/' ) ) {
+            $relative_path = substr( $request_path, strlen( $lang_prefix . '/' ) );
+        } elseif ( rtrim( $request_path, '/' ) === $lang_prefix ) {
+            $relative_path = '';
+        } else {
+            return '';
+        }
+
+        $relative_path = trim( (string) $relative_path, '/' );
+        if ( '' === $relative_path ) {
+            return '';
+        }
+
+        $source_post = get_page_by_path( $relative_path, OBJECT, array( 'page', 'post' ) );
+
+        if ( ! $source_post instanceof \WP_Post ) {
+            $segments    = explode( '/', $relative_path );
+            $last_segment = end( $segments );
+            $slug         = is_string( $last_segment ) ? $last_segment : '';
+
+            if ( '' === $slug ) {
+                return '';
+            }
+
+            $source_post = get_page_by_path( $slug, OBJECT, array( 'page', 'post' ) );
+        }
+
+        if ( ! $source_post instanceof \WP_Post ) {
+            return '';
+        }
+
+        return $this->resolve_fallback_translation_url( $source_post, $fallback_lang );
     }
 }
 

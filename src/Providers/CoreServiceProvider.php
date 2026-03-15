@@ -295,7 +295,7 @@ class CoreServiceProvider implements ServiceProvider {
 		// Translation Versioning
 		$container->bind( 'translation.versioning', function( Container $c ) {
 			if ( class_exists( '\FP\Multilanguage\Core\TranslationVersioning' ) ) {
-				return new \FP\Multilanguage\Core\TranslationVersioning();
+				return \FP\Multilanguage\Core\TranslationVersioning::instance();
 			}
 			return null;
 		}, true );
@@ -311,7 +311,7 @@ class CoreServiceProvider implements ServiceProvider {
 		// Diagnostics (legacy singleton wrapper)
 		$container->bind( 'diagnostics', function( Container $c ) {
 			if ( class_exists( '\FP\Multilanguage\Diagnostics\Diagnostics' ) ) {
-				return new \FP\Multilanguage\Diagnostics\Diagnostics();
+				return \FP\Multilanguage\Diagnostics\Diagnostics::instance();
 			}
 			return null;
 		}, true );

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.18] - 2026-03-15
+### Changed
+- Hardened WPBakery/Salient shortcode translation flow for nested content and label attributes (title, heading, tab titles, CTA/button text).
+- Improved fallback behavior when EN content is empty to force a full content translation pass.
+
+### Fixed
+- Fixed FPML analytics dashboard fatal caused by queue type mismatch in widget cost calculation.
+- Fixed false-positive translate success states by validating provider availability before metabox translation execution.
+- Fixed multilingual routing/switcher regressions and normalized language-aware URL generation for active slugs.
+
 ## [0.9.17] - 2026-03-09
 ### Changed
 - FoundationServiceProvider sync

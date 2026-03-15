@@ -75,6 +75,36 @@ class PluginServiceProvider implements ServiceProvider {
 				}
 
 				/**
+				 * Get diagnostics snapshot for the admin diagnostics page.
+				 *
+				 * @return array<string,mixed>
+				 */
+				public function get_diagnostics_snapshot(): array {
+					$assisted_mode   = $this->is_assisted_mode();
+					$assisted_reason = $this->get_assisted_reason();
+
+					$diagnostics = function_exists( 'fpml_get_diagnostics' ) ? fpml_get_diagnostics() : null;
+					if ( $diagnostics && method_exists( $diagnostics, 'get_snapshot' ) ) {
+						try {
+							return (array) $diagnostics->get_snapshot( $assisted_mode, $assisted_reason );
+						} catch ( \Throwable $e ) {
+							return array(
+								'assisted_mode'   => $assisted_mode,
+								'assisted_reason' => $assisted_reason,
+								'message'         => __( 'Diagnostica temporaneamente non disponibile.', 'fp-multilanguage' ),
+								'estimate_error'  => $e->getMessage(),
+							);
+						}
+					}
+
+					return array(
+						'assisted_mode'   => $assisted_mode,
+						'assisted_reason' => $assisted_reason,
+						'message'         => __( 'Servizio diagnostica non disponibile.', 'fp-multilanguage' ),
+					);
+				}
+
+				/**
 				 * Detect external multilingual plugins.
 				 *
 				 * @return string

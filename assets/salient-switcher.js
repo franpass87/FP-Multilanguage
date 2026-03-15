@@ -2,6 +2,20 @@
 	'use strict';
 
 	var resizeTimer = null;
+	var langFlags = {
+		IT: '🇮🇹',
+		EN: '🇬🇧',
+		DE: '🇩🇪',
+		FR: '🇫🇷',
+		ES: '🇪🇸',
+		PT: '🇵🇹',
+		NL: '🇳🇱',
+		PL: '🇵🇱',
+		RU: '🇷🇺',
+		ZH: '🇨🇳',
+		JA: '🇯🇵',
+		AR: '🇸🇦'
+	};
 
 	/**
 	 * Execute callback when DOM is ready.
@@ -19,6 +33,59 @@
 				document.body.classList.add('fpml-salient-enhanced');
 			});
 		}
+	}
+
+	/**
+	 * Ensure language links always show a visible flag.
+	 *
+	 * @param {Element} switcherRoot Switcher root element.
+	 * @returns {void}
+	 */
+	function ensureVisibleFlags(switcherRoot) {
+		if (!switcherRoot) {
+			return;
+		}
+
+		var links = switcherRoot.querySelectorAll('a');
+		links.forEach(function (link) {
+			if (!link) {
+				return;
+			}
+
+			if (link.querySelector('.fpml-switcher__flag')) {
+				return;
+			}
+
+			var text = (link.textContent || '').trim();
+			if (!text) {
+				return;
+			}
+
+			// Skip if link already starts with a flag emoji.
+			if (/^[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/.test(text)) {
+				return;
+			}
+
+			var code = text.split(/\s+/)[0].toUpperCase();
+			if (!langFlags[code]) {
+				return;
+			}
+
+			link.textContent = '';
+
+			var flag = document.createElement('span');
+			flag.className = 'fpml-switcher__flag';
+			flag.setAttribute('aria-hidden', 'true');
+			flag.textContent = langFlags[code];
+
+			var srText = document.createElement('span');
+			srText.className = 'screen-reader-text';
+			srText.textContent = code + ' ';
+
+			link.appendChild(flag);
+			link.appendChild(srText);
+			link.appendChild(document.createTextNode(' ' + text));
+		});
 	}
 
 	/**
@@ -82,6 +149,8 @@
 				switcherContent.appendChild(link.cloneNode(true));
 			});
 		}
+
+		ensureVisibleFlags(switcherContent);
 
 		var toggles = header.querySelectorAll('.slide-out-widget-area-toggle.mobile-icon');
 

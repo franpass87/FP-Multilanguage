@@ -1,6 +1,6 @@
 # FP Multilanguage
 
-[![Versione](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
+[![Versione](https://img.shields.io/badge/version-0.9.18-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
 [![WordPress](https://img.shields.io/badge/wordpress-5.8+-green.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/php-8.0+-purple.svg)](https://php.net)
 [![License](https://img.shields.io/badge/license-GPL--2.0+-orange.svg)](LICENSE)
@@ -367,13 +367,13 @@ Vedi [CONTRIBUTING.md](CONTRIBUTING.md) per linee guida.
 ---
 
 **Ultimo aggiornamento**: Novembre 2025  
-**Versione corrente**: 0.9.1+  
+**Versione corrente**: 0.9.18  
 **Status**: Production Ready ✅
 
-### 🆕 Novità Recenti (v0.9.1+)
-- ✨ **Commenti Annidati** - Supporto completo commenti threaded con mapping parent automatico
-- 🛒 **Attributi WooCommerce** - Traduzione queue-based per attributi custom e opzioni
-- 🔧 **Miglioramenti** - Rimossi placeholder `[PENDING TRANSLATION]`, workflow ottimizzato
+### 🆕 Novità Recenti (v0.9.18)
+- ✨ **WPBakery + Salient** - Traduzione robusta di contenuti annidati e attributi testuali (title/heading/tab/CTA/button)
+- 🔁 **Fallback contenuti EN vuoti** - Forzata traduzione full content quando il target è vuoto
+- 🛡️ **Stabilità admin** - Risolto fatal nel widget Analytics legato al tipo Queue
 ---
 
 ## Autore

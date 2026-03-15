@@ -62,6 +62,19 @@ class SwitcherMarkupGenerator {
 
 		$output = do_shortcode( $shortcode );
 
+		// If shortcode is not registered yet, do_shortcode returns raw text.
+		if ( ! is_string( $output ) || false !== strpos( $output, '[fpml_language_switcher' ) ) {
+			$legacy_style = 'dropdown' === $style ? 'dropdown' : 'inline';
+			$legacy_flags = 'yes' === $show_flags_attr ? '1' : '0';
+			$legacy_code  = sprintf(
+				'[fp_lang_switcher style="%s" show_flags="%s"]',
+				esc_attr( $legacy_style ),
+				esc_attr( $legacy_flags )
+			);
+
+			$output = do_shortcode( $legacy_code );
+		}
+
 		return is_string( $output ) ? trim( $output ) : '';
 	}
 }

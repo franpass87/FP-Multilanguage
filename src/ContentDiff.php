@@ -192,9 +192,11 @@ class ContentDiff {
                         'vc_row',
                         'vc_column',
                         'vc_section',
+                        'vc_column_text',
                         'vc_row_inner',
                         'vc_column_inner',
                         'vc_container',
+                        'vc_cta',
                         // WPBakery tabs/accordions (containers)
                         'vc_tabs',
                         'vc_tab',
@@ -225,6 +227,10 @@ class ContentDiff {
                         'tab',
                         'toggles',
                         'toggle',
+                        'highlighted_text',
+                        'fancy_box',
+                        'team_member',
+                        'testimonial',
                         'carousel',
                         'item',
                         'pricing_table',
@@ -233,6 +239,8 @@ class ContentDiff {
                         'client',
                         'testimonial_slider',
                         'testimonial',
+                        'nectar_accordion',
+                        'nectar_accordion_tab',
                 );
 
                 // Helper function to generate unique placeholder

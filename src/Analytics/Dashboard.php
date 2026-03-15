@@ -8,9 +8,10 @@
 
 namespace FP\Multilanguage\Analytics;
 
-use FP\Multilanguage\Queue;
+use FP\Multilanguage\Queue as LegacyQueue;
 use FP\Multilanguage\Logger;
 use FP\Multilanguage\Core\TranslationCache;
+use FP\Multilanguage\Core\Queue\Queue as CoreQueue;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -228,10 +229,10 @@ class Dashboard {
 	 * @since 0.5.0
 	 * @since 0.10.0 Improved calculation with actual queue job data
 	 *
-	 * @param Queue $queue Queue instance.
+	 * @param LegacyQueue|CoreQueue $queue Queue instance.
 	 * @return float Estimated cost.
 	 */
-	protected function calculate_queue_cost( Queue $queue ): float {
+	protected function calculate_queue_cost( LegacyQueue|CoreQueue $queue ): float {
 		// Get pending jobs to estimate cost
 		$pending_jobs = $queue->get_by_state( [ 'pending' ], 100 ); // Limit to 100 for performance
 		

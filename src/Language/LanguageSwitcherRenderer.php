@@ -255,11 +255,8 @@ class LanguageSwitcherRenderer {
 
         $emoji = $flags[ $code ];
 
-        if ( function_exists( 'wp_staticize_emoji' ) ) {
-            $emoji_html = wp_staticize_emoji( $emoji );
-        } else {
-            $emoji_html = esc_html( $emoji );
-        }
+        // Keep native emoji characters to avoid remote image fallback issues.
+        $emoji_html = esc_html( $emoji );
 
         // aria-hidden because the parent <a> already carries aria-label with the language name
         return sprintf( '<span class="fpml-switcher__flag" aria-hidden="true">%s</span>', $emoji_html );

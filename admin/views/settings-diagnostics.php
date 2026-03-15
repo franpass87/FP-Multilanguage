@@ -11,275 +11,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $options = isset( $options ) ? $options : array();
 
-// FIX CRITICO: Aggiunto error handling robusto per evitare fatal error
 $plugin = null;
-// #region agent log
-$log_file = 'c:\\Users\\franc\\Local Sites\\fp-development\\app\\public\\.cursor\\debug.log';
-$log_entry = json_encode([
-	'sessionId' => 'debug-session',
-	'runId' => 'run1',
-	'hypothesisId' => 'A',
-	'location' => 'settings-diagnostics.php:16',
-	'message' => 'Starting plugin instance retrieval',
-	'data' => [
-		'container_exists' => isset($container),
-		'container_is_object' => isset($container) && is_object($container),
-		'container_has_get' => isset($container) && is_object($container) && method_exists($container, 'get'),
-		'core_plugin_exists' => class_exists('\FP\Multilanguage\Core\Plugin'),
-		'legacy_plugin_exists' => class_exists('\FPML_Plugin'),
-	],
-	'timestamp' => time() * 1000
-]) . "\n";
-file_put_contents($log_file, $log_entry, FILE_APPEND);
-// #endregion
-try {
-	// Try to get plugin from container first
-	if ( isset( $container ) && is_object( $container ) && method_exists( $container, 'get' ) ) {
-		try {
-			$plugin = $container->get( 'plugin' );
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'A',
-				'location' => 'settings-diagnostics.php:21',
-				'message' => 'Plugin retrieved from container',
-				'data' => [
-					'plugin_not_null' => $plugin !== null,
-					'plugin_class' => $plugin ? get_class($plugin) : null,
-					'has_method' => $plugin ? method_exists($plugin, 'get_diagnostics_snapshot') : false,
-				],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
-		} catch ( \Exception $e ) {
-			// Container doesn't have plugin, try other methods
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'A',
-				'location' => 'settings-diagnostics.php:23',
-				'message' => 'Container get failed, trying fallback',
-				'data' => ['error' => $e->getMessage()],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
-		}
-	}
-	
-	// Fallback to direct instance
-	if ( ! $plugin ) {
-		if ( class_exists( '\FP\Multilanguage\Core\Plugin' ) ) {
-			$plugin = \FP\Multilanguage\Core\Plugin::instance();
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'A',
-				'location' => 'settings-diagnostics.php:29',
-				'message' => 'Plugin retrieved via Core\Plugin::instance()',
-				'data' => [
-					'plugin_not_null' => $plugin !== null,
-					'plugin_class' => $plugin ? get_class($plugin) : null,
-					'has_method' => $plugin ? method_exists($plugin, 'get_diagnostics_snapshot') : false,
-				],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
-		} elseif ( class_exists( '\FPML_Plugin' ) ) {
-			$plugin = \FPML_Plugin::instance();
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'A',
-				'location' => 'settings-diagnostics.php:31',
-				'message' => 'Plugin retrieved via FPML_Plugin::instance()',
-				'data' => [
-					'plugin_not_null' => $plugin !== null,
-					'plugin_class' => $plugin ? get_class($plugin) : null,
-					'has_method' => $plugin ? method_exists($plugin, 'get_diagnostics_snapshot') : false,
-				],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
-		}
-	}
-} catch ( \Exception $e ) {
-	error_log( 'FPML Diagnostics View: Error loading plugin instance - ' . $e->getMessage() );
-	$plugin = null;
-	// #region agent log
-	$log_entry = json_encode([
-		'sessionId' => 'debug-session',
-		'runId' => 'run1',
-		'hypothesisId' => 'A',
-		'location' => 'settings-diagnostics.php:35',
-		'message' => 'Exception during plugin retrieval',
-		'data' => ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
-		'timestamp' => time() * 1000
-	]) . "\n";
-	file_put_contents($log_file, $log_entry, FILE_APPEND);
-	// #endregion
-} catch ( \Error $e ) {
-	error_log( 'FPML Diagnostics View: Fatal error loading plugin instance - ' . $e->getMessage() );
-	$plugin = null;
-	// #region agent log
-	$log_entry = json_encode([
-		'sessionId' => 'debug-session',
-		'runId' => 'run1',
-		'hypothesisId' => 'A',
-		'location' => 'settings-diagnostics.php:38',
-		'message' => 'Fatal error during plugin retrieval',
-		'data' => ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
-		'timestamp' => time() * 1000
-	]) . "\n";
-	file_put_contents($log_file, $log_entry, FILE_APPEND);
-	// #endregion
+
+if ( function_exists( 'fpml_get_plugin' ) ) {
+	$plugin = fpml_get_plugin();
 }
 
-// Carica snapshot dalla cache o genera nuovo
+if ( ! $plugin && class_exists( '\FP\Multilanguage\Core\Plugin' ) ) {
+	$plugin = \FP\Multilanguage\Core\Plugin::instance();
+}
+
 $snapshot = get_transient( 'fpml_diagnostics_snapshot' );
 
 if ( false === $snapshot || ! is_array( $snapshot ) ) {
-	
-	// Prova a generare snapshot con timeout limitato e error handling
-	$old_time_limit = ini_get( 'max_execution_time' );
-	if ( function_exists( 'set_time_limit' ) ) {
-		@set_time_limit( 30 ); // Limita a 30 secondi
+	$assisted_reason = '';
+	if ( defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' ) ) {
+		$assisted_reason = 'wpml';
+	} elseif ( defined( 'POLYLANG_VERSION' ) || function_exists( 'pll_current_language' ) ) {
+		$assisted_reason = 'polylang';
 	}
-	
-	$snapshot_loaded = false;
-	$snapshot_error = null;
-	
-	// Usa output buffering per catturare eventuali errori
-	ob_start();
+	$assisted_mode = '' !== $assisted_reason;
+
 	try {
-		// #region agent log
-		$log_entry = json_encode([
-			'sessionId' => 'debug-session',
-			'runId' => 'run1',
-			'hypothesisId' => 'A,E',
-			'location' => 'settings-diagnostics.php:59',
-			'message' => 'Before calling get_diagnostics_snapshot',
-			'data' => [
-				'plugin_not_null' => $plugin !== null,
-				'has_method' => $plugin ? method_exists($plugin, 'get_diagnostics_snapshot') : false,
-			],
-			'timestamp' => time() * 1000
-		]) . "\n";
-		file_put_contents($log_file, $log_entry, FILE_APPEND);
-		// #endregion
 		if ( $plugin && method_exists( $plugin, 'get_diagnostics_snapshot' ) ) {
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'B,C,D',
-				'location' => 'settings-diagnostics.php:60',
-				'message' => 'Calling get_diagnostics_snapshot',
-				'data' => ['plugin_class' => get_class($plugin)],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
 			$snapshot = $plugin->get_diagnostics_snapshot();
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'D',
-				'location' => 'settings-diagnostics.php:61',
-				'message' => 'get_diagnostics_snapshot returned',
-				'data' => [
-					'is_array' => is_array($snapshot),
-					'is_empty' => empty($snapshot),
-					'keys' => is_array($snapshot) ? array_keys($snapshot) : null,
-				],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
-			if ( is_array( $snapshot ) && ! empty( $snapshot ) ) {
-				// Salva in cache per 5 minuti solo se snapshot valido
-				set_transient( 'fpml_diagnostics_snapshot', $snapshot, 5 * MINUTE_IN_SECONDS );
-				$snapshot_loaded = true;
-				// #region agent log
-				$log_entry = json_encode([
-					'sessionId' => 'debug-session',
-					'runId' => 'run1',
-					'hypothesisId' => 'D',
-					'location' => 'settings-diagnostics.php:64',
-					'message' => 'Snapshot saved to cache',
-					'data' => ['snapshot_loaded' => true],
-					'timestamp' => time() * 1000
-				]) . "\n";
-				file_put_contents($log_file, $log_entry, FILE_APPEND);
-				// #endregion
+		}
+
+		if ( ( ! is_array( $snapshot ) || empty( $snapshot ) ) && function_exists( 'fpml_get_diagnostics' ) ) {
+			$diagnostics = fpml_get_diagnostics();
+			if ( $diagnostics && method_exists( $diagnostics, 'get_snapshot' ) ) {
+				$snapshot = (array) $diagnostics->get_snapshot( $assisted_mode, $assisted_reason );
 			}
-		} else {
-			// #region agent log
-			$log_entry = json_encode([
-				'sessionId' => 'debug-session',
-				'runId' => 'run1',
-				'hypothesisId' => 'A,E',
-				'location' => 'settings-diagnostics.php:66',
-				'message' => 'Plugin null or method not exists',
-				'data' => [
-					'plugin_null' => $plugin === null,
-					'has_method' => $plugin ? method_exists($plugin, 'get_diagnostics_snapshot') : false,
-				],
-				'timestamp' => time() * 1000
-			]) . "\n";
-			file_put_contents($log_file, $log_entry, FILE_APPEND);
-			// #endregion
+		}
+
+		if ( is_array( $snapshot ) && ! empty( $snapshot ) ) {
+			set_transient( 'fpml_diagnostics_snapshot', $snapshot, 5 * MINUTE_IN_SECONDS );
 		}
 	} catch ( \Throwable $e ) {
-		$snapshot_error = $e;
-		error_log( 'FPML Diagnostics View: Error loading snapshot - ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
-		// #region agent log
-		$log_entry = json_encode([
-			'sessionId' => 'debug-session',
-			'runId' => 'run1',
-			'hypothesisId' => 'C,D',
-			'location' => 'settings-diagnostics.php:69',
-			'message' => 'Exception in get_diagnostics_snapshot',
-			'data' => [
-				'error' => $e->getMessage(),
-				'file' => $e->getFile(),
-				'line' => $e->getLine(),
-				'trace' => $e->getTraceAsString(),
-			],
-			'timestamp' => time() * 1000
-		]) . "\n";
-		file_put_contents($log_file, $log_entry, FILE_APPEND);
-		// #endregion
+		error_log( 'FPML Diagnostics View: Error loading snapshot - ' . $e->getMessage() );
 	}
-	ob_end_clean();
-	
-	// Ripristina time limit
-	if ( function_exists( 'set_time_limit' ) && $old_time_limit ) {
-		@set_time_limit( $old_time_limit );
-	}
-	
-	// Se non è stato caricato, mostra errore reale invece di snapshot vuoto
-	if ( ! $snapshot_loaded || ! is_array( $snapshot ) || empty( $snapshot ) ) {
-		if ( $snapshot_error ) {
-			echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Errore critico nel caricamento diagnostica:', 'fp-multilanguage' ) . '</strong></p>';
-			echo '<p>' . esc_html( $snapshot_error->getMessage() ) . '</p>';
-			echo '<p><small>' . esc_html( sprintf( __( 'File: %s, Linea: %d', 'fp-multilanguage' ), $snapshot_error->getFile(), $snapshot_error->getLine() ) ) . '</small></p>';
-			echo '<p><small>' . esc_html__( 'Controlla i log di debug per maggiori dettagli.', 'fp-multilanguage' ) . '</small></p></div>';
-		} else {
-			echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Errore: Impossibile caricare la diagnostica.', 'fp-multilanguage' ) . '</strong></p>';
-			echo '<p>' . esc_html__( 'Il plugin non è stato inizializzato correttamente o il metodo get_diagnostics_snapshot() non è disponibile.', 'fp-multilanguage' ) . '</p>';
-			echo '<p><small>' . esc_html__( 'Controlla i log di debug per maggiori dettagli.', 'fp-multilanguage' ) . '</small></p></div>';
-		}
-		// Non usare snapshot vuoto - ferma qui per vedere l'errore
-		return;
+
+	if ( ! is_array( $snapshot ) || empty( $snapshot ) ) {
+		$snapshot = array(
+			'assisted_mode'   => $assisted_mode,
+			'assisted_reason' => $assisted_reason,
+			'message'         => __( 'Diagnostica temporaneamente non disponibile. Alcune metriche potrebbero non essere complete.', 'fp-multilanguage' ),
+		);
 	}
 }
 

@@ -62,6 +62,8 @@
     font-size: 18px;
     line-height: 1;
     display: inline-block;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+    font-variant-emoji: emoji;
 }
 
 /* Dropdown Switcher */
@@ -289,6 +291,8 @@
     opacity: 0.7;
     margin: 0;
     vertical-align: middle;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+    font-variant-emoji: emoji;
 }
 
 .fpml-flag:hover {
