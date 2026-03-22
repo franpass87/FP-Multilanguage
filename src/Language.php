@@ -241,7 +241,7 @@ class Language {
         if ( file_exists( $css_file ) ) {
             wp_enqueue_style(
                 'fpml-frontend',
-                \FPML_PLUGIN_URL . '/assets/frontend.css',
+                \FPML_PLUGIN_URL . 'assets/frontend.css',
                 array(),
                 filemtime( $css_file )
             );
@@ -841,6 +841,12 @@ class Language {
      * @return string
      */
     public function filter_locale( $locale ) {
+        static $in_filter_locale = false;
+        if ( $in_filter_locale ) {
+            return $locale;
+        }
+        $in_filter_locale = true;
+        try {
         if ( is_admin() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
             return $locale;
         }
@@ -950,6 +956,9 @@ class Language {
         
         // Fallback to en_US for backward compatibility
         return 'en_US';
+        } finally {
+            $in_filter_locale = false;
+        }
     }
 
     /**
@@ -1112,8 +1121,13 @@ class Language {
             global $post;
             if ( $post && isset( $post->ID ) ) {
                 $translation_provider = get_post_meta( $post->ID, '_fpml_translation_provider', true );
-                // Se il post usa WPML o 'auto' (e WPML ha la traduzione), usa WPML
-                if ( $translation_provider === 'wpml' || ( $translation_provider === 'auto' && function_exists( 'icl_object_id' ) ) ) {
+                $wpml_translation_id = 0;
+                if ( function_exists( 'icl_object_id' ) ) {
+                    $wpml_translation_id = (int) icl_object_id( $post->ID, $post->post_type, false, $lang );
+                }
+
+                // In AUTO mode use WPML only if that specific translation already exists.
+                if ( $translation_provider === 'wpml' || ( $translation_provider === 'auto' && $wpml_translation_id && $wpml_translation_id !== $post->ID ) ) {
                     // Usa WPML per generare l'URL
                     $wpml_lang_code = $lang === 'it' ? 'it' : $lang; // WPML potrebbe usare codici diversi
                     if ( function_exists( 'apply_filters' ) ) {

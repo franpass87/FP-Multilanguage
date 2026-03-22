@@ -1,6 +1,6 @@
 # FP Multilanguage
 
-[![Versione](https://img.shields.io/badge/version-0.9.18-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
+[![Versione](https://img.shields.io/badge/version-0.9.19-blue.svg)](https://github.com/francescopasseri/FP-Multilanguage)
 [![WordPress](https://img.shields.io/badge/wordpress-5.8+-green.svg)](https://wordpress.org)
 [![PHP](https://img.shields.io/badge/php-8.0+-purple.svg)](https://php.net)
 [![License](https://img.shields.io/badge/license-GPL--2.0+-orange.svg)](LICENSE)

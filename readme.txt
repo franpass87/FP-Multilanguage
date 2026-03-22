@@ -4,7 +4,7 @@ Tags: translation, multilanguage, openai, psr-4, seo
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 8.0
-Stable tag: 0.9.18
+Stable tag: 0.9.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Plugin Homepage: https://francescopasseri.com
@@ -33,6 +33,9 @@ FP Multilanguage duplicates English content that stays synced with the original 
 4. Run an initial sync from the Diagnostics tab or via `wp fpml queue run`.
 
 == Changelog ==
+
+= 0.9.19 (2026-03-22) =
+* **FIXED**: Corretto doppio slash nell'URL CSS frontend
 
 = 0.9.18 (2026-03-15) =
 * **CHANGED**: Rafforzata la traduzione shortcode WPBakery/Salient per contenuti annidati e attributi testuali (title, heading, tab_title, label, text, h2/h3/h4/h5).

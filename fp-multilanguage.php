@@ -3,7 +3,7 @@
  * Plugin Name: FP Multilanguage
  * Plugin URI: https://francescopasseri.com
  * Description: Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
- * Version: 0.9.18
+ * Version: 0.9.19
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * Text Domain: fp-multilanguage
@@ -14,6 +14,11 @@
  * @author Francesco Passeri
  * @link https://francescopasseri.com
  */
+
+if ( defined( 'FPML_RUNTIME_BOOTSTRAPPED' ) ) {
+	return;
+}
+define( 'FPML_RUNTIME_BOOTSTRAPPED', true );
 
 // Early language_attributes filter - must run before theme loads
 // This ensures the lang attribute is set correctly even if Language class isn't loaded yet
@@ -114,7 +119,7 @@ if ( version_compare( PHP_VERSION, '8.0.0', '<' ) ) {
 	return;
 }
 
-define( 'FPML_PLUGIN_VERSION', '0.9.18' );
+define( 'FPML_PLUGIN_VERSION', '0.9.19' );
 define( 'FPML_PLUGIN_FILE', __FILE__ );
 define( 'FPML_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FPML_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

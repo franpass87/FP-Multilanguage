@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.19] - 2026-03-22
+### Fixed
+- Corretto doppio slash nell'URL CSS frontend (FP-Multilanguage//assets → FP-Multilanguage/assets)
+
 ## [0.9.18] - 2026-03-15
 ### Changed
 - Hardened WPBakery/Salient shortcode translation flow for nested content and label attributes (title, heading, tab titles, CTA/button text).
