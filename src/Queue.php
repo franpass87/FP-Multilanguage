@@ -114,12 +114,6 @@ class Queue {
          * @return self
          */
         public static function instance(): self {
-		_doing_it_wrong( 
-			'FP\Multilanguage\Queue::instance()', 
-			'Queue::instance() is deprecated. Use dependency injection via container instead.', 
-			'1.0.0' 
-		);
-		
                 if ( null === self::$instance ) {
                         self::$instance = new self();
                 }

@@ -31,7 +31,9 @@
 
     // Check if fetch is supported
     if (typeof window.fetch !== 'function') {
-        console.warn('FP Multilanguage: fetch API not supported');
+        if (window.fpmlDebug) {
+            console.warn('FP Multilanguage: fetch API not supported');
+        }
         return;
     }
 
@@ -175,7 +177,9 @@
     const refreshNonce = async () => {
         try {
             // Try WordPress AJAX first (more reliable than REST for nonce refresh)
-            console.log('Tentativo refresh nonce tramite AJAX WordPress...');
+            if (window.fpmlDebug) {
+                console.log('Tentativo refresh nonce tramite AJAX WordPress...');
+            }
             
             const ajaxResponse = await fetch(ajaxurl, {
                 method: 'POST',
@@ -192,17 +196,23 @@
             if (ajaxResponse.ok) {
                 const ajaxData = await ajaxResponse.json();
                 if (ajaxData.success && ajaxData.data && ajaxData.data.nonce) {
-                    console.log('Nuovo nonce ricevuto tramite AJAX:', ajaxData.data.nonce.substring(0, 10) + '...');
+                    if (window.fpmlDebug) {
+                        console.log('Nuovo nonce ricevuto tramite AJAX:', ajaxData.data.nonce.substring(0, 10) + '...');
+                    }
                     return ajaxData.data.nonce;
                 }
             }
 
             // Fallback to REST endpoint if AJAX fails
-            console.log('AJAX fallito, tentativo tramite REST endpoint...');
+            if (window.fpmlDebug) {
+                console.log('AJAX fallito, tentativo tramite REST endpoint...');
+            }
             const refreshEndpoint = feedback?.getAttribute('data-refresh-endpoint');
             
             if (!refreshEndpoint) {
-                console.error('Né AJAX né endpoint REST disponibili');
+                if (window.fpmlDebug) {
+                    console.error('Né AJAX né endpoint REST disponibili');
+                }
                 return null;
             }
 
@@ -216,20 +226,28 @@
             });
 
             if (!response.ok) {
-                console.error('Refresh nonce REST fallito con status:', response.status);
+                if (window.fpmlDebug) {
+                    console.error('Refresh nonce REST fallito con status:', response.status);
+                }
                 return null;
             }
 
             const data = await response.json();
             if (data && data.nonce) {
-                console.log('Nuovo nonce ricevuto tramite REST:', data.nonce.substring(0, 10) + '...');
+                if (window.fpmlDebug) {
+                    console.log('Nuovo nonce ricevuto tramite REST:', data.nonce.substring(0, 10) + '...');
+                }
                 return data.nonce;
             } else {
-                console.error('Risposta refresh nonce REST non valida:', data);
+                if (window.fpmlDebug) {
+                    console.error('Risposta refresh nonce REST non valida:', data);
+                }
                 return null;
             }
         } catch (error) {
-            console.error('Errore durante il refresh del nonce:', error);
+            if (window.fpmlDebug) {
+                console.error('Errore durante il refresh del nonce:', error);
+            }
             return null;
         }
     };
@@ -250,11 +268,15 @@
      * @returns {Promise<{response: Response, payload: Object|null}>}
      */
     const executeRequest = async (endpoint, nonce, retryCount = 0, requestBody = '{}') => {
-        console.log(`🔧 REFACTOR: Tentativo ${retryCount + 1} per ${endpoint}`);
+        if (window.fpmlDebug) {
+            console.log(`🔧 REFACTOR: Tentativo ${retryCount + 1} per ${endpoint}`);
+        }
         
         // REFACTOR: Completamente nuova strategia - bypass nonce per reindex
         if (endpoint.includes('/reindex') && retryCount === 0) {
-            console.log('🚀 REFACTOR: Uso AJAX diretto per reindex');
+            if (window.fpmlDebug) {
+                console.log('🚀 REFACTOR: Uso AJAX diretto per reindex');
+            }
             return await executeReindexViaAjaxDirect(requestBody, retryCount);
         }
         
@@ -324,7 +346,9 @@
 
         // If nonce is expired and we haven't retried yet, refresh and retry
         if (isNonceError && retryCount === 0) {
-            console.log('Nonce scaduto rilevato, aggiornamento in corso...');
+            if (window.fpmlDebug) {
+                console.log('Nonce scaduto rilevato, aggiornamento in corso...');
+            }
             
             // Show temporary feedback to user
             if (feedback) {
@@ -334,7 +358,9 @@
             const newNonce = await refreshNonce();
             
             if (newNonce) {
-                console.log('Nonce aggiornato con successo, nuovo tentativo...');
+                if (window.fpmlDebug) {
+                    console.log('Nonce aggiornato con successo, nuovo tentativo...');
+                }
                 // Update the nonce in all buttons for future requests
                 actionButtons.forEach((btn) => {
                     btn.setAttribute('data-nonce', newNonce);
@@ -366,7 +392,9 @@
                 // Retry the request with the new nonce (only once to avoid loops)
                 return executeRequest(endpoint, newNonce, retryCount + 1, requestBody);
             } else {
-                console.error('Impossibile aggiornare il nonce');
+                if (window.fpmlDebug) {
+                    console.error('Impossibile aggiornare il nonce');
+                }
                 if (feedback) {
                     setFeedback('Errore: impossibile aggiornare le credenziali. <a href="' + window.location.href + '" style="color: #0073aa; text-decoration: underline;">Clicca qui per ricaricare la pagina</a> e riprova.', 'error');
                 }
@@ -390,7 +418,9 @@
         const progressText = document.getElementById('fpml-reindex-progress-text');
         
         if (!progressContainer || !progressBar || !progressText) {
-            console.error('Progress bar elements not found, falling back to standard reindex');
+            if (window.fpmlDebug) {
+                console.error('Progress bar elements not found, falling back to standard reindex');
+            }
             return false; // Fallback to standard method
         }
 
@@ -414,7 +444,9 @@
                 // Refresh del nonce ogni 2 step per evitare scadenze durante processi lunghi
                 // WordPress nonces can expire after inactivity, so we refresh proactively
                 if (step > 0 && step % 2 === 0) {
-                    console.log('Aggiornamento preventivo del nonce allo step', step);
+                    if (window.fpmlDebug) {
+                        console.log('Aggiornamento preventivo del nonce allo step', step);
+                    }
                     const newNonce = await refreshNonce();
                     if (newNonce) {
                         currentNonce = newNonce;
@@ -422,8 +454,10 @@
                         actionButtons.forEach((btn) => {
                             btn.setAttribute('data-nonce', newNonce);
                         });
-                        console.log('Nonce aggiornato con successo allo step', step);
-                    } else {
+                        if (window.fpmlDebug) {
+                            console.log('Nonce aggiornato con successo allo step', step);
+                        }
+                    } else if (window.fpmlDebug) {
                         console.warn('Impossibile aggiornare il nonce preventivamente allo step', step, '- continuo con quello corrente');
                     }
                 }
@@ -453,7 +487,9 @@
             
             // Controllo di sicurezza: se abbiamo raggiunto il limite massimo
             if (stepCount >= maxSteps) {
-                console.warn('⚠️ Raggiunto limite massimo di step, forzando completamento');
+                if (window.fpmlDebug) {
+                    console.warn('⚠️ Raggiunto limite massimo di step, forzando completamento');
+                }
                 complete = true;
                 progressText.textContent = 'Completato (limite raggiunto)';
             }
@@ -536,7 +572,9 @@
                         actionButtons.forEach((btn) => {
                             btn.setAttribute('data-nonce', newNonce);
                         });
-                        console.log('Nonce aggiornato prima del reindex');
+                        if (window.fpmlDebug) {
+                            console.log('Nonce aggiornato prima del reindex');
+                        }
                     }
                 }
 
@@ -757,7 +795,9 @@
         const AUTO_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
         
         setInterval(async () => {
-            console.log('Auto-refresh del nonce in background...');
+            if (window.fpmlDebug) {
+                console.log('Auto-refresh del nonce in background...');
+            }
             const newNonce = await refreshNonce();
             
             if (newNonce) {
@@ -767,13 +807,17 @@
                 actionButtons.forEach((btn) => {
                     btn.setAttribute('data-nonce', newNonce);
                 });
-                console.log('Nonce aggiornato automaticamente in background');
-            } else {
+                if (window.fpmlDebug) {
+                    console.log('Nonce aggiornato automaticamente in background');
+                }
+            } else if (window.fpmlDebug) {
                 console.warn('Auto-refresh del nonce fallito');
             }
         }, AUTO_REFRESH_INTERVAL);
         
-        console.log('Auto-refresh del nonce abilitato (ogni ' + (AUTO_REFRESH_INTERVAL / 60000) + ' minuti)');
+        if (window.fpmlDebug) {
+            console.log('Auto-refresh del nonce abilitato (ogni ' + (AUTO_REFRESH_INTERVAL / 60000) + ' minuti)');
+        }
     }
 
     /**
@@ -783,7 +827,9 @@
      * per evitare tutti i problemi di nonce scaduto.
      */
     const executeReindexViaAjaxDirect = async (requestBody, retryCount = 0) => {
-        console.log('🚀 AJAX diretto per reindex - bypass REST API');
+        if (window.fpmlDebug) {
+            console.log('🚀 AJAX diretto per reindex - bypass REST API');
+        }
         
         try {
             const data = JSON.parse(requestBody || '{}');
@@ -800,7 +846,9 @@
             
             formData.append('_wpnonce', currentNonce);
             
-            console.log(`📡 Invio AJAX: step=${step}, nonce=${currentNonce.substring(0, 10)}...`);
+            if (window.fpmlDebug) {
+                console.log(`📡 Invio AJAX: step=${step}, nonce=${currentNonce.substring(0, 10)}...`);
+            }
             
             const response = await fetch(ajaxurl, {
                 method: 'POST',
@@ -815,8 +863,10 @@
             const result = await response.json();
             
             if (result.success) {
-                console.log('✅ AJAX diretto completato con successo');
-                console.log('📊 Dati ricevuti:', result.data);
+                if (window.fpmlDebug) {
+                    console.log('✅ AJAX diretto completato con successo');
+                    console.log('📊 Dati ricevuti:', result.data);
+                }
                 
                 // Mappa la risposta AJAX al formato atteso dal JavaScript principale
                 const mappedPayload = {
@@ -831,10 +881,12 @@
                 };
                 
                 // Controlla se il reindex è completato
-                if (mappedPayload.complete) {
-                    console.log('🎉 REINDEX COMPLETATO!');
-                } else {
-                    console.log('⏳ Reindex in corso, step:', mappedPayload.step);
+                if (window.fpmlDebug) {
+                    if (mappedPayload.complete) {
+                        console.log('🎉 REINDEX COMPLETATO!');
+                    } else {
+                        console.log('⏳ Reindex in corso, step:', mappedPayload.step);
+                    }
                 }
                 
                 return { 
@@ -846,11 +898,15 @@
             }
             
         } catch (error) {
-            console.error('❌ AJAX diretto fallito:', error);
+            if (window.fpmlDebug) {
+                console.error('❌ AJAX diretto fallito:', error);
+            }
             
             // Se AJAX fallisce, prova con REST come fallback
             if (retryCount === 0) {
-                console.log('🔄 Fallback a REST API...');
+                if (window.fpmlDebug) {
+                    console.log('🔄 Fallback a REST API...');
+                }
                 return await executeRequestViaRest(requestBody, retryCount + 1);
             }
             
@@ -862,7 +918,9 @@
      * Fallback REST API quando AJAX fallisce
      */
     const executeRequestViaRest = async (requestBody, retryCount = 0) => {
-        console.log('🔄 Fallback REST API...');
+        if (window.fpmlDebug) {
+            console.log('🔄 Fallback REST API...');
+        }
         
         // Prova con un nonce fresco
         const freshNonce = await refreshNonce();

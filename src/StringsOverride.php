@@ -45,6 +45,12 @@ class StringsOverride {
          * @var array<string, string>
          */
         protected $overrides_index = array();
+        /**
+         * Guard against recursive gettext invocations.
+         *
+         * @var bool
+         */
+        protected bool $filtering = false;
 
         /**
          * Constructor.
@@ -352,6 +358,12 @@ class StringsOverride {
          * @return string
          */
         public function filter_gettext( $translation, $text, $domain ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                if ( $this->filtering ) {
+                        return $translation;
+                }
+
+                $this->filtering = true;
+                try {
                 if ( empty( $this->overrides ) ) {
                         return $translation;
                 }
@@ -367,6 +379,9 @@ class StringsOverride {
                 }
 
                 return $translation;
+                } finally {
+                        $this->filtering = false;
+                }
         }
 
         /**
@@ -383,6 +398,12 @@ class StringsOverride {
          * @return string
          */
         public function filter_ngettext( $translation, $single, $plural, $number, $domain ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+                if ( $this->filtering ) {
+                        return $translation;
+                }
+
+                $this->filtering = true;
+                try {
                 if ( empty( $this->overrides ) ) {
                         return $translation;
                 }
@@ -399,6 +420,9 @@ class StringsOverride {
                 }
 
                 return $translation;
+                } finally {
+                        $this->filtering = false;
+                }
         }
 }
 

@@ -117,7 +117,8 @@ class SettingsAdapter {
 		return array(
 			'provider'                => '',
 			'openai_api_key'          => '',
-			'openai_model'            => 'gpt-5-nano',
+			'openai_model'            => 'gpt-5.4-mini',
+			'openai_api_method'       => 'responses',
 			'google_api_key'          => '',
 			'google_project_id'       => '',
 			'batch_size'              => 5,
@@ -165,7 +166,7 @@ class SettingsAdapter {
 			'menu_switcher_style'          => 'inline',
 			'menu_switcher_show_flags'     => true,
 			'menu_switcher_position'       => 'end',
-			'enabled_languages'            => array( 'en', 'de' ), // Default: English and German as main languages (Italian is always source)
+			'enabled_languages'            => array( 'en', 'de', 'es', 'fr', 'pt', 'ru' ),
 		);
 	}
 
@@ -293,6 +294,7 @@ class SettingsAdapter {
 		$data['provider']               = sanitize_text_field( $data['provider'] );
 		$data['openai_api_key']         = sanitize_text_field( $data['openai_api_key'] );
 		$data['openai_model']           = sanitize_text_field( $data['openai_model'] );
+		$data['openai_api_method']      = sanitize_text_field( $data['openai_api_method'] );
 		$data['google_api_key']         = sanitize_text_field( $data['google_api_key'] );
 		$data['google_project_id']      = sanitize_text_field( $data['google_project_id'] );
 		$data['batch_size']             = max( 1, absint( $data['batch_size'] ) );
@@ -302,6 +304,11 @@ class SettingsAdapter {
 		$frequencies = array( '5min', '15min', 'hourly' );
 		if ( ! in_array( $data['cron_frequency'], $frequencies, true ) ) {
 			$data['cron_frequency'] = $defaults['cron_frequency'];
+		}
+
+		$openai_methods = array( 'responses', 'chat_completions' );
+		if ( ! in_array( $data['openai_api_method'], $openai_methods, true ) ) {
+			$data['openai_api_method'] = $defaults['openai_api_method'];
 		}
 
 		$data['routing_mode']            = in_array( $data['routing_mode'], array( 'segment', 'query' ), true ) ? $data['routing_mode'] : $defaults['routing_mode'];
@@ -352,9 +359,30 @@ class SettingsAdapter {
 		$data['menu_switcher_show_flags']     = ! empty( $data['menu_switcher_show_flags'] );
 		$data['menu_switcher_position']       = in_array( $data['menu_switcher_position'], array( 'start', 'end' ), true ) ? $data['menu_switcher_position'] : $defaults['menu_switcher_position'];
 
-		$available_languages = array( 'en', 'de', 'fr', 'es' );
 		$enabled_languages = isset( $data['enabled_languages'] ) && is_array( $data['enabled_languages'] ) ? $data['enabled_languages'] : array();
-		$enabled_languages = array_intersect( $enabled_languages, $available_languages );
+		$enabled_languages = array_map( 'sanitize_key', $enabled_languages );
+
+		$available_languages = array();
+		if ( function_exists( 'fpml_get_language_manager' ) ) {
+			$language_manager = fpml_get_language_manager();
+			if ( $language_manager && method_exists( $language_manager, 'get_all_languages' ) ) {
+				$available_languages = array_keys( $language_manager->get_all_languages() );
+			}
+		}
+		if ( empty( $available_languages ) ) {
+			$available_languages = array( 'it', 'en', 'de', 'es', 'fr', 'pt', 'ru' );
+		}
+		$enabled_languages = array_values( array_intersect( $enabled_languages, $available_languages ) );
+
+		$source_language = function_exists( 'fpml_get_source_language' ) ? sanitize_key( (string) fpml_get_source_language() ) : 'it';
+		$enabled_languages = array_values(
+			array_filter(
+				$enabled_languages,
+				static function ( string $code ) use ( $source_language ): bool {
+					return $code !== $source_language;
+				}
+			)
+		);
 		if ( empty( $enabled_languages ) ) {
 			$enabled_languages = array( 'en' );
 		}

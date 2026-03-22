@@ -16,13 +16,13 @@ $options = isset( $options ) ? $options : array();
 <table class="form-table" role="presentation">
 <tbody>
 <tr>
-<th scope="row"><?php esc_html_e( 'Provider predefinito', 'fp-multilanguage' ); ?></th>
+<th scope="row"><?php esc_html_e( 'Motore di traduzione predefinito', 'fp-multilanguage' ); ?></th>
 <td>
 <select name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[provider]">
 <option value="openai" <?php selected( $options['provider'], 'openai' ); ?>>OpenAI - <?php esc_html_e( 'Qualità superiore con GPT-5 e modelli successivi', 'fp-multilanguage' ); ?></option>
 </select>
 <p class="fpml-field-description">
-<?php esc_html_e( 'Provider di traduzione: OpenAI (GPT-5 e modelli successivi).', 'fp-multilanguage' ); ?>
+<?php esc_html_e( 'Motore di traduzione: OpenAI (GPT-5 e modelli successivi).', 'fp-multilanguage' ); ?>
 <br />
 <strong><?php esc_html_e( '💡 Qualità superiore:', 'fp-multilanguage' ); ?></strong>
 <?php esc_html_e( 'OpenAI offre la migliore qualità per contenuti tecnici, marketing e testi complessi.', 'fp-multilanguage' ); ?>
@@ -54,7 +54,7 @@ $options = isset( $options ) ? $options : array();
 <div id="fpml-test-result" style="margin-top: 10px;"></div>
 <div id="fpml-billing-status" style="margin-top: 10px;"></div>
 <p class="fpml-field-description">
-<?php esc_html_e( 'Richiesto per usare l\'API OpenAI (modello GPT-5 o precedenti).', 'fp-multilanguage' ); ?>
+<?php esc_html_e( 'Richiesto per usare l\'API OpenAI (modelli GPT-5 e successivi).', 'fp-multilanguage' ); ?>
 <br />
 <strong><?php esc_html_e( 'Come ottenere la chiave:', 'fp-multilanguage' ); ?></strong>
 <?php
@@ -91,7 +91,7 @@ printf(
 $default_rate = '0.00011';
 printf(
 	/* translators: 1: default rate per 1000 chars, 2: pricing URL */
-	esc_html__( '💰 Costi: ~%1$s EUR ogni 1000 caratteri con GPT-5 nano. %2$s', 'fp-multilanguage' ),
+	esc_html__( '💰 Costi: ~%1$s EUR ogni 1000 caratteri (stima indicativa). %2$s', 'fp-multilanguage' ),
 	$default_rate,
 	'<a href="https://openai.com/api/pricing/" target="_blank" rel="noopener">' . esc_html__( 'Vedi prezzi completi ↗', 'fp-multilanguage' ) . '</a>'
 );
@@ -102,8 +102,27 @@ printf(
 <tr>
 <th scope="row"><?php esc_html_e( 'Modello OpenAI', 'fp-multilanguage' ); ?></th>
 <td>
-<input type="text" class="regular-text" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_model]" value="<?php echo esc_attr( $options['openai_model'] ); ?>" />
-<p class="fpml-field-description"><?php esc_html_e( 'Modello consigliato: gpt-5-nano per prestazioni ottimali e costi ridotti. Assicurati che supporti input HTML.', 'fp-multilanguage' ); ?></p>
+<?php $openai_model = isset( $options['openai_model'] ) && '' !== (string) $options['openai_model'] ? (string) $options['openai_model'] : 'gpt-5.4-mini'; ?>
+<input type="text" class="regular-text" list="fpml-openai-models" name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_model]" value="<?php echo esc_attr( $openai_model ); ?>" />
+<datalist id="fpml-openai-models">
+<option value="gpt-5.4"><?php esc_html_e( 'Massima qualità (frontier)', 'fp-multilanguage' ); ?></option>
+<option value="gpt-5.4-mini"><?php esc_html_e( 'Consigliato (qualità/costo bilanciati)', 'fp-multilanguage' ); ?></option>
+<option value="gpt-5.4-nano"><?php esc_html_e( 'Ultra economico e veloce', 'fp-multilanguage' ); ?></option>
+<option value="gpt-5-mini"><?php esc_html_e( 'Compatibilità GPT-5 mini', 'fp-multilanguage' ); ?></option>
+<option value="gpt-5-nano"><?php esc_html_e( 'Compatibilità GPT-5 nano', 'fp-multilanguage' ); ?></option>
+</datalist>
+<p class="fpml-field-description"><?php esc_html_e( 'Modello consigliato: gpt-5.4-mini. Puoi inserire manualmente qualsiasi model ID disponibile nel tuo account OpenAI.', 'fp-multilanguage' ); ?></p>
+</td>
+</tr>
+<tr>
+<th scope="row"><?php esc_html_e( 'Metodo API OpenAI', 'fp-multilanguage' ); ?></th>
+<td>
+<?php $openai_api_method = isset( $options['openai_api_method'] ) ? (string) $options['openai_api_method'] : 'responses'; ?>
+<select name="<?php echo esc_attr( FPML_Settings::OPTION_KEY ); ?>[openai_api_method]">
+<option value="responses" <?php selected( $openai_api_method, 'responses' ); ?>><?php esc_html_e( 'Responses API (consigliato - marzo 2026)', 'fp-multilanguage' ); ?></option>
+<option value="chat_completions" <?php selected( $openai_api_method, 'chat_completions' ); ?>><?php esc_html_e( 'Chat Completions API (legacy/compatibilità)', 'fp-multilanguage' ); ?></option>
+</select>
+<p class="fpml-field-description"><?php esc_html_e( 'Usa Responses API per i modelli più recenti. Mantieni Chat Completions solo se hai workflow legacy o modelli compatibili esclusivamente con quel metodo.', 'fp-multilanguage' ); ?></p>
 </td>
 </tr>
 <tr>
@@ -130,10 +149,10 @@ $enabled_languages = isset( $options['enabled_languages'] ) && is_array( $option
 <?php endforeach; ?>
 </fieldset>
 <p class="fpml-field-description">
-	<?php esc_html_e( 'Seleziona le lingue in cui vuoi tradurre i contenuti. Ogni contenuto può avere traduzioni in tutte le lingue selezionate.', 'fp-multilanguage' ); ?>
+	<?php esc_html_e( 'Seleziona le lingue target in cui vuoi tradurre i contenuti. L\'italiano resta lingua sorgente.', 'fp-multilanguage' ); ?>
 	<br />
 	<strong><?php esc_html_e( 'Nota:', 'fp-multilanguage' ); ?></strong>
-	<?php esc_html_e( 'Almeno una lingua deve essere selezionata. Le rewrite rules verranno aggiornate automaticamente.', 'fp-multilanguage' ); ?>
+	<?php esc_html_e( 'Almeno una lingua target deve essere selezionata. Le rewrite rules verranno aggiornate automaticamente.', 'fp-multilanguage' ); ?>
 </p>
 </td>
 </tr>

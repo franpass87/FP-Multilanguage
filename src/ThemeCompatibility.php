@@ -158,7 +158,18 @@ class ThemeCompatibility {
      * @return bool
      */
     protected function is_auto_integration_enabled() {
-        return (bool) $this->settings->get( 'auto_integrate_menu_switcher', true );
+        $enabled = (bool) $this->settings->get( 'auto_integrate_menu_switcher', true );
+        if ( ! $enabled ) {
+            return false;
+        }
+
+        // In mixed setups prefer WPML switcher to avoid duplicated selectors.
+        $wpml_active = defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' );
+        if ( $wpml_active ) {
+            return (bool) apply_filters( 'fpml_allow_auto_switcher_with_wpml', false );
+        }
+
+        return true;
     }
 
     /**

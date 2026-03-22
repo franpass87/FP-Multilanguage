@@ -20,9 +20,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ApiClient {
 	/**
-	 * API endpoint.
+	 * Chat Completions API endpoint.
 	 */
-	const API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+	const CHAT_COMPLETIONS_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+
+	/**
+	 * Responses API endpoint.
+	 */
+	const RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
 
 	/**
 	 * Error handler instance.
@@ -69,24 +74,13 @@ class ApiClient {
 	 * @param string $domain    Context domain.
 	 * @param bool   $marketing Whether to apply marketing tone.
 	 * @param string $api_key   API key.
-	 * @param string $model     Model name.
+	 * @param string $model      Model name.
+	 * @param string $api_method API method ('responses'|'chat_completions').
 	 * @return string|\WP_Error
 	 */
-	public function request_translation( string $text, string $source, string $target, string $domain, bool $marketing, string $api_key, string $model ): string|\WP_Error {
-		$payload = array(
-			'model'       => $model,
-			'temperature' => 1,
-			'messages'    => array(
-				array(
-					'role'    => 'system',
-					'content' => $this->prompt_builder->build_system_prompt( $marketing, $source, $target ),
-				),
-				array(
-					'role'    => 'user',
-					'content' => $this->prompt_builder->build_user_prompt( $text, $source, $target, $domain ),
-				),
-			),
-		);
+	public function request_translation( string $text, string $source, string $target, string $domain, bool $marketing, string $api_key, string $model, string $api_method = 'responses' ): string|\WP_Error {
+		$api_method = $this->normalize_api_method( $api_method );
+		$payload = $this->build_payload( $text, $source, $target, $domain, $marketing, $model, $api_method );
 
 		$body = wp_json_encode( $payload );
 		if ( false === $body ) {
@@ -101,11 +95,12 @@ class ApiClient {
 			'body'    => $body,
 			'timeout' => 45,
 		);
+		$endpoint = $this->get_endpoint( $api_method );
 
 		$max_attempts = 5;
 
 		for ( $attempt = 1; $attempt <= $max_attempts; $attempt++ ) {
-			$response = wp_remote_post( self::API_ENDPOINT, $args );
+			$response = wp_remote_post( $endpoint, $args );
 
 			if ( is_wp_error( $response ) ) {
 				if ( $attempt === $max_attempts ) {
@@ -175,14 +170,117 @@ class ApiClient {
 				$data = array();
 			}
 
-			if ( ! isset( $data['choices'][0]['message']['content'] ) || empty( $data['choices'][0]['message']['content'] ) ) {
+			$translated_content = $this->extract_translated_content( $data, $api_method );
+			if ( '' === $translated_content ) {
 				return new \WP_Error( 'fpml_openai_empty', __( 'OpenAI non ha restituito alcun contenuto traducibile.', 'fp-multilanguage' ) );
 			}
 
-			return (string) $data['choices'][0]['message']['content'];
+			return $translated_content;
 		}
 
 		return new \WP_Error( 'fpml_openai_unexpected', __( 'Errore imprevisto durante la traduzione con OpenAI.', 'fp-multilanguage' ) );
+	}
+
+	/**
+	 * Normalize API method to supported values.
+	 *
+	 * @param string $api_method Raw API method.
+	 * @return string
+	 */
+	protected function normalize_api_method( string $api_method ): string {
+		return in_array( $api_method, array( 'responses', 'chat_completions' ), true ) ? $api_method : 'responses';
+	}
+
+	/**
+	 * Resolve OpenAI endpoint by API method.
+	 *
+	 * @param string $api_method API method.
+	 * @return string
+	 */
+	protected function get_endpoint( string $api_method ): string {
+		return 'chat_completions' === $api_method ? self::CHAT_COMPLETIONS_ENDPOINT : self::RESPONSES_ENDPOINT;
+	}
+
+	/**
+	 * Build OpenAI payload for selected API method.
+	 *
+	 * @param string $text       Text to translate.
+	 * @param string $source     Source language.
+	 * @param string $target     Target language.
+	 * @param string $domain     Context domain.
+	 * @param bool   $marketing  Marketing tone.
+	 * @param string $model      Model name.
+	 * @param string $api_method API method.
+	 * @return array<string,mixed>
+	 */
+	protected function build_payload( string $text, string $source, string $target, string $domain, bool $marketing, string $model, string $api_method ): array {
+		$system_prompt = $this->prompt_builder->build_system_prompt( $marketing, $source, $target );
+		$user_prompt   = $this->prompt_builder->build_user_prompt( $text, $source, $target, $domain );
+
+		if ( 'chat_completions' === $api_method ) {
+			return array(
+				'model'       => $model,
+				'temperature' => 1,
+				'messages'    => array(
+					array(
+						'role'    => 'system',
+						'content' => $system_prompt,
+					),
+					array(
+						'role'    => 'user',
+						'content' => $user_prompt,
+					),
+				),
+			);
+		}
+
+		return array(
+			'model'        => $model,
+			'instructions' => $system_prompt,
+			'input'        => $user_prompt,
+		);
+	}
+
+	/**
+	 * Extract translated text from OpenAI response payload.
+	 *
+	 * @param array<string,mixed> $data       Decoded OpenAI response.
+	 * @param string              $api_method API method used.
+	 * @return string
+	 */
+	protected function extract_translated_content( array $data, string $api_method ): string {
+		if ( 'chat_completions' === $api_method ) {
+			$content = $data['choices'][0]['message']['content'] ?? '';
+			return is_string( $content ) ? trim( $content ) : '';
+		}
+
+		$output_text = $data['output_text'] ?? '';
+		if ( is_string( $output_text ) && '' !== trim( $output_text ) ) {
+			return trim( $output_text );
+		}
+
+		if ( ! isset( $data['output'] ) || ! is_array( $data['output'] ) ) {
+			return '';
+		}
+
+		foreach ( $data['output'] as $item ) {
+			if ( ! is_array( $item ) || ! isset( $item['content'] ) || ! is_array( $item['content'] ) ) {
+				continue;
+			}
+
+			foreach ( $item['content'] as $part ) {
+				if ( ! is_array( $part ) ) {
+					continue;
+				}
+
+				$text = $part['text'] ?? '';
+				if ( is_string( $text ) && '' !== trim( $text ) ) {
+					return trim( $text );
+				}
+			}
+		}
+
+		return '';
 	}
 }
 

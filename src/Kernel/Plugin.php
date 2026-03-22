@@ -101,7 +101,9 @@ class Plugin {
 			try {
 				$provider = new $provider_class();
 			} catch ( \Throwable $e ) {
-				error_log( 'FPML: Provider ' . $provider_class . ' failed to instantiate: ' . $e->getMessage() );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+					error_log( 'FPML: Provider ' . $provider_class . ' failed to instantiate: ' . $e->getMessage() );
+				}
 				continue;
 			}
 			if ( $provider instanceof ServiceProvider ) {

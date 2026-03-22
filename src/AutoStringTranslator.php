@@ -83,6 +83,12 @@ class AutoStringTranslator {
 			return;
 		}
 
+		// Safety: avoid gettext interception in admin/AJAX contexts where
+		// multiple plugins register dynamic hooks and can trigger recursion.
+		if ( ( function_exists( 'is_admin' ) && is_admin() ) || ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) ) {
+			return;
+		}
+
 		// Registra sempre i filtri - verificheranno la lingua ad ogni chiamata
 		$this->register_filters();
 	}
@@ -348,6 +354,12 @@ class AutoStringTranslator {
 	 * @return string
 	 */
 	protected function get_translation( $text, $domain = 'default', $context = '' ) {
+		if ( $this->translating ) {
+			return $text;
+		}
+
+		$this->translating = true;
+		try {
 		$target_lang = $this->get_current_target_language();
 		$cache_key   = 'string_' . md5( $text . $domain . $context . $target_lang );
 
@@ -369,6 +381,9 @@ class AutoStringTranslator {
 		$this->schedule_async_translation( $text, $domain, $context, $target_lang, $transient_key );
 
 		return $text;
+		} finally {
+			$this->translating = false;
+		}
 	}
 
 	/**

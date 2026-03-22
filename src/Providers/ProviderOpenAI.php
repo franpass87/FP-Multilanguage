@@ -28,7 +28,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 0.10.0 Refactored to use modular components.
  */
 class ProviderOpenAI extends BaseProvider {
-	const API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+	const CHAT_COMPLETIONS_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+	const RESPONSES_ENDPOINT        = 'https://api.openai.com/v1/responses';
 
 	/**
 	 * API client instance.
@@ -70,7 +71,7 @@ class ProviderOpenAI extends BaseProvider {
 	 */
 	public function is_configured(): bool {
 		$key   = $this->get_option( 'openai_api_key' );
-		$model = $this->get_option( 'openai_model', 'gpt-5-nano' );
+		$model = $this->get_option( 'openai_model', 'gpt-5.4-mini' );
 
 		return ! empty( $key ) && ! empty( $model );
 	}
@@ -126,7 +127,8 @@ class ProviderOpenAI extends BaseProvider {
 				$domain,
 				$marketing,
 				$this->get_option( 'openai_api_key' ),
-				$this->get_option( 'openai_model', 'gpt-5-nano' )
+				$this->get_option( 'openai_model', 'gpt-5.4-mini' ),
+				$this->get_option( 'openai_api_method', 'responses' )
 			);
 
 			if ( is_wp_error( $result ) ) {
@@ -165,16 +167,10 @@ class ProviderOpenAI extends BaseProvider {
 			return new \WP_Error( 'fpml_openai_not_configured', __( 'Chiave API OpenAI non configurata.', 'fp-multilanguage' ) );
 		}
 
-		// Try a minimal request to check quota
-		$test_payload = array(
-			'model'       => $this->get_option( 'openai_model', 'gpt-5-nano' ),
-			'messages'    => array(
-				array(
-					'role'    => 'user',
-					'content' => 'Hi',
-				),
-			),
-			'max_tokens'  => 5,
+		$api_method = $this->normalize_api_method( (string) $this->get_option( 'openai_api_method', 'responses' ) );
+		$test_payload = $this->build_verification_payload(
+			(string) $this->get_option( 'openai_model', 'gpt-5.4-mini' ),
+			$api_method
 		);
 
 		$body = wp_json_encode( $test_payload );
@@ -191,7 +187,7 @@ class ProviderOpenAI extends BaseProvider {
 			'timeout' => 15,
 		);
 
-		$response = wp_remote_post( self::API_ENDPOINT, $args );
+		$response = wp_remote_post( $this->get_api_endpoint( $api_method ), $args );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -228,5 +224,53 @@ class ProviderOpenAI extends BaseProvider {
 		}
 
 		return new \WP_Error( 'fpml_openai_verification_failed', sprintf( __( 'Verifica fallita (codice %d): %s', 'fp-multilanguage' ), $code, wp_kses_post( $api_message ) ) );
+	}
+
+	/**
+	 * Normalize API method to supported values.
+	 *
+	 * @param string $api_method Raw API method value.
+	 * @return string
+	 */
+	protected function normalize_api_method( string $api_method ): string {
+		return in_array( $api_method, array( 'responses', 'chat_completions' ), true ) ? $api_method : 'responses';
+	}
+
+	/**
+	 * Resolve endpoint based on configured API method.
+	 *
+	 * @param string $api_method API method.
+	 * @return string
+	 */
+	protected function get_api_endpoint( string $api_method ): string {
+		return 'chat_completions' === $api_method ? self::CHAT_COMPLETIONS_ENDPOINT : self::RESPONSES_ENDPOINT;
+	}
+
+	/**
+	 * Build minimal verification payload for selected API method.
+	 *
+	 * @param string $model      OpenAI model.
+	 * @param string $api_method API method.
+	 * @return array<string,mixed>
+	 */
+	protected function build_verification_payload( string $model, string $api_method ): array {
+		if ( 'chat_completions' === $api_method ) {
+			return array(
+				'model'      => $model,
+				'messages'   => array(
+					array(
+						'role'    => 'user',
+						'content' => 'Hi',
+					),
+				),
+				'max_tokens' => 5,
+			);
+		}
+
+		return array(
+			'model'             => $model,
+			'input'             => 'Hi',
+			'max_output_tokens' => 5,
+		);
 	}
 }

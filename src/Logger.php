@@ -135,7 +135,7 @@ class Logger {
 
 		$logger->buffer_entry( $entry );
 
-		if ( self::LEVEL_ERROR === $level ) {
+		if ( self::LEVEL_ERROR === $level && defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
 			error_log( sprintf( '[FPML %s] %s', strtoupper( $level ), $message ) );
 		}
 	}

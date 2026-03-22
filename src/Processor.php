@@ -1756,11 +1756,11 @@ $this->excluded_shortcodes = array_values( array_unique( $clean ) );
                 $new_value = apply_filters( 'fpml_pre_save_translation', $new_value, $post, $field );
 
                 // Get provider for versioning
-                $provider = 'gpt-5-nano';
+                $provider = 'gpt-5.4-mini';
                 $container = $this->getContainer();
                 $settings = $container && $container->has( 'options' ) ? $container->get( 'options' ) : \FPML_Settings::instance();
                 if ( $settings ) {
-                        $provider = $settings->get( 'openai_model', 'gpt-5-nano' );
+                        $provider = $settings->get( 'openai_model', 'gpt-5.4-mini' );
                 }
 
                 switch ( $field ) {

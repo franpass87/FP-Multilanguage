@@ -39,7 +39,7 @@ class ErrorHandler {
 		$error_message .= __( '3. Carica crediti (minimo $5) cliccando su "Add to credit balance"', 'fp-multilanguage' ) . "\n";
 		$error_message .= __( '4. Attendi 1-2 minuti affinché i crediti vengano attivati', 'fp-multilanguage' ) . "\n";
 		$error_message .= __( '5. Riprova il test', 'fp-multilanguage' ) . "\n\n";
-		$error_message .= __( '💰 Costi: ~€0.00011 per 1000 caratteri con GPT-5 nano (estremamente economico e di qualità)', 'fp-multilanguage' ) . "\n\n";
+		$error_message .= __( '💰 Costi: dipendono dal modello OpenAI selezionato nelle impostazioni del plugin.', 'fp-multilanguage' ) . "\n\n";
 		$error_message .= __( '💡 In alternativa, puoi usare Google Cloud Translation per grandi volumi.', 'fp-multilanguage' );
 		
 		if ( $api_message ) {

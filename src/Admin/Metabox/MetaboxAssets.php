@@ -87,7 +87,17 @@ class MetaboxAssets {
                 const targetLang = \$btn.data('target-lang') || 'en';
                 
                 const langName = targetLang === 'en' ? 'Inglese' : (targetLang === 'de' ? 'Tedesco' : (targetLang === 'fr' ? 'Francese' : (targetLang === 'es' ? 'Spagnolo' : targetLang)));
-                if (!confirm('" . esc_js( __( 'Creare/aggiornare la traduzione', 'fp-multilanguage' ) ) . " ' + langName + ' ORA?')) {
+                const selectedProvider = ($('#fpml_translation_provider').val() || '').toString();
+                const providerLabelMap = {
+                    auto: '" . esc_js( __( 'Gestione automatica (WPML se esiste, FP Multilanguage altrimenti)', 'fp-multilanguage' ) ) . "',
+                    wpml: '" . esc_js( __( 'Gestito da WPML', 'fp-multilanguage' ) ) . "',
+                    fpml: '" . esc_js( __( 'Gestito da FP Multilanguage', 'fp-multilanguage' ) ) . "'
+                };
+                const providerLabel = providerLabelMap[selectedProvider] || '';
+                const confirmMessage = providerLabel
+                    ? '" . esc_js( __( 'Avviare/aggiornare la traduzione in', 'fp-multilanguage' ) ) . " ' + langName + '?\\n\\n' + providerLabel
+                    : '" . esc_js( __( 'Avviare/aggiornare la traduzione in', 'fp-multilanguage' ) ) . " ' + langName + '?';
+                if (!confirm(confirmMessage)) {
                     return;
                 }
 

@@ -68,30 +68,45 @@ class MetaboxAjax {
             $translation_provider = get_post_meta( $post->ID, '_fpml_translation_provider', true );
             $wpml_active = defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' );
             
-            // Se WPML è attivo e il provider è 'wpml' o 'auto' (e WPML ha una traduzione), usa WPML
-            if ( $wpml_active && ( $translation_provider === 'wpml' || ( $translation_provider === 'auto' && function_exists( 'icl_object_id' ) ) ) ) {
-                // Verifica se WPML ha già una traduzione per questa lingua
-                $wpml_translation_id = 0;
-                if ( function_exists( 'icl_object_id' ) ) {
-                    $wpml_translation_id = icl_object_id( $post->ID, $post->post_type, false, $target_lang );
-                }
-                
+            $wpml_translation_id = 0;
+            if ( $wpml_active && function_exists( 'icl_object_id' ) ) {
+                $wpml_translation_id = (int) icl_object_id( $post->ID, $post->post_type, false, $target_lang );
+            }
+
+            // Provider WPML: sempre delega a WPML.
+            if ( $wpml_active && 'wpml' === $translation_provider ) {
                 if ( $wpml_translation_id && $wpml_translation_id !== $post->ID ) {
-                    // WPML ha già una traduzione, reindirizza l'utente
                     $edit_link = get_edit_post_link( $wpml_translation_id, 'raw' );
-                    wp_send_json_error( array( 
-                        'message' => sprintf( 
-                            __( 'Questo post è configurato per usare WPML. La traduzione esiste già: <a href="%s" target="_blank">Modifica traduzione WPML</a>', 'fp-multilanguage' ), 
-                            esc_url( $edit_link ) 
-                        ),
-                        'wpml_translation_id' => $wpml_translation_id
-                    ) );
-                } else {
-                    // WPML non ha traduzione, suggerisci di usare WPML
-                    wp_send_json_error( array( 
-                        'message' => __( 'Questo post è configurato per usare WPML. Crea la traduzione tramite WPML invece di FP Multilanguage. Se vuoi usare FP Multilanguage, cambia il provider nel pannello Traduzioni.', 'fp-multilanguage' )
-                    ) );
+                    wp_send_json_error(
+                        array(
+                            'message'             => sprintf(
+                                __( 'Gestione WPML attiva: la traduzione esiste già. <a href="%s" target="_blank">Apri traduzione WPML</a>', 'fp-multilanguage' ),
+                                esc_url( $edit_link )
+                            ),
+                            'wpml_translation_id' => $wpml_translation_id,
+                        )
+                    );
                 }
+
+                wp_send_json_error(
+                    array(
+                        'message' => __( 'Gestione WPML attiva: crea questa traduzione tramite WPML.', 'fp-multilanguage' ),
+                    )
+                );
+            }
+
+            // Provider AUTO: usa WPML solo se la traduzione esiste già, altrimenti fallback a FPML.
+            if ( $wpml_active && 'auto' === $translation_provider && $wpml_translation_id && $wpml_translation_id !== $post->ID ) {
+                $edit_link = get_edit_post_link( $wpml_translation_id, 'raw' );
+                wp_send_json_error(
+                    array(
+                        'message'             => sprintf(
+                            __( 'Traduzione già presente in WPML: <a href="%s" target="_blank">Apri traduzione WPML</a>. In modalità automatica FPML non crea duplicati.', 'fp-multilanguage' ),
+                            esc_url( $edit_link )
+                        ),
+                        'wpml_translation_id' => $wpml_translation_id,
+                    )
+                );
             }
 
             $manager = fpml_get_translation_manager();

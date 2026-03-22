@@ -48,7 +48,9 @@ if ( false === $snapshot || ! is_array( $snapshot ) ) {
 			set_transient( 'fpml_diagnostics_snapshot', $snapshot, 5 * MINUTE_IN_SECONDS );
 		}
 	} catch ( \Throwable $e ) {
-		error_log( 'FPML Diagnostics View: Error loading snapshot - ' . $e->getMessage() );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+			error_log( 'FPML Diagnostics View: Error loading snapshot - ' . $e->getMessage() );
+		}
 	}
 
 	if ( ! is_array( $snapshot ) || empty( $snapshot ) ) {
@@ -237,7 +239,9 @@ if ( $form_submitted && function_exists( 'wp_create_nonce' ) ) {
                 }
             })
             .catch(error => {
-                console.error('Errore AJAX:', error);
+                if (window.fpmlDebug) {
+                    console.error('Errore AJAX:', error);
+                }
                 alert('Errore durante la pulizia: ' + error.message);
             })
             .finally(() => {
@@ -379,25 +383,25 @@ if ( $form_submitted && function_exists( 'wp_create_nonce' ) ) {
                                 </tr>
                         </tbody>
                 </table>
-                <p class="description"><?php esc_html_e( 'Il calcolo analizza un campione di job pendenti e utilizza la tariffa configurata per il provider attivo.', 'fp-multilanguage' ); ?></p>
+                <p class="description"><?php esc_html_e( 'Il calcolo analizza un campione di job pendenti e utilizza la tariffa configurata per il motore attivo.', 'fp-multilanguage' ); ?></p>
         </div>
 
         <div class="fpml-diagnostics-card">
-                <h2><?php esc_html_e( 'Provider di traduzione', 'fp-multilanguage' ); ?></h2>
+                <h2><?php esc_html_e( 'Motore di traduzione', 'fp-multilanguage' ); ?></h2>
                 <p>
-                        <strong><?php esc_html_e( 'Provider attivo:', 'fp-multilanguage' ); ?></strong>
+                        <strong><?php esc_html_e( 'Motore attivo:', 'fp-multilanguage' ); ?></strong>
                         <?php echo esc_html( $provider_name ); ?>
                 </p>
                 <?php if ( $provider_ready ) : ?>
                         <p class="fpml-diagnostics-success"><?php esc_html_e( 'Configurazione valida. Esegui un test per verificarne la latenza.', 'fp-multilanguage' ); ?></p>
                 <?php else : ?>
-                        <p class="fpml-diagnostics-warning"><?php esc_html_e( 'Il provider selezionato non è pronto. Controlla chiavi API e impostazioni.', 'fp-multilanguage' ); ?></p>
+                        <p class="fpml-diagnostics-warning"><?php esc_html_e( 'Il motore selezionato non è pronto. Controlla chiavi API e impostazioni.', 'fp-multilanguage' ); ?></p>
                         <?php if ( $provider_error ) : ?>
                                 <p class="fpml-diagnostics-warning"><?php echo esc_html( $provider_error ); ?></p>
                         <?php endif; ?>
                 <?php endif; ?>
                 <p class="fpml-diagnostics-actions">
-                        <button type="button" class="button button-primary" data-fpml-action="test-provider" data-endpoint="<?php echo esc_url( $test_endpoint ); ?>" data-nonce="<?php echo esc_attr( $rest_nonce ); ?>" data-success-message="<?php echo esc_attr__( 'Test completato.', 'fp-multilanguage' ); ?>"><?php esc_html_e( 'Test provider', 'fp-multilanguage' ); ?></button>
+                        <button type="button" class="button button-primary" data-fpml-action="test-provider" data-endpoint="<?php echo esc_url( $test_endpoint ); ?>" data-nonce="<?php echo esc_attr( $rest_nonce ); ?>" data-success-message="<?php echo esc_attr__( 'Test completato.', 'fp-multilanguage' ); ?>"><?php esc_html_e( 'Test motore', 'fp-multilanguage' ); ?></button>
                 </p>
                 <div class="fpml-provider-result" data-fpml-provider-result></div>
         </div>

@@ -375,7 +375,9 @@ class Diagnostics {
 				@set_time_limit( $old_time_limit );
 			}
 			// Rilancia l'eccezione invece di nasconderla
-			error_log( 'FPML Diagnostics: Error in get_snapshot - ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+				error_log( 'FPML Diagnostics: Error in get_snapshot - ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() );
+			}
 			// #region agent log
 			$log_entry = json_encode([
 				'sessionId' => 'debug-session',

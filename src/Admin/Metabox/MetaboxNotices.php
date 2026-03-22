@@ -80,6 +80,14 @@ class MetaboxNotices {
 
         $translation_id = get_post_meta( $post_id, '_fpml_pair_id', true );
         $has_translation = ! empty( $translation_id );
+		$translation_provider = (string) get_post_meta( $post_id, '_fpml_translation_provider', true );
+		$wpml_active = defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' );
+		$provider_label = __( 'Gestito da FP Multilanguage', 'fp-multilanguage' );
+		if ( 'wpml' === $translation_provider ) {
+			$provider_label = __( 'Gestito da WPML', 'fp-multilanguage' );
+		} elseif ( 'auto' === $translation_provider && $wpml_active ) {
+			$provider_label = __( 'Gestione automatica (WPML se esiste, FP Multilanguage altrimenti)', 'fp-multilanguage' );
+		}
 
         ?>
         <div class="notice notice-success is-dismissible fpml-translate-notice" style="border-left-color: #00a0d2;">
@@ -87,6 +95,7 @@ class MetaboxNotices {
                 <div style="flex: 1;">
                     <p style="margin: 0; font-size: 14px;">
                         <strong>🌍 <?php esc_html_e( 'Traduzione Disponibile', 'fp-multilanguage' ); ?></strong><br>
+						<em><?php echo esc_html( $provider_label ); ?></em><br>
                         <?php if ( $has_translation ) : ?>
                             <?php esc_html_e( 'La traduzione inglese esiste. Clicca per aggiornarla o visualizzarla.', 'fp-multilanguage' ); ?>
                         <?php else : ?>
@@ -95,7 +104,7 @@ class MetaboxNotices {
                     </p>
                 </div>
                 <div>
-                    <button type="button" class="button button-primary button-large fpml-force-translate-notice" data-post-id="<?php echo esc_attr( $post_id ); ?>" style="min-width: 150px;">
+                    <button type="button" class="button button-primary button-large fpml-force-translate-notice" data-post-id="<?php echo esc_attr( $post_id ); ?>" data-provider-label="<?php echo esc_attr( $provider_label ); ?>" style="min-width: 150px;">
                         <?php if ( $has_translation ) : ?>
                             🔄 <?php esc_html_e( 'Ritraduci ORA', 'fp-multilanguage' ); ?>
                         <?php else : ?>
@@ -221,7 +230,11 @@ class MetaboxNotices {
                 const targetLang = $btn.data('target-lang') || 'en';
                 
                 const langName = targetLang === 'en' ? 'Inglese' : (targetLang === 'de' ? 'Tedesco' : (targetLang === 'fr' ? 'Francese' : (targetLang === 'es' ? 'Spagnolo' : targetLang)));
-                if (!confirm('<?php echo esc_js( __( 'Creare/aggiornare la traduzione', 'fp-multilanguage' ) ); ?> ' + langName + ' ORA?')) {
+                const providerLabel = $btn.data('provider-label') || '';
+                const confirmMessage = providerLabel
+                    ? '<?php echo esc_js( __( 'Avviare/aggiornare la traduzione in', 'fp-multilanguage' ) ); ?> ' + langName + '?\n\n' + providerLabel
+                    : '<?php echo esc_js( __( 'Avviare/aggiornare la traduzione in', 'fp-multilanguage' ) ); ?> ' + langName + '?';
+                if (!confirm(confirmMessage)) {
                     return;
                 }
 

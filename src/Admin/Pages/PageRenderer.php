@@ -245,10 +245,14 @@ class PageRenderer implements PageInterface {
             try {
                 $plugin = function_exists( 'fpml_get_plugin' ) ? fpml_get_plugin() : \FPML_Plugin::instance();
             } catch ( \Exception $e ) {
-                error_log( 'FPML PageRenderer: Error loading plugin instance - ' . $e->getMessage() );
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+                    error_log( 'FPML PageRenderer: Error loading plugin instance - ' . $e->getMessage() );
+                }
                 $plugin = null;
             } catch ( \Error $e ) {
-                error_log( 'FPML PageRenderer: Fatal error loading plugin instance - ' . $e->getMessage() );
+                if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+                    error_log( 'FPML PageRenderer: Fatal error loading plugin instance - ' . $e->getMessage() );
+                }
                 $plugin = null;
             }
             include $view_path;

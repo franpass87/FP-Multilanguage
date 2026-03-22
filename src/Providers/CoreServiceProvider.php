@@ -423,7 +423,7 @@ class CoreServiceProvider implements ServiceProvider {
 				try {
 					\FP\Multilanguage\Core\Plugin::activate();
 				} catch ( \Exception $e ) {
-					if ( function_exists( 'error_log' ) ) {
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
 						error_log( 'FPML Activation Error: ' . $e->getMessage() );
 					}
 				}
@@ -437,7 +437,7 @@ class CoreServiceProvider implements ServiceProvider {
 				try {
 					\FP\Multilanguage\Core\Plugin::deactivate();
 				} catch ( \Exception $e ) {
-					if ( function_exists( 'error_log' ) ) {
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
 						error_log( 'FPML Deactivation Error: ' . $e->getMessage() );
 					}
 				}

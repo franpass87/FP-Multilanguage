@@ -111,21 +111,21 @@ class MetaboxRenderer {
             <?php if ( $wpml_active ) : ?>
                 <div class="fpml-provider-selector" style="margin-bottom: 15px; padding: 12px; background: #f0f6fc; border-left: 4px solid #2271b1; border-radius: 4px;">
                     <label for="fpml_translation_provider" style="display: block; margin-bottom: 8px; font-weight: 600;">
-                        <?php esc_html_e( 'Provider di Traduzione:', 'fp-multilanguage' ); ?>
+                        <?php esc_html_e( 'Gestione traduzione:', 'fp-multilanguage' ); ?>
                     </label>
                     <select name="fpml_translation_provider" id="fpml_translation_provider" style="width: 100%; padding: 6px;">
                         <option value="auto" <?php selected( $translation_provider, 'auto' ); ?>>
-                            <?php esc_html_e( '🔀 Automatico (usa WPML se disponibile, altrimenti FP Multilanguage)', 'fp-multilanguage' ); ?>
+                            <?php esc_html_e( '🔀 Automatico (WPML se esiste, FP Multilanguage altrimenti)', 'fp-multilanguage' ); ?>
                         </option>
                         <option value="wpml" <?php selected( $translation_provider, 'wpml' ); ?>>
-                            <?php esc_html_e( '🌐 WPML (gestione traduzioni con WPML)', 'fp-multilanguage' ); ?>
+                            <?php esc_html_e( '🌐 Gestito da WPML', 'fp-multilanguage' ); ?>
                         </option>
                         <option value="fpml" <?php selected( $translation_provider, 'fpml' ); ?>>
-                            <?php esc_html_e( '🤖 FP Multilanguage (traduzione automatica con AI)', 'fp-multilanguage' ); ?>
+                            <?php esc_html_e( '🤖 Gestito da FP Multilanguage', 'fp-multilanguage' ); ?>
                         </option>
                     </select>
                     <p style="margin-top: 8px; margin-bottom: 0; font-size: 12px; color: #646970;">
-                        <?php esc_html_e( 'Scegli quale sistema usare per tradurre questo contenuto. La scelta viene salvata automaticamente.', 'fp-multilanguage' ); ?>
+                        <?php esc_html_e( 'Scegli quale sistema gestisce le traduzioni di questo contenuto. La modalità viene salvata automaticamente.', 'fp-multilanguage' ); ?>
                     </p>
                 </div>
             <?php endif; ?>
@@ -138,10 +138,20 @@ class MetaboxRenderer {
                     $lang_info = $available_languages[ $lang_code ];
                     $translation_id = $translation_manager->get_translation_id( $post->ID, $lang_code );
                     $translation_post = $translation_id ? get_post( $translation_id ) : null;
+                    $managed_by_wpml = false;
+
+                    // In assisted mode, consider existing WPML translations as valid existing targets.
+                    if ( ! ( $translation_post instanceof \WP_Post ) && $wpml_active ) {
+                        $wpml_translation_id = $this->get_wpml_translation_id( $post->ID, $post->post_type, $lang_code );
+                        if ( $wpml_translation_id && $wpml_translation_id !== $post->ID ) {
+                            $translation_post = get_post( $wpml_translation_id );
+                            $managed_by_wpml = $translation_post instanceof \WP_Post;
+                        }
+                    }
                     ?>
                     <div class="fpml-language-section">
                         <?php if ( $translation_post instanceof \WP_Post ) : ?>
-                            <?php $this->render_existing_translation( $post, $translation_post, $lang_code, $lang_info ); ?>
+                            <?php $this->render_existing_translation( $post, $translation_post, $lang_code, $lang_info, $managed_by_wpml ); ?>
                         <?php else : ?>
                             <?php $this->render_missing_translation( $post, $lang_code, $lang_info ); ?>
                         <?php endif; ?>
@@ -170,24 +180,29 @@ class MetaboxRenderer {
      * @param \WP_Post $translation_post Translation post.
      * @param string   $lang_code Language code.
      * @param array    $lang_info Language info.
+     * @param bool    $managed_by_wpml True when translation is provided by WPML.
      * @return void
      */
-    protected function render_existing_translation( \WP_Post $post, \WP_Post $translation_post, $lang_code, $lang_info ) {
+    protected function render_existing_translation( \WP_Post $post, \WP_Post $translation_post, $lang_code, $lang_info, bool $managed_by_wpml = false ) {
         $status = $this->determine_translation_status( $translation_post->ID );
         $status_class = 'completed' === $status ? 'fpml-status-completed' : 'fpml-status-pending';
         $status_icon = 'completed' === $status ? '✅' : '⏳';
         $translation_provider = get_post_meta( $post->ID, '_fpml_translation_provider', true );
         $wpml_active = defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' );
-        $use_wpml = $wpml_active && ( $translation_provider === 'wpml' || ( $translation_provider === 'auto' && function_exists( 'icl_object_id' ) ) );
+        $use_wpml = $managed_by_wpml || ( $wpml_active && 'wpml' === $translation_provider );
+        $provider_label = $use_wpml ? __( 'Gestito da WPML', 'fp-multilanguage' ) : __( 'Gestito da FP Multilanguage', 'fp-multilanguage' );
         ?>
         <div class="fpml-status-card <?php echo esc_attr( $status_class ); ?>">
             <div class="fpml-status-icon"><?php echo esc_html( $status_icon ); ?></div>
             <div class="fpml-status-text">
                 <strong><?php printf( esc_html__( 'Tradotto in %s', 'fp-multilanguage' ), esc_html( $lang_info['name'] ) ); ?></strong>
                 <div class="fpml-status-meta">
+                    <span class="fpml-provider-pill <?php echo esc_attr( $use_wpml ? 'is-wpml' : 'is-fpml' ); ?>">
+                        <?php echo esc_html( $provider_label ); ?>
+                    </span><br />
                     <?php
                     $view_permalink = get_permalink( $translation_post->ID );
-                    if ( class_exists( '\FPML_Language' ) ) {
+                    if ( ! $use_wpml && class_exists( '\FPML_Language' ) ) {
                         $language = ( function_exists( 'fpml_get_language' ) ? fpml_get_language() : \FPML_Language::instance() );
                         if ( $language && method_exists( $language, 'filter_translation_permalink' ) ) {
                             $view_permalink = $language->filter_translation_permalink( $view_permalink, $translation_post, true );
@@ -214,7 +229,7 @@ class MetaboxRenderer {
             <?php else : ?>
                 <div style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
                     <p style="margin: 0; font-size: 12px;">
-                        <?php esc_html_e( '🌐 Questo post usa WPML. Usa WPML per ritradurre.', 'fp-multilanguage' ); ?>
+                        <?php esc_html_e( '🌐 Questa traduzione è gestita da WPML. Usa WPML per aggiornarla.', 'fp-multilanguage' ); ?>
                     </p>
                 </div>
             <?php endif; ?>
@@ -236,7 +251,8 @@ class MetaboxRenderer {
     protected function render_missing_translation( \WP_Post $post, $lang_code, $lang_info ) {
         $translation_provider = get_post_meta( $post->ID, '_fpml_translation_provider', true );
         $wpml_active = defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' );
-        $use_wpml = $wpml_active && ( $translation_provider === 'wpml' || ( $translation_provider === 'auto' && function_exists( 'icl_object_id' ) ) );
+        $use_wpml = $wpml_active && 'wpml' === $translation_provider;
+        $is_auto = ( 'auto' === $translation_provider );
         ?>
         <div class="fpml-status-card fpml-status-none">
             <div class="fpml-status-icon">⚪</div>
@@ -244,9 +260,16 @@ class MetaboxRenderer {
                 <strong><?php printf( esc_html__( 'Non Tradotto in %s', 'fp-multilanguage' ), esc_html( isset( $lang_info['name'] ) ? $lang_info['name'] : $lang_code ) ); ?></strong>
                 <div class="fpml-status-meta">
                     <?php if ( $use_wpml ) : ?>
+                        <span class="fpml-provider-pill is-wpml"><?php esc_html_e( 'Gestione impostata su WPML', 'fp-multilanguage' ); ?></span><br />
+                    <?php elseif ( $is_auto && $wpml_active ) : ?>
+                        <span class="fpml-provider-pill is-auto"><?php esc_html_e( 'Gestione automatica (WPML se esiste, FPML altrimenti)', 'fp-multilanguage' ); ?></span><br />
+                    <?php else : ?>
+                        <span class="fpml-provider-pill is-fpml"><?php esc_html_e( 'Gestione impostata su FP Multilanguage', 'fp-multilanguage' ); ?></span><br />
+                    <?php endif; ?>
+                    <?php if ( $use_wpml ) : ?>
                         <?php esc_html_e( 'Usa WPML per creare la traduzione', 'fp-multilanguage' ); ?>
                     <?php else : ?>
-                        <?php printf( esc_html__( 'Clicca "Traduci ORA" per creare la versione %s', 'fp-multilanguage' ), esc_html( isset( $lang_info['name'] ) ? $lang_info['name'] : $lang_code ) ); ?>
+                        <?php printf( esc_html__( 'Clicca "Traduci ORA" per creare la versione %s con FP Multilanguage.', 'fp-multilanguage' ), esc_html( isset( $lang_info['name'] ) ? $lang_info['name'] : $lang_code ) ); ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -260,12 +283,37 @@ class MetaboxRenderer {
                     </p>
                 </div>
             <?php else : ?>
+                <?php if ( $wpml_active && 'auto' === $translation_provider ) : ?>
+                    <div style="padding: 10px; background: #ecf7ed; border-left: 4px solid #46b450; border-radius: 4px; margin-bottom: 8px;">
+                        <p style="margin: 0; font-size: 12px;">
+                            <?php esc_html_e( '🔀 Modalità automatica: nessuna traduzione trovata in WPML per questa lingua, puoi crearla ora con FP Multilanguage.', 'fp-multilanguage' ); ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
                 <button type="button" class="button button-primary fpml-force-translate" data-post-id="<?php echo esc_attr( $post->ID ); ?>" data-target-lang="<?php echo esc_attr( $lang_code ); ?>" style="width:100%; text-align:center;">
                     🚀 <?php printf( esc_html__( 'Traduci in %s ORA', 'fp-multilanguage' ), esc_html( isset( $lang_info['name'] ) ? $lang_info['name'] : $lang_code ) ); ?>
                 </button>
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    /**
+     * Resolve a WPML translation ID for a post and language.
+     *
+     * @since 1.0.0
+     *
+     * @param int    $post_id    Source post ID.
+     * @param string $post_type  Post type.
+     * @param string $lang_code  Target language code.
+     * @return int
+     */
+    protected function get_wpml_translation_id( int $post_id, string $post_type, string $lang_code ): int {
+        if ( ! function_exists( 'icl_object_id' ) ) {
+            return 0;
+        }
+
+        return (int) icl_object_id( $post_id, $post_type, false, $lang_code );
     }
 
     /**
@@ -343,6 +391,30 @@ class MetaboxRenderer {
                 font-size: 12px;
                 color: #646970;
                 margin-top: 4px;
+            }
+            .fpml-provider-pill {
+                display: inline-block;
+                margin-bottom: 6px;
+                padding: 2px 8px;
+                border-radius: 999px;
+                font-size: 11px;
+                line-height: 1.4;
+                font-weight: 600;
+            }
+            .fpml-provider-pill.is-wpml {
+                background: #fff3cd;
+                color: #7a5f00;
+                border: 1px solid #f0d58c;
+            }
+            .fpml-provider-pill.is-fpml {
+                background: #e6f7ee;
+                color: #185b37;
+                border: 1px solid #9fd8b7;
+            }
+            .fpml-provider-pill.is-auto {
+                background: #e9f2ff;
+                color: #1d4f9f;
+                border: 1px solid #a8c7f2;
             }
             .fpml-actions {
                 padding: 15px;

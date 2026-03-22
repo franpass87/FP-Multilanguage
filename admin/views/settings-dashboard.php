@@ -11,6 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // $stats è passato da render_dashboard_tab()
+$options = function_exists( 'fpml_get_options' ) ? fpml_get_options() : null;
+$model_label = $options && method_exists( $options, 'get' ) ? (string) $options->get( 'openai_model', 'gpt-5.4-mini' ) : 'gpt-5.4-mini';
+$method_label = $options && method_exists( $options, 'get' ) ? (string) $options->get( 'openai_api_method', 'responses' ) : 'responses';
+$method_label = 'chat_completions' === $method_label ? 'Chat Completions' : 'Responses';
 ?>
 
 <style>
@@ -303,10 +307,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 				</tr>
 			<tr style="background: #fff;">
 				<td style="border: none; padding: 8px 12px;">
-					<strong>Provider Traduzione:</strong>
+					<strong>Motore Traduzione:</strong>
 				</td>
 				<td style="border: none; padding: 8px 12px;">
-					OpenAI GPT-5 nano
+					<?php echo esc_html( 'OpenAI ' . $model_label . ' (' . $method_label . ')' ); ?>
 				</td>
 			</tr>
 				<tr>

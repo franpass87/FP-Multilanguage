@@ -247,7 +247,7 @@ class Dashboard {
 			$total_chars += mb_strlen( $job_text, 'UTF-8' );
 		}
 
-		// OpenAI GPT-5 Nano pricing: ~€0.00011 per 1000 characters
+		// Default pricing fallback per 1000 characters (can be overridden in settings)
 		// Using average of 500 chars per job if no data available
 		if ( $total_chars === 0 ) {
 			$total_chars = count( $pending_jobs ) * 500;

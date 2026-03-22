@@ -72,6 +72,11 @@ class MenuIntegrator {
 			return $items;
 		}
 
+		// Avoid duplicate switchers in mixed environments (FPML + WPML).
+		if ( $this->has_existing_language_switcher_markup( $items ) ) {
+			return $items;
+		}
+
 		$switcher = $this->markup_generator->get_switcher_markup();
 
 		if ( empty( $switcher ) ) {
@@ -88,6 +93,43 @@ class MenuIntegrator {
 		}
 
 		return $items . $switcher_html;
+	}
+
+	/**
+	 * Detect if menu markup already contains a language switcher.
+	 *
+	 * Covers both FPML and WPML common markup/classes to keep a single
+	 * visible switcher for a seamless navigation experience.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $items Menu items HTML.
+	 * @return bool
+	 */
+	protected function has_existing_language_switcher_markup( string $items ): bool {
+		if ( '' === trim( $items ) ) {
+			return false;
+		}
+
+		$patterns = array(
+			'fpml-auto-integrated', // FPML auto-integrated list item
+			'fpml-language-switcher',
+			'fpml-switcher',
+			'fp_lang_switcher',
+			'fpml_language_switcher',
+			'wpml-ls-item', // WPML language switcher
+			'wpml-ls',
+			'icl_language_selector',
+			'menu-item-language',
+		);
+
+		foreach ( $patterns as $pattern ) {
+			if ( false !== stripos( $items, $pattern ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 

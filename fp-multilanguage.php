@@ -3,7 +3,7 @@
  * Plugin Name: FP Multilanguage
  * Plugin URI: https://francescopasseri.com
  * Description: Automates Italian-to-English copies of content, taxonomies, menus, media, and SEO data with queue-based routing and trusted translation providers.
- * Version: 0.9.19
+ * Version: 0.9.20
  * Author: Francesco Passeri
  * Author URI: https://francescopasseri.com
  * Text Domain: fp-multilanguage
@@ -240,7 +240,9 @@ if ( ! apply_filters( 'fpml_use_old_bootstrap', false ) ) {
 		\FP\Multilanguage\Kernel\Bootstrap::boot( __FILE__ );
 	} catch ( \Exception $e ) {
 		// Emergency fallback to old bootstrap only on critical error
-		error_log( 'FP Multilanguage: Kernel bootstrap failed, using legacy fallback. Error: ' . $e->getMessage() );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+			error_log( 'FP Multilanguage: Kernel bootstrap failed, using legacy fallback. Error: ' . $e->getMessage() );
+		}
 		add_action( 'admin_notices', function() use ( $e ) {
 			if ( current_user_can( 'activate_plugins' ) ) {
 				echo '<div class="notice notice-error"><p>';
@@ -379,7 +381,7 @@ function fpml_deactivate() {
 		try {
 			$kernel->deactivate();
 		} catch ( \Exception $e ) {
-			if ( function_exists( 'error_log' ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
 				error_log( 'FPML Deactivation Error: ' . $e->getMessage() );
 			}
 		}
@@ -390,7 +392,7 @@ function fpml_deactivate() {
 		try {
 			Plugin::deactivate();
 		} catch ( \Exception $e ) {
-			if ( function_exists( 'error_log' ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
 				error_log( 'FPML Deactivation Error: ' . $e->getMessage() );
 			}
 		}

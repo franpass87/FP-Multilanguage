@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.9.20] - 2026-03-22
+### Fixed
+- Tutti gli `error_log` condizionati a `WP_DEBUG` (settings-diagnostics, fp-multilanguage.php, CoreServiceProvider, Diagnostics, Kernel/Plugin, TermTranslationManager, PostTranslationManager, Logger, PageRenderer, Foundation/Logger) per evitare output in produzione
+
 ## [0.9.19] - 2026-03-22
 ### Fixed
 - Corretto doppio slash nell'URL CSS frontend (FP-Multilanguage//assets → FP-Multilanguage/assets)

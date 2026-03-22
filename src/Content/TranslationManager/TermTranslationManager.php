@@ -157,7 +157,9 @@ class TermTranslationManager {
 					)
 				);
 			} else {
-				error_log( sprintf( 'FPML: Impossibile creare la traduzione per il termine #%d: %s', $term_id, $inserted->get_error_message() ) );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+					error_log( sprintf( 'FPML: Impossibile creare la traduzione per il termine #%d: %s', $term_id, $inserted->get_error_message() ) );
+				}
 			}
 
 			return false;

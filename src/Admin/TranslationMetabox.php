@@ -286,13 +286,13 @@ class TranslationMetabox {
 		update_post_meta( $post_id, '_fpml_translation_provider', $provider );
 
 		$provider_names = array(
-			'auto' => __( 'Automatico', 'fp-multilanguage' ),
-			'wpml' => __( 'WPML', 'fp-multilanguage' ),
-			'fpml' => __( 'FP Multilanguage', 'fp-multilanguage' ),
+			'auto' => __( 'Automatico (WPML se esiste, FP Multilanguage altrimenti)', 'fp-multilanguage' ),
+			'wpml' => __( 'Gestito da WPML', 'fp-multilanguage' ),
+			'fpml' => __( 'Gestito da FP Multilanguage', 'fp-multilanguage' ),
 		);
 
 		wp_send_json_success( array( 
-			'message' => sprintf( __( 'Provider salvato: %s', 'fp-multilanguage' ), $provider_names[ $provider ] )
+			'message' => sprintf( __( 'Modalità di gestione salvata: %s', 'fp-multilanguage' ), $provider_names[ $provider ] )
 		) );
 	}
 }

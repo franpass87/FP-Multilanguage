@@ -305,7 +305,9 @@ class PostTranslationManager {
 					array( 'post_id' => $post->ID )
 				);
 			} else {
-				error_log( sprintf( 'FPML: Failed to create translation for post #%d: %s', $post->ID, $e->getMessage() ) );
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+					error_log( sprintf( 'FPML: Failed to create translation for post #%d: %s', $post->ID, $e->getMessage() ) );
+				}
 			}
 		} finally {
 			$this->creating_translation          = false;

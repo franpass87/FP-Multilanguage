@@ -155,13 +155,17 @@ class Admin {
      * @return void
      */
     public function enqueue_admin_scripts( $hook ) {
-        if ( strpos( $hook, self::MENU_SLUG ) === false ) {
+        $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+        $is_our_page = ( strpos( $hook, self::MENU_SLUG ) !== false )
+            || in_array( $page, array( self::MENU_SLUG, 'fpml-bulk-translate' ), true );
+        if ( ! $is_our_page ) {
             return;
         }
 
         wp_enqueue_script( 'jquery' );
         wp_enqueue_style( 'fpml-admin', \FPML_PLUGIN_URL . 'assets/admin.css', array(), \FPML_PLUGIN_VERSION );
         wp_enqueue_script( 'fpml-admin', \FPML_PLUGIN_URL . 'assets/admin.js', array( 'jquery' ), \FPML_PLUGIN_VERSION, true );
+        wp_add_inline_script( 'fpml-admin', 'window.fpmlDebug=' . ( defined( 'WP_DEBUG' ) && WP_DEBUG ? 'true' : 'false' ) . ';', 'before' );
     }
 
     /**
@@ -172,8 +176,15 @@ class Admin {
     public function render_admin_page() {
         $current_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'dashboard';
         
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__( 'FP Multilanguage', 'fp-multilanguage' ) . '</h1>';
+        echo '<div class="wrap fpml-admin-page">';
+        echo '<h1 class="screen-reader-text">' . esc_html__( 'FP Multilanguage', 'fp-multilanguage' ) . '</h1>';
+        echo '<div class="fpml-page-header">';
+        echo '<div class="fpml-page-header-content">';
+        echo '<h2 class="fpml-page-header-title" aria-hidden="true"><span class="dashicons dashicons-translation"></span> ' . esc_html__( 'FP Multilanguage', 'fp-multilanguage' ) . '</h2>';
+        echo '<p>' . esc_html__( 'Gestione multilingua e traduzioni automatiche.', 'fp-multilanguage' ) . '</p>';
+        echo '</div>';
+        echo '<span class="fpml-page-header-badge">v' . esc_html( \FPML_PLUGIN_VERSION ) . '</span>';
+        echo '</div>';
         
         $this->page_renderer->render_tab_navigation( $current_tab );
         $this->page_renderer->render_tab_content( $current_tab );

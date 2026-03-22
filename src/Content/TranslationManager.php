@@ -168,7 +168,14 @@ class TranslationManager {
 	 * @return int|false Translation post ID, or false if not found.
 	 */
 	public function get_translation_id( int $post_id, string $target_lang = 'en' ): int|false {
-		return $this->cache->get_translation_id( $post_id, $target_lang );
+		$translation_id = $this->cache->get_translation_id( $post_id, $target_lang );
+		if ( $translation_id ) {
+			return $translation_id;
+		}
+
+		// WPML fallback: when an external translation already exists, reuse it
+		// to avoid creating duplicated translations in coexistence scenarios.
+		return $this->get_wpml_translation_id( $post_id, $target_lang );
 	}
 
 	/**
@@ -180,7 +187,72 @@ class TranslationManager {
 	 * @return array Array of [language_code => translation_id] pairs.
 	 */
 	public function get_all_translations( int $post_id ): array {
-		return $this->cache->get_all_translations( $post_id );
+		$translations = $this->cache->get_all_translations( $post_id );
+
+		if ( ! $this->is_wpml_active() ) {
+			return $translations;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! ( $post instanceof \WP_Post ) ) {
+			return $translations;
+		}
+
+		$enabled_languages = function_exists( 'fpml_get_enabled_languages' ) ? fpml_get_enabled_languages() : array();
+		foreach ( $enabled_languages as $lang_code ) {
+			if ( isset( $translations[ $lang_code ] ) && (int) $translations[ $lang_code ] > 0 ) {
+				continue;
+			}
+
+			$wpml_translation_id = $this->get_wpml_translation_id( $post_id, (string) $lang_code, $post->post_type );
+			if ( $wpml_translation_id ) {
+				$translations[ $lang_code ] = $wpml_translation_id;
+			}
+		}
+
+		return $translations;
+	}
+
+	/**
+	 * Resolve translation ID from WPML when available.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param int         $post_id     Source post ID.
+	 * @param string      $target_lang Target language code.
+	 * @param string|null $post_type   Optional post type.
+	 * @return int|false
+	 */
+	protected function get_wpml_translation_id( int $post_id, string $target_lang, ?string $post_type = null ): int|false {
+		if ( ! $this->is_wpml_active() ) {
+			return false;
+		}
+
+		if ( null === $post_type ) {
+			$post = get_post( $post_id );
+			if ( ! ( $post instanceof \WP_Post ) ) {
+				return false;
+			}
+			$post_type = $post->post_type;
+		}
+
+		$wpml_translation_id = (int) icl_object_id( $post_id, $post_type, false, $target_lang );
+		if ( $wpml_translation_id > 0 && $wpml_translation_id !== $post_id ) {
+			return $wpml_translation_id;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check whether WPML runtime is available.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return bool
+	 */
+	protected function is_wpml_active(): bool {
+		return function_exists( 'icl_object_id' ) && ( defined( 'ICL_SITEPRESS_VERSION' ) || function_exists( 'icl_object_id' ) );
 	}
 
 	/**

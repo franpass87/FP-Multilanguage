@@ -98,12 +98,17 @@ class BulkTranslator {
 	 * @param string $hook Current admin page.
 	 */
 	public function enqueue_scripts( $hook ) {
-		if ( 'fpml_page_fpml-bulk-translate' !== $hook ) {
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$is_our_page = ( strpos( $hook, 'fpml-bulk-translate' ) !== false ) || ( 'fpml-bulk-translate' === $page );
+		if ( ! $is_our_page ) {
 			return;
 		}
 
+		wp_enqueue_style( 'fpml-admin', \FPML_PLUGIN_URL . 'assets/admin.css', array(), \FPML_PLUGIN_VERSION );
+
 		$settings = function_exists( 'fpml_get_settings' ) ? fpml_get_settings() : Settings::instance();
 		$rate_option = $settings ? $settings->get( 'rate_openai', '0.00011' ) : '0.00011';
+		$model_label = $settings ? (string) $settings->get( 'openai_model', 'gpt-5.4-mini' ) : 'gpt-5.4-mini';
 		$rate_value  = (float) str_replace( ',', '.', (string) $rate_option );
 
 		if ( $rate_value <= 0 ) {
@@ -129,7 +134,7 @@ class BulkTranslator {
 				'nonce'      => wp_create_nonce( 'fpml_bulk_translate' ),
 				'rate'       => $rate_value,
 				'rate_label' => sprintf( '€%s / 1000', $rate_label ),
-				'model'      => __( 'GPT-5 nano', 'fp-multilanguage' ),
+				'model'      => $model_label,
 			)
 		);
 	}
@@ -149,6 +154,7 @@ class BulkTranslator {
 
 		$settings = function_exists( 'fpml_get_settings' ) ? fpml_get_settings() : Settings::instance();
 		$rate_option    = $settings ? $settings->get( 'rate_openai', '0.00011' ) : '0.00011';
+		$model_label    = $settings ? (string) $settings->get( 'openai_model', 'gpt-5.4-mini' ) : 'gpt-5.4-mini';
 		$rate_value     = (float) str_replace( ',', '.', (string) $rate_option );
 		if ( $rate_value <= 0 ) {
 			$rate_value = 0.00011;
@@ -159,9 +165,15 @@ class BulkTranslator {
 
 		$untranslated_posts = $this->get_untranslated_posts();
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Bulk Translation', 'fp-multilanguage' ); ?></h1>
-			<p><?php esc_html_e( 'Seleziona i contenuti da tradurre in blocco.', 'fp-multilanguage' ); ?></p>
+		<div class="wrap fpml-admin-page">
+			<h1 class="screen-reader-text"><?php esc_html_e( 'Bulk Translation', 'fp-multilanguage' ); ?></h1>
+			<div class="fpml-page-header">
+				<div class="fpml-page-header-content">
+					<h2 class="fpml-page-header-title" aria-hidden="true"><span class="dashicons dashicons-translation"></span> <?php esc_html_e( 'Bulk Translation', 'fp-multilanguage' ); ?></h2>
+					<p><?php esc_html_e( 'Seleziona i contenuti da tradurre in blocco.', 'fp-multilanguage' ); ?></p>
+				</div>
+				<span class="fpml-page-header-badge">v<?php echo esc_html( \FPML_PLUGIN_VERSION ); ?></span>
+			</div>
 
 			<form id="fpml-bulk-form">
 				<table class="wp-list-table widefat fixed striped">
@@ -219,7 +231,7 @@ class BulkTranslator {
 					</div>
 					<div style="padding:15px; background:#fff; border-radius:6px; border:1px solid #bfdbfe;">
 						<div style="display:flex; justify-content:space-between; align-items:center;">
-							<div style="color:#64748b; font-size:13px;">💰 <?php esc_html_e( 'Costo Totale Stimato', 'fp-multilanguage' ); ?> (<?php esc_html_e( 'GPT-5 nano', 'fp-multilanguage' ); ?>)</div>
+							<div style="color:#64748b; font-size:13px;">💰 <?php esc_html_e( 'Costo Totale Stimato', 'fp-multilanguage' ); ?> (<?php echo esc_html( $model_label ); ?>)</div>
 							<div style="font-size:28px; font-weight:700; color:#0ea5e9;" id="fpml-total-cost">$0.00</div>
 						</div>
 						<div style="color:#64748b; font-size:11px; margin-top:8px;">

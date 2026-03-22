@@ -167,8 +167,9 @@ class Logger implements LoggerInterface {
 
 		$this->addEntry( $entry );
 
-		// Also log to error_log if error level or above
-		if ( LogLevel::getPriority( $level ) >= LogLevel::getPriority( LogLevel::ERROR ) ) {
+		// Also log to error_log if error level or above (only when WP_DEBUG enabled)
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' )
+			&& LogLevel::getPriority( $level ) >= LogLevel::getPriority( LogLevel::ERROR ) ) {
 			error_log( sprintf( '[FPML %s] %s', strtoupper( $level ), $message ) );
 		}
 	}

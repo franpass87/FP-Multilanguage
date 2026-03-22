@@ -134,7 +134,8 @@ public function get_defaults() {
 		return array(
 			'provider'                => '',
 			'openai_api_key'          => '',
-			'openai_model'            => 'gpt-5-nano',
+			'openai_model'            => 'gpt-5.4-mini',
+			'openai_api_method'       => 'responses',
 			'google_api_key'          => '',
 			'google_project_id'       => '',
 			'batch_size'              => 5,
@@ -184,8 +185,8 @@ public function get_defaults() {
 		'menu_switcher_style'          => 'inline',
 		'menu_switcher_show_flags'     => true,
 		'menu_switcher_position'       => 'end',
-		// Enabled languages (multi-language support)
-		'enabled_languages'            => array( 'en', 'de' ), // Default: English and German as main languages (Italian is always source)
+		// Enabled target languages (source language is excluded automatically).
+		'enabled_languages'            => array( 'en', 'de', 'es', 'fr', 'pt', 'ru' ),
 	);
 }
 
@@ -316,6 +317,7 @@ $data     = wp_parse_args( is_array( $input ) ? $input : array(), $defaults );
 $data['provider']               = sanitize_text_field( $data['provider'] );
 $data['openai_api_key']         = sanitize_text_field( $data['openai_api_key'] );
 $data['openai_model']           = sanitize_text_field( $data['openai_model'] );
+$data['openai_api_method']      = sanitize_text_field( $data['openai_api_method'] );
 $data['google_api_key']         = sanitize_text_field( $data['google_api_key'] );
 $data['google_project_id']      = sanitize_text_field( $data['google_project_id'] );
 $data['batch_size']             = max( 1, absint( $data['batch_size'] ) );
@@ -326,6 +328,11 @@ $frequencies = array( '5min', '15min', 'hourly' );
 if ( ! in_array( $data['cron_frequency'], $frequencies, true ) ) {
 $data['cron_frequency'] = $defaults['cron_frequency'];
 }
+
+	$openai_methods = array( 'responses', 'chat_completions' );
+	if ( ! in_array( $data['openai_api_method'], $openai_methods, true ) ) {
+		$data['openai_api_method'] = $defaults['openai_api_method'];
+	}
 
 $data['routing_mode']            = in_array( $data['routing_mode'], array( 'segment', 'query' ), true ) ? $data['routing_mode'] : $defaults['routing_mode'];
 $data['browser_redirect']        = ! empty( $data['browser_redirect'] );
@@ -397,6 +404,16 @@ $data['excluded_shortcodes']     = sanitize_textarea_field( $data['excluded_shor
 					return (bool) preg_match( '/^[a-z]{2}(-[a-z]{2})?$/', $code );
 				}
 			)
+		)
+	);
+
+	$source_language = function_exists( 'fpml_get_source_language' ) ? sanitize_key( (string) fpml_get_source_language() ) : 'it';
+	$enabled_languages = array_values(
+		array_filter(
+			$enabled_languages,
+			static function ( string $code ) use ( $source_language ): bool {
+				return $code !== $source_language;
+			}
 		)
 	);
 	if ( empty( $enabled_languages ) ) {

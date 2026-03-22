@@ -1033,6 +1033,7 @@ class Rewrites {
         ?>
         <script type="text/javascript">
         (function() {
+            window.fpmlDebug = window.fpmlDebug || <?php echo ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ? 'true' : 'false'; ?>;
             var fpmlLangSlug = '<?php echo esc_js( $lang_slug_js2 ); ?>';
             function fixDuplicateUrls() {
                 var links = document.querySelectorAll('a[href]');
@@ -1096,7 +1097,7 @@ class Rewrites {
                     }
                 }
                 
-                if (fixedCount > 0 && window.console && window.console.log) {
+                if (fixedCount > 0 && window.fpmlDebug && window.console && window.console.log) {
                     console.log('[FPML] Corretti ' + fixedCount + ' URL duplicati nel DOM');
                 }
                 
@@ -1149,8 +1150,8 @@ class Rewrites {
                     }
                 });
                 
-                // Log per debug (solo se console è disponibile)
-                if (removedCount > 0 && window.console && window.console.log) {
+                // Log per debug (solo se console è disponibile e debug attivo)
+                if (removedCount > 0 && window.fpmlDebug && window.console && window.console.log) {
                     console.log('[FPML] Rimossi ' + removedCount + ' link problematici dal DOM');
                 }
             }
