@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.21] - 2026-04-05
+### Changed
+- Menu admin: posizione top-level allineata allo schema FP `'56.17'` (gruppo plugin FP tra Pagamenti e Marketing WooCommerce).
+### Fixed
+- Allineata la costante `FPML_PLUGIN_VERSION` all’header del plugin (evita disallineamento con `Version:`).
+
 ## [0.9.20] - 2026-03-22
 ### Fixed
 - Tutti gli `error_log` condizionati a `WP_DEBUG` (settings-diagnostics, fp-multilanguage.php, CoreServiceProvider, Diagnostics, Kernel/Plugin, TermTranslationManager, PostTranslationManager, Logger, PageRenderer, Foundation/Logger) per evitare output in produzione

@@ -144,7 +144,7 @@ class Admin {
             self::MENU_SLUG,
             array( $this, 'render_admin_page' ),
             'dashicons-translation',
-            30
+            '56.17'
         );
     }
 

@@ -4,7 +4,7 @@ Tags: translation, multilanguage, openai, psr-4, seo
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 8.0
-Stable tag: 0.9.20
+Stable tag: 0.9.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Plugin Homepage: https://francescopasseri.com
@@ -33,6 +33,10 @@ FP Multilanguage duplicates English content that stays synced with the original 
 4. Run an initial sync from the Diagnostics tab or via `wp fpml queue run`.
 
 == Changelog ==
+
+= 0.9.21 (2026-04-05) =
+* **CHANGED**: Menu admin raggruppato con gli altri plugin FP (posizione 56.17).
+* **FIXED**: Costante versione allineata all’header del plugin.
 
 = 0.9.20 (2026-03-22) =
 * **FIXED**: error_log condizionati a WP_DEBUG (settings-diagnostics, bootstrap, providers, Logger, PageRenderer)
